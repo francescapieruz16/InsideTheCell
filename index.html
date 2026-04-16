@@ -30,16 +30,41 @@
     font-size: 60px;
     font-weight: bold;
     color: white;
-    background-color: #ff8000;
+    background-color: #FF3E00;
     border: 5px solid white;
+    box-shadow: 
+      0 0 5px #FF5F1F, 
+      0 0 20px #FF5F1F, 
+      inset 0 0 10px #FF5F1F;
     border-radius: 50px;
     cursor: pointer;
+    transition: all 0.3s ease;
+    position: absolute;
+    bottom: 10vh;
+    /*to prevent flickering*/
+    backface-visibility: hidden;
+    -webkit-font-smoothing: subpixel-antialiased;
+    will-change: transform;
+  }
+  #playBtn:hover {
+    box-shadow:
+      0 0 5px #FF5F1F, 
+      0 0 20px #FF5F1F, 
+      inset 0 0 10px #FF5F1F;
+    transform: translateY(-4px);
+  }
+  #playBtn:active {
+    box-shadow: 
+      0 0 5px #FF5F1F, 
+      0 0 20px #FF5F1F, 
+      inset 0 0 10px #FF5F1F;
+    transform: translateY(2px);
   }
 </style>
 </head>
 <body>
   <div id="app"></div>
-  <img id="background" src="/assets/background.jpg"/>
+  <img id="background" src="/assets/background.png"/>
   <button id="playBtn">Play</button>
   <script type="module" src="/src/title_page.ts"></script>
 </body>

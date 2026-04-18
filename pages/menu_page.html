@@ -4,9 +4,114 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InsideTheCell</title>
+  <style>
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      overflow: hidden; 
+    }
+
+    #background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover; /* Mantiene le proporzioni coprendo tutto lo schermo */
+      z-index: -1; 
+    }
+
+    /* Contenitore flessibile per centrare i livelli */
+    .level-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      gap: 15px; /* Spazio uniforme tra i bottoni */
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      border: 2px solid #333;
+      border-radius: 8px;
+      background-color: rgba(255, 255, 255, 0.8);
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .level-btn {
+      background-color: #FF3E00; 
+      color: white;
+      border: 3px solid white;
+      padding: 15px 40px;
+      font-size: 1.5rem;
+      box-shadow: 0 4px #1b5e20;
+      width: 250px;
+    }
+
+    .level-btn:hover {
+      background-color: #FF5F1F;
+      transform: scale(1.05);
+    }
+
+    button:hover {
+      background-color: rgba(255, 255, 255, 1);
+      transform: scale(1.05);
+    }
+
+    .corner-btn {
+      position: absolute;
+      
+    }
+
+    #Tutorial {
+      bottom: 100px;
+      left:100px;
+      padding: 30px 60px;
+        font-size: 1.5rem;
+        background-color: #19c482e7; 
+        color: white;
+        border: 3px solid white;
+          box-shadow: 0 4px #1b5e20;
+    }
+
+    #Options {
+      top: 20px;
+      right: 20px;
+    }
+
+    #Back {
+      top: 20px;
+      left: 20px;
+    }
+
+
+  </style>
 </head>
 <body>
   <div id="app"></div>
+  <img id="background" src="/assets/backgroundlevelselection.png" alt="Sfondo selezione livello"/>
+  
+  <button id="Back" class="corner-btn">Back</button>
+  <button id="Options" class="corner-btn">Options</button>
+  <button id="Tutorial" class="corner-btn">Tutorial Zone</button>
+
+  <div class="level-container">
+    <button id="Level1" class="level-btn">Level 1</button>
+    <button id="Level2" class="level-btn">Level 2</button>
+    <button id="Level3" class="level-btn">Level 3</button>
+    <button id="Level4" class="level-btn">Level 4</button>
+    <button id="Level5" class="level-btn">Level 5</button>
+    <button id="Level6" class="level-btn">Level 6</button>
+  </div>
+  
   <script type="module" src="/src/menu_page.ts"></script>
 </body>
 </html>

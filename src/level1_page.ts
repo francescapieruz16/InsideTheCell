@@ -292,7 +292,7 @@ class Level1 extends Phaser.Scene {
         }
     }
 
-    private catchVirus(_cart: Phaser.GameObjects.GameObject, virus: Phaser.GameObjects.GameObject) {
+    private catchVirus(_cart: any, virus: any) {
         const v = virus as Phaser.Physics.Arcade.Sprite;
 
         this.virusGroup.killAndHide(v);
@@ -304,7 +304,7 @@ class Level1 extends Phaser.Scene {
     }
 }
 
-    private triggerGameOver(virusHit: Phaser.GameObjects.GameObject, receptorHit: Phaser.GameObjects.GameObject) {
+    private triggerGameOver(virusHit: any, receptorHit: any) {
         const virus = virusHit as Phaser.Physics.Arcade.Sprite;
         const receptor = receptorHit as Phaser.Physics.Arcade.Sprite;
 

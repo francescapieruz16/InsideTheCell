@@ -1,15 +1,74 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InsideTheCell - Level 1</title>
   <style>
-    body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+    }
+
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #llm-chat-ui {
+      position: absolute;
+      left: 50%;
+      top: 73%;
+      transform: translateX(-50%);
+      display: none;
+      z-index: 50;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #llm-chat-input {
+      width: 520px;
+      height: 58px;
+      border: 4px solid white;
+      border-radius: 12px;
+      outline: none;
+      padding: 0 16px;
+      font-size: 22px;
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+    }
+
+    #llm-chat-send {
+      height: 60px;
+      padding: 0 24px;
+      border: 4px solid white;
+      border-radius: 12px;
+      background: #ff5a0a;
+      color: white;
+      font-size: 22px;
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    #llm-chat-send:hover {
+      transform: scale(1.08);
+    }
   </style>
 </head>
 <body>
   <div id="game-container"></div>
+
+  <div id="llm-chat-ui">
+    <input id="llm-chat-input" type="text" placeholder="Type your answer..." />
+    <button id="llm-chat-send">Send</button>
+  </div>
+
   <script type="module" src="/src/level1_page.ts"></script>
 </body>
 </html>

@@ -328,7 +328,7 @@ class Level1 extends Phaser.Scene {
             return;
         }
 
-        this.createEndScreen('GAME OVER', '#ff3b3b');
+        this.createEndScreen('GAME OVER', '#770000');
     }
 
     private triggerWin() {
@@ -731,7 +731,7 @@ class Level1 extends Phaser.Scene {
             });
         } else {
             this.finalQuizResultText.setText('Wrong answer. Try again.');
-            this.finalQuizResultText.setColor('#ff4444');
+            this.finalQuizResultText.setColor('#770000');
         }
     }
 

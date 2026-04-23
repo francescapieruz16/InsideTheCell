@@ -41,7 +41,7 @@ class Level1 extends Phaser.Scene {
 
     // Easy mode
     private vaccinatedDelay: number = 2600;
-    private baseVirusSpeedVaccinated: number = 70;
+    private baseVirusSpeedVaccinated: number = 150;
     private speedIncreaseOverTimeVaccinated: number = 2;
 
     private currentVirusSpeed: number = 260;

@@ -18,10 +18,10 @@ class ExternalScene extends Phaser.Scene {
     // NUOVO METODO: Carica le immagini in memoria prima di avviare la scena
     preload() {
         // I parametri sono: (Chiave univoca, Percorso del file)
-        this.load.image('nav_front', '/assets/Navicella_Front.png');
-        this.load.image('nav_back', '/assets/Navicella_Back.png');
-        this.load.image('nav_left', '/assets/Navicella_Left.png');
-        this.load.image('nav_right', '/assets/Navicella_Right.png');
+        this.load.image('nav_front', '/assets/tutorial/navicella/Navicella_Front.png');
+        this.load.image('nav_back', '/assets/tutorial/navicella/Navicella_Back.png');
+        this.load.image('nav_left', '/assets/tutorial/navicella/Navicella_Left.png');
+        this.load.image('nav_right', '/assets/tutorial/navicella/Navicella_Right.png');
     }
 
     create() {

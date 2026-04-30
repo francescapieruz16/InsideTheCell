@@ -6,10 +6,10 @@ class Level1 extends Phaser.Scene {
     private receptorsGroup!: Phaser.Physics.Arcade.Group;
 
     private receptorVirusData = [
-        { receptor: 'receptor_circle', virus: 'virus_circle', pX: 0.125, pY: 0.73},
-        { receptor: 'receptor_hexagon', virus: 'virus_hexagon', pX: 0.375, pY: 0.73},
-        { receptor: 'receptor_square', virus: 'virus_square', pX: 0.625, pY: 0.73},
-        { receptor: 'receptor_triangle', virus: 'virus_triangle', pX: 0.875, pY: 0.73}
+        { receptor: 'receptor_circle', virus: 'virus_circle', pX: 0.125, pY: 0.73, scale: 0.08},
+        { receptor: 'receptor_hexagon', virus: 'virus_hexagon', pX: 0.375, pY: 0.73, scale: 0.09},
+        { receptor: 'receptor_square', virus: 'virus_square', pX: 0.625, pY: 0.73, scale: 0.09},
+        { receptor: 'receptor_triangle', virus: 'virus_triangle', pX: 0.875, pY: 0.73, scale: 0.08}
     ];
 
     private playerCart!: Phaser.Physics.Arcade.Sprite;
@@ -205,7 +205,7 @@ class Level1 extends Phaser.Scene {
 
             const receptor = this.receptorsGroup.create(x, y, data.receptor);
             
-            receptor.displayWidth = screenW * 0.08; 
+            receptor.displayWidth = screenW * data.scale; 
             receptor.scaleY = receptor.scaleX;
             receptor.refreshBody();
         });

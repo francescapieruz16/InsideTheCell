@@ -27,15 +27,20 @@ export class PostGameManager {
 
     private minigame_description: string = "";
     private knowledge: string = "";
+    private defaultResponse: string = ""
 
-    private llm = new ChatGoogleGenerativeAI({
-        model: "gemini-3-flash-preview",
-        apiKey: import.meta.env.VITE_GEMINI_API_KEY,
-        temperature: 0.7,
-    });
+    private llm!: ChatGoogleGenerativeAI;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
+
+        const savedApiKey = localStorage.getItem('GEMINI_API_KEY') || "";
+
+        this.llm = new ChatGoogleGenerativeAI({
+            model: "gemini-3-flash-preview",
+            apiKey: savedApiKey,
+            temperature: 0.7,
+        });
         
         this.chatManager = new ChatManager(
         (playerMessage: string) => {
@@ -49,7 +54,7 @@ export class PostGameManager {
     );
     }
 
-    public preparePostGame(infoTitle: string, infoText: string, minigame_description: string, knowledge: string) {
+    public preparePostGame(infoTitle: string, infoText: string, minigame_description: string, knowledge: string, defaultResponse: string) {
         this.quizData = {
             infoTitle,
             infoText,
@@ -57,6 +62,7 @@ export class PostGameManager {
 
         this.minigame_description = minigame_description;
         this.knowledge = knowledge;
+        this.defaultResponse = defaultResponse;
 
         this.buildInfo();
         this.buildChat();
@@ -93,8 +99,11 @@ export class PostGameManager {
     }
 
     public async evaluatePlayerChatInput(playerMessage: string) {
-    try {
-            if (this.questionText && this.questionText.visible) {
+        const isFirstMessage = this.questionText && this.questionText.visible;
+
+        try {
+        
+            if (isFirstMessage) {
                 this.questionText.setVisible(false);
             }
 
@@ -129,9 +138,15 @@ export class PostGameManager {
             this.chatManager.show();
         } catch (e) {
             console.log("LLM error" + e)
-            this.llmResponseText.setText("Error contacting LLM. Proceed to quiz.");
-            this.continueToQuizBtn.setVisible(true);
-            this.chatManager.hide();
+            if (isFirstMessage) {
+                this.llmResponseText.setText(this.defaultResponse);
+                this.continueToQuizBtn.setVisible(true);
+                this.chatManager.hide();
+            } else {
+                this.llmResponseText.setText("Error contacting LLM. Proceed to quiz.");
+                this.continueToQuizBtn.setVisible(true);
+                this.chatManager.hide();
+            }
         }
     }
 
@@ -161,6 +176,34 @@ export class PostGameManager {
         });
 
         this.scene.add.container(0, 0, [...windowUi.list, title, nextBtn, menuBtn]).setDepth(120);
+    }
+
+    // called when player lose in vaccinated mode
+    public showGameOverScreen() {
+        const cx = this.scene.cameras.main.width / 2;
+        const cy = this.scene.cameras.main.height / 2;
+
+        const windowUi = this.createWindow(cx, cy, 820, 420);
+        
+        const title = this.scene.add.text(cx, cy - 100, 'GAME OVER', {
+            fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#ff0000'
+        }).setOrigin(0.5);
+
+        const text = this.scene.add.text(cx, cy - 20, 'The virus breached the cell defenses.', {
+            fontFamily: this.MENU_FONT, fontSize: '28px', fontStyle: 'bold', color: '#ffffff'
+        }).setOrigin(0.5);
+
+        const retryBtn = this.createButton(cx, cy + 70, 320, 70, 'Try Again', () => {
+            this.chatManager.hide();
+            this.scene.scene.restart({ vaccinated: true }); 
+        });
+
+        const menuBtn = this.createButton(cx, cy + 160, 320, 70, 'Menu', () => {
+            this.chatManager.hide();
+            window.location.href = '/pages/menu_page.html';
+        });
+
+        this.scene.add.container(0, 0, [...windowUi.list, title, text, retryBtn, menuBtn]).setDepth(120);
     }
 
     private buildInfo() {

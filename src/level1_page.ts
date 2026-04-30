@@ -136,34 +136,19 @@ class Level1 extends Phaser.Scene {
 
         const infoTitle = "The virus reached the cell!";
         const infoText = "\nYou were not able to stop it in time.\nThe virus reached the receptors on the surface of the cell and attached to it.\nThis is the first step of the infection.";
-        const reflectiveQuestion = "Why do you think you lost?";
 
-        const prompt = 
-            `You are an AI tutor in an educational video game about viruses, designed for middle and high school students. 
-            The player has just failed the minigame about 'binding' (the first phase of a viral infection). Your task is to generate a simple, 
-            educational multiple-choice quiz to help them learn from their mistake. The quiz must have exactly one correct answer and two incorrect 
-            but plausible distractors (three options in total). 
-            Crucial rule: You must base the question and all answers exclusively on the following text context, without adding outside knowledge: `
+        const minigame_description = 
+           `The objective of the minigame is to prevent viruses falling from the top of the screen from binding to the receptors located on the cell 
+            membrane. The player controls a movable cart to catch the viruses before they can successfully attach to a receptor.` 
 
         // TODO: add knowledge
         const knowledge = "During the binding phase, viruses use their surface proteins to attach to specific receptors on the host cell. This lock-and-key mechanism is the mandatory first step for the virus to enter the cell and cause an infection.";
 
-        const chatPrompt = 
-            `You are an AI assistant in a video game about viral infections (specifically focusing on the first phase of infection, which is binding), 
-            answering questions asked by a player. The target audience is middle and high school students. The first question asks why the player thinks 
-            they lost. You must answer by teaching the user how the binding phase works and explaining what happened during this phase in the context of 
-            the minigame. The minigame consists of catching viruses before they connect to the receptors, and the user lost because a virus successfully 
-            connected to a receptor. 
-            CRITICAL: Your response must be very brief (maximum 2-3 short sentences) to fit in a small UI container.
-            To answer, adhere strictly to the information present in the following knowledge file: `
-
         this.postGameManager.preparePostGame(
             infoTitle,
             infoText,
-            reflectiveQuestion,
-            prompt,
+            minigame_description,
             knowledge,
-            chatPrompt,
         );
 
         this.setupGame();

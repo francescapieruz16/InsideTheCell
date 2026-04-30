@@ -3,7 +3,7 @@ import { ChatManager } from './chatManager';
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { z } from "zod";
+import quiz from '../../assets/quizzes/level1_quizzes.json'
 
 export class PostGameManager {
     private scene: Phaser.Scene;
@@ -25,7 +25,7 @@ export class PostGameManager {
     private finalQuizResultText!: Phaser.GameObjects.Text;
     private questionText!: Phaser.GameObjects.Text;
 
-    private chatPrompt: string = "";
+    private minigame_description: string = "";
     private knowledge: string = "";
 
     private llm = new ChatGoogleGenerativeAI({
@@ -49,37 +49,29 @@ export class PostGameManager {
     );
     }
 
-    public preparePostGame(infoTitle: string, infoText: string, reflectiveQuestion: string, prompt: string, knowledge: string, chatPrompt: string) {
+    public preparePostGame(infoTitle: string, infoText: string, minigame_description: string, knowledge: string) {
         this.quizData = {
             infoTitle,
             infoText,
-            reflectiveQuestion
         };
 
-        this.chatPrompt = chatPrompt;
+        this.minigame_description = minigame_description;
         this.knowledge = knowledge;
 
         this.buildInfo();
         this.buildChat();
 
-        this.generateQuizInBackground(prompt, knowledge);
+        this.loadRandomQuiz();
     }
 
-    private async generateQuizInBackground(prompt: string, knowledge: string) {
+    private loadRandomQuiz() {
         try {
-            const quizSchema = z.object({
-                quizQuestion: z.string().describe("The final multiple-choice question that the player must answer."),
-                answers: z.array(z.object({
-                    text: z.string().describe("The text of the answer (keep it short)."),
-                    isCorrect: z.boolean().describe("True if it is the correct answer, false otherwise.")
-                })).length(3).describe("Exactly three possible answers.")
-            });
+            // pick a random quiz from the file
+            const randomIndex = Phaser.Math.Between(0, quiz.length - 1);
+            const selectedQuiz = quiz[randomIndex];
 
-            const structuredLlm = this.llm.withStructuredOutput(quizSchema);
-            const generatedData = await structuredLlm.invoke(prompt + knowledge);
-
-            this.quizData.quizQuestion = generatedData.quizQuestion;
-            this.quizData.answers = generatedData.answers;
+            this.quizData.quizQuestion = selectedQuiz.quizQuestion;
+            this.quizData.answers = selectedQuiz.answers;
             
             this.buildQuiz();
             this.isQuizReady = true;
@@ -89,7 +81,14 @@ export class PostGameManager {
                 this.finalQuizContainer.setVisible(true);
             }
         } catch (e) {
-            console.error("Error during quiz content generation:", e);
+            this.quizData.quizQuestion = "What is the mandatory first step for infection is?";
+            this.quizData.answers = [
+                { text: "Binding phase", isCorrect: true },
+                { text: "Replicating inside the nucleus", isCorrect: false },
+                { text: "Destroying the host cell", isCorrect: false }
+            ];
+            this.buildQuiz();
+            this.isQuizReady = true;
         }
     }
 
@@ -102,14 +101,25 @@ export class PostGameManager {
             this.llmResponseText.setText("Elaborating...");
             this.continueToQuizBtn.setVisible(false);
 
+            const prompt = 
+                `You are an AI tutor in an educational video game about viral infection phases, designed for middle and high school students. 
+                You will be provided with a description of the specific minigame phase and a "knowledge context". The player has just lost the level. 
+                They will initially respond to the prompt "Why do you think you lost?", and may subsequently ask you follow-up questions.
+
+                Follow these strict rules to formulate your response:
+                1. You must answer using EXCLUSIVELY the provided "knowledge context". Do not introduce outside scientific facts or information.
+                2. Always validate the player's effort. Find the positive logic or merit in their answers and questions before gently correcting or guiding them.
+                3. Your response MUST be extremely brief—strictly a maximum of 2 to 3 short sentences. This is mandatory so the text fits inside a small UI container.`
+
             const chatPromptTemplate = ChatPromptTemplate.fromMessages([
-                ["system", this.chatPrompt],
-                ["user", "Knowledge context: {knowledge}\n\nPlayer answer: {playerMessage}"]
+                ["system", prompt],
+                ["user", "Minigame description: {minigame_description}\n\nKnowledge context: {knowledge}\n\nPlayer answer: {playerMessage}"]
             ]);
 
             const chain = chatPromptTemplate.pipe(this.llm).pipe(new StringOutputParser());
 
             const feedback = await chain.invoke({
+                minigame_description: this.minigame_description,
                 knowledge: this.knowledge,
                 playerMessage: playerMessage
             });
@@ -118,9 +128,10 @@ export class PostGameManager {
             this.continueToQuizBtn.setVisible(true);
             this.chatManager.show();
         } catch (e) {
-            this.llmResponseText.setText("Connection error. Procede with the quiz.");
+            console.log("LLM error" + e)
+            this.llmResponseText.setText("Error contacting LLM. Proceed to quiz.");
             this.continueToQuizBtn.setVisible(true);
-            this.chatManager.show();
+            this.chatManager.hide();
         }
     }
 
@@ -181,7 +192,7 @@ export class PostGameManager {
 
         const windowUi = this.createWindow(cx, cy, 980, 560);
 
-        this.questionText = this.scene.add.text(cx, cy - 95, this.quizData.reflectiveQuestion, {
+        this.questionText = this.scene.add.text(cx, cy - 95, "Why do you think you lost?", {
             fontFamily: this.MENU_FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: 760 }
         }).setOrigin(0.5); 
 

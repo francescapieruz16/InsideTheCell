@@ -1,0 +1,87 @@
+[
+    {
+        "quizQuestion": "What happens immediately after a virus binds to a host cell?",
+        "answers": [
+            {
+                "text": "It attempts to enter the cell",
+                "isCorrect": true
+            },
+            {
+                "text": "It starts replicating outside the cell",
+                "isCorrect": false
+            },
+            {
+                "text": "It destroys the cell instantly",
+                "isCorrect": false
+            }
+        ]
+    },
+    {
+        "quizQuestion": "What is the main goal of the virus during the entry phase?",
+        "answers": [
+            {
+                "text": "To cross the cell membrane",
+                "isCorrect": true
+            },
+            {
+                "text": "To replicate its DNA immediately",
+                "isCorrect": false
+            },
+            {
+                "text": "To attack other viruses",
+                "isCorrect": false
+            }
+        ]
+    },
+    {
+        "quizQuestion": "Which structure must the virus cross to enter the cell?",
+        "answers": [
+            {
+                "text": "The cell membrane",
+                "isCorrect": true
+            },
+            {
+                "text": "The nucleus",
+                "isCorrect": false
+            },
+            {
+                "text": "The mitochondria",
+                "isCorrect": false
+            }
+        ]
+    },
+    {
+        "quizQuestion": "Which process allows the virus to merge with the host cell membrane?",
+        "answers": [
+            {
+                "text": "Membrane fusion",
+                "isCorrect": true
+            },
+            {
+                "text": "DNA replication",
+                "isCorrect": false
+            },
+            {
+                "text": "Protein synthesis",
+                "isCorrect": false
+            }
+        ]
+    },
+    {
+        "quizQuestion": "Which mechanism allows the cell to engulf the virus during entry?",
+        "answers": [
+            {
+                "text": "Endocytosis",
+                "isCorrect": true
+            },
+            {
+                "text": "Photosynthesis",
+                "isCorrect": false
+            },
+            {
+                "text": "Respiration",
+                "isCorrect": false
+            }
+        ]
+    }
+]

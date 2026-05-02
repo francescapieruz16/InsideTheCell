@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
+import { PostGameManager } from './postGame/postGameManager';
 
 class Level2 extends Phaser.Scene {
     private readonly MENU_FONT = 'Arial';
 
     private paths: Phaser.Curves.Path[] = [];
-    private graphics!: Phaser.GameObjects.Graphics;
     private crosshair!: Phaser.GameObjects.Image;
     private viruses!: Phaser.GameObjects.Group;
 
@@ -31,20 +31,8 @@ class Level2 extends Phaser.Scene {
     private virusDurationNonVaccinated: number = 4300;
     private virusDurationVaccinated: number = 7000;
 
-    private infoContainer!: Phaser.GameObjects.Container;
-
-    private llmContainer!: Phaser.GameObjects.Container;
-    private llmTitle!: Phaser.GameObjects.Text;
-    private llmQuestionText!: Phaser.GameObjects.Text;
-    private llmResponseText!: Phaser.GameObjects.Text;
-    private continueButtonContainer!: Phaser.GameObjects.Container;
-
-    private finalQuizContainer!: Phaser.GameObjects.Container;
-    private finalQuizResultText!: Phaser.GameObjects.Text;
-
-    private chatUi!: HTMLDivElement;
-    private chatInput!: HTMLInputElement;
-    private chatSend!: HTMLButtonElement;
+    private postGameManager!: PostGameManager;
+    
 
     private virusKeys = [
         'virus_circle',
@@ -74,6 +62,8 @@ class Level2 extends Phaser.Scene {
         this.load.image('crosshair', '/assets/level 2/crosshair.png');
         this.load.image('explosion', '/assets/level 2/explosion.png');
 
+        this.load.json('level2quizzes', '/assets/quizzes/level2.json');
+
         this.virusKeys.forEach(key => {
             this.load.image(key, `/assets/level1/${key}.png`);
         });
@@ -94,15 +84,9 @@ class Level2 extends Phaser.Scene {
             : this.maxBreachesNonVaccinated;
 
         this.createPaths(width, height);
-        // this.drawDebugPaths();
 
         this.createScoreUI();
         this.createCrosshair();
-
-        this.setupChatUI();
-        this.createInfoUI();
-        this.createLLMUI();
-        this.createFinalQuizUI();
 
         const spawnDelay = this.isVaccinated
             ? this.spawnDelayVaccinated
@@ -113,31 +97,36 @@ class Level2 extends Phaser.Scene {
             loop: true,
             callback: () => this.spawnVirus()
         });
-    }
 
-    private setupChatUI() {
-        this.chatUi = document.getElementById('llm-chat-ui') as HTMLDivElement;
-        this.chatInput = document.getElementById('llm-chat-input') as HTMLInputElement;
-        this.chatSend = document.getElementById('llm-chat-send') as HTMLButtonElement;
+        this.postGameManager = new PostGameManager(this);
+        
+        const infoTitle = "Viruses entered the membrane!";
+        const infoText = "\nYou were not able to stop them in time.\nThe virus fused with the cell membrane.\nThis is the second step of the infection.";
 
-        this.hideChatUi();
+        const minigame_description = 
+            `The objective of the minigame is to prevent viruses from entering the cell membrane
+            The player controls the crosshair and can destroy the viruses before reaching the entry point, if too many viruses
+            get through they enters the cell .`;
 
-        this.chatSend.onclick = () => {
-            this.handleChatSubmit();
-        };
+        // TODO: add knowledge
+        const knowledge = 
+            `After binding to the cell receptors, viruses proceed to the next phase: entry into the cell.
+            They can cross the cell membrane either by membrane fusion or by endocytosis.
+            Stopping the virus before it enters the cell is crucial to prevent the infection from progressing.`;
 
-        this.chatInput.addEventListener('keydown', (event: KeyboardEvent) => {
-            event.stopPropagation();
+        const defaultResponse = 
+            `Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane.
+            They do this through mechanisms like membrane fusion or endocytosis. 
+            Stopping the virus before it enters is essential to prevent the infection from progressing.`;
 
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                this.handleChatSubmit();
-            }
-        });
-
-        this.chatInput.addEventListener('keyup', (event: KeyboardEvent) => {
-            event.stopPropagation();
-        });
+        this.postGameManager.preparePostGame(
+            infoTitle,
+            infoText,
+            minigame_description,
+            knowledge,
+            defaultResponse,
+            'level2quizzes'
+        );
     }
 
     private createScoreUI() {
@@ -186,7 +175,7 @@ class Level2 extends Phaser.Scene {
         this.input.setDefaultCursor('none');
 
         this.crosshair = this.add.image(0, 0, 'crosshair');
-        this.crosshair.setDisplaySize(48, 48);
+        this.crosshair.setDisplaySize(68, 68);
         this.crosshair.setDepth(400);
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -269,17 +258,15 @@ class Level2 extends Phaser.Scene {
         this.tweens.killAll();
         this.viruses.clear(true, true);
 
-        if (!this.isVaccinated && !this.hasShownQuiz) {
+        this.crosshair.setVisible(false);
+        this.input.setDefaultCursor('default');
+
+        if (this.isVaccinated) {
+            this.postGameManager.showGameOverScreen();
+        } else if (!this.hasShownQuiz) {
             this.hasShownQuiz = true;
-
-            this.time.delayedCall(800, () => {
-                this.infoContainer.setVisible(true);
-            });
-
-            return;
+            this.postGameManager.showLearningPhase();
         }
-
-        this.createEndScreen('CELL INFECTED', '#ff3333');
     }
 
     private triggerWin() {
@@ -289,431 +276,12 @@ class Level2 extends Phaser.Scene {
         this.tweens.killAll();
         this.viruses.clear(true, true);
 
-        const cx = this.cameras.main.width / 2;
-        const cy = this.cameras.main.height / 2;
+        this.crosshair.setVisible(false);
+        this.input.setDefaultCursor('default');
 
-        const windowUi = this.createMenuStyleWindow(cx, cy, 820, 380);
-
-        const title = this.add.text(cx, cy - 90, 'LEVEL COMPLETE!', {
-            fontFamily: this.MENU_FONT,
-            fontSize: '48px',
-            fontStyle: 'bold',
-            color: '#00ff88'
-        }).setOrigin(0.5);
-
-        const nextBtn = this.createMenuButton(
-            cx,
-            cy + 20,
-            320,
-            70,
-            'NEXT LEVEL',
-            () => {
-                window.location.href = '/pages/level3.html';
-            }
-        );
-
-        const menuBtn = this.createMenuButton(
-            cx,
-            cy + 110,
-            320,
-            70,
-            'BACK TO MENU',
-            () => {
-                window.location.href = '/pages/menu_page.html';
-            }
-        );
-
-        const container = this.add.container(0, 0, [
-            ...windowUi.list,
-            title,
-            nextBtn,
-            menuBtn
-        ]);
-
-        container.setDepth(600);
+        this.postGameManager.showWinScreen();
     }
 
-    private createEndScreen(titleText: string, color: string) {
-        const cx = this.cameras.main.width / 2;
-        const cy = this.cameras.main.height / 2;
-
-        const windowUi = this.createMenuStyleWindow(cx, cy, 760, 340);
-
-        const title = this.add.text(cx, cy - 65, titleText, {
-            fontFamily: this.MENU_FONT,
-            fontSize: '48px',
-            fontStyle: 'bold',
-            color
-        }).setOrigin(0.5);
-
-        const playAgainBtn = this.createMenuButton(
-            cx,
-            cy + 45,
-            340,
-            72,
-            this.isVaccinated ? 'PLAY AGAIN' : 'TRY VACCINATED',
-            () => {
-                this.hideChatUi();
-                this.scene.restart({ vaccinated: true });
-            }
-        );
-
-        const menuBtn = this.createMenuButton(
-            cx,
-            cy + 130,
-            300,
-            64,
-            'BACK TO MENU',
-            () => {
-                window.location.href = '/pages/menu_page.html';
-            }
-        );
-
-        const container = this.add.container(0, 0, [
-            ...windowUi.list,
-            title,
-            playAgainBtn,
-            menuBtn
-        ]);
-
-        container.setDepth(600);
-    }
-
-    private createInfoUI() {
-        const cx = this.cameras.main.width / 2;
-        const cy = this.cameras.main.height / 2;
-
-        const windowUi = this.createMenuStyleWindow(cx, cy, 980, 540);
-
-        const title = this.add.text(
-            cx,
-            cy - 145,
-            'The virus entered the cell',
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '36px',
-                fontStyle: 'bold',
-                color: '#ffffff',
-                align: 'center'
-            }
-        ).setOrigin(0.5);
-
-        const text = this.add.text(
-            cx,
-            cy - 15,
-            "You blocked some viruses, but too many particles reached the entry point.\n\nAfter attaching to receptors, viruses can enter the cell through the membrane.\nThis is the second phase of infection: viral entry.",
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '24px',
-                fontStyle: 'bold',
-                color: '#ffffff',
-                align: 'center',
-                wordWrap: { width: 760 },
-                lineSpacing: 12
-            }
-        ).setOrigin(0.5);
-
-        const continueBtn = this.createMenuButton(
-            cx,
-            cy + 180,
-            340,
-            70,
-            'CONTINUE',
-            () => {
-                this.infoContainer.setVisible(false);
-                this.llmContainer.setVisible(true);
-                this.showChatUi();
-            }
-        );
-
-        this.infoContainer = this.add.container(0, 0, [
-            ...windowUi.list,
-            title,
-            text,
-            continueBtn
-        ]);
-
-        this.infoContainer.setDepth(600);
-        this.infoContainer.setVisible(false);
-    }
-
-    private createLLMUI() {
-        const cx = this.cameras.main.width / 2;
-        const cy = this.cameras.main.height / 2;
-
-        const windowUi = this.createMenuStyleWindow(cx, cy, 980, 560);
-
-        this.llmTitle = this.add.text(cx, cy - 165, 'ANALYZE', {
-            fontFamily: this.MENU_FONT,
-            fontSize: '48px',
-            fontStyle: 'bold',
-            color: '#ffffff'
-        }).setOrigin(0.5);
-
-        this.llmQuestionText = this.add.text(
-            cx,
-            cy - 95,
-            'Why do you think you lost?',
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '30px',
-                fontStyle: 'bold',
-                color: '#ffffff',
-                align: 'center',
-                wordWrap: { width: 760 }
-            }
-        ).setOrigin(0.5);
-
-        this.llmResponseText = this.add.text(
-            cx,
-            cy + 20,
-            '',
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '24px',
-                fontStyle: 'bold',
-                color: '#ffffff',
-                align: 'center',
-                wordWrap: { width: 760 },
-                lineSpacing: 10
-            }
-        ).setOrigin(0.5);
-
-        this.continueButtonContainer = this.createMenuButton(
-            cx,
-            cy + 185,
-            260,
-            64,
-            'CONTINUE',
-            () => {
-                this.llmContainer.setVisible(false);
-                this.hideChatUi();
-                this.finalQuizContainer.setVisible(true);
-            }
-        );
-
-        this.continueButtonContainer.setVisible(false);
-
-        this.llmContainer = this.add.container(0, 0, [
-            ...windowUi.list,
-            this.llmTitle,
-            this.llmQuestionText,
-            this.llmResponseText,
-            this.continueButtonContainer
-        ]);
-
-        this.llmContainer.setDepth(610);
-        this.llmContainer.setVisible(false);
-    }
-
-    private createFinalQuizUI() {
-        const cx = this.cameras.main.width / 2;
-        const cy = this.cameras.main.height / 2;
-
-        const windowUi = this.createMenuStyleWindow(cx, cy, 960, 560);
-
-        const title = this.add.text(cx, cy - 165, 'CHECK', {
-            fontFamily: this.MENU_FONT,
-            fontSize: '42px',
-            fontStyle: 'bold',
-            color: '#ffffff'
-        }).setOrigin(0.5);
-
-        const question = this.add.text(
-            cx,
-            cy - 85,
-            'What happens during viral entry?',
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '28px',
-                fontStyle: 'bold',
-                color: '#ffffff',
-                align: 'center',
-                wordWrap: { width: 720 }
-            }
-        ).setOrigin(0.5);
-
-        const answerA = this.createMenuButton(
-            cx,
-            cy + 10,
-            700,
-            68,
-            'A) The virus enters the cell after attachment',
-            () => this.handleFinalQuiz(true)
-        );
-
-        const answerB = this.createMenuButton(
-            cx,
-            cy + 95,
-            620,
-            68,
-            'B) The virus becomes harmless immediately',
-            () => this.handleFinalQuiz(false)
-        );
-
-        const answerC = this.createMenuButton(
-            cx,
-            cy + 180,
-            620,
-            68,
-            'C) The cell stops existing',
-            () => this.handleFinalQuiz(false)
-        );
-
-        this.finalQuizResultText = this.add.text(cx, cy + 265, '', {
-            fontFamily: this.MENU_FONT,
-            fontSize: '24px',
-            fontStyle: 'bold',
-            color: '#00ff00',
-            align: 'center'
-        }).setOrigin(0.5);
-
-        this.finalQuizContainer = this.add.container(0, 0, [
-            ...windowUi.list,
-            title,
-            question,
-            answerA,
-            answerB,
-            answerC,
-            this.finalQuizResultText
-        ]);
-
-        this.finalQuizContainer.setDepth(620);
-        this.finalQuizContainer.setVisible(false);
-    }
-
-    private handleChatSubmit() {
-        const userText = this.chatInput.value.trim();
-
-        if (!userText) return;
-
-        this.hideChatUi();
-        this.llmTitle.setText('LEARN');
-
-        const lower = userText.toLowerCase();
-
-        let feedback =
-            "You lost because too many viruses reached the entry point and entered the cell. " +
-            "This represents the second phase of infection: viral entry through the cell membrane.";
-
-        if (
-            lower.includes('entry') ||
-            lower.includes('enter') ||
-            lower.includes('cell') ||
-            lower.includes('membrane') ||
-            lower.includes('virus')
-        ) {
-            feedback =
-                "Good reasoning. The key problem is that the viruses were not blocked before reaching the entry point. " +
-                "After attachment, viruses can enter the cell and start the next steps of infection.";
-        }
-
-        this.llmQuestionText.setText('Here is what happened:');
-        this.llmResponseText.setText(feedback);
-        this.continueButtonContainer.setVisible(true);
-    }
-
-    private handleFinalQuiz(correct: boolean) {
-        if (correct) {
-            this.finalQuizResultText.setText('Correct! Vaccinated mode unlocked.');
-            this.finalQuizResultText.setColor('#00ff00');
-
-            this.time.delayedCall(1000, () => {
-                this.hideChatUi();
-                this.scene.restart({ vaccinated: true });
-            });
-        } else {
-            this.finalQuizResultText.setText('Wrong answer. Try again.');
-            this.finalQuizResultText.setColor('#770000');
-        }
-    }
-
-    private createMenuStyleWindow(x: number, y: number, width: number, height: number) {
-        const container = this.add.container(0, 0);
-
-        const shadow = this.add.rectangle(x + 8, y + 8, width, height, 0x000000, 0.35);
-        const outer = this.add.rectangle(x, y, width, height, 0xff5a0a, 1)
-            .setStrokeStyle(4, 0xffffff);
-        const inner = this.add.rectangle(x, y, width - 12, height - 12, 0xd94700, 1);
-        const shine = this.add.rectangle(x, y - height / 2 + 18, width - 14, 22, 0xff8a3d, 0.9);
-
-        container.add([shadow, outer, inner, shine]);
-        return container;
-    }
-
-    private createMenuButton(
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-        label: string,
-        onClick: () => void
-    ) {
-        const container = this.add.container(x, y);
-
-        const shadow = this.add.rectangle(6, 6, width, height, 0x000000, 0.25);
-        const outer = this.add.rectangle(0, 0, width, height, 0xff5a0a, 1)
-            .setStrokeStyle(4, 0xffffff);
-        const inner = this.add.rectangle(0, 0, width - 8, height - 8, 0xff4d06, 1);
-        const shine = this.add.rectangle(0, -height / 2 + 10, width - 8, 16, 0xff8f47, 0.9);
-
-        const text = this.add.text(0, 0, label, {
-            fontFamily: this.MENU_FONT,
-            fontSize: '22px',
-            fontStyle: 'bold',
-            color: '#ffffff',
-            align: 'center',
-            wordWrap: { width: width - 30 }
-        }).setOrigin(0.5);
-
-        const hit = this.add.rectangle(0, 0, width, height, 0xffffff, 0.001)
-            .setInteractive({ useHandCursor: true });
-
-        hit.on('pointerover', () => {
-            container.setScale(1.08);
-        });
-
-        hit.on('pointerout', () => {
-            container.setScale(1);
-        });
-
-        hit.on('pointerdown', () => {
-            container.setScale(1.02);
-            onClick();
-        });
-
-        hit.on('pointerup', () => {
-            container.setScale(1.08);
-        });
-
-        container.add([shadow, outer, inner, shine, text, hit]);
-        return container;
-    }
-
-    private showChatUi() {
-        this.chatInput.value = '';
-        this.chatUi.style.display = 'flex';
-        this.isChatActive = true;
-
-        if (this.input.keyboard) {
-            this.input.keyboard.enabled = false;
-        }
-
-        setTimeout(() => {
-            this.chatInput.focus();
-        }, 0);
-    }
-
-    private hideChatUi() {
-        if (!this.chatUi) return;
-
-        this.chatUi.style.display = 'none';
-        this.isChatActive = false;
-
-        if (this.input.keyboard) {
-            this.input.keyboard.enabled = true;
-        }
-    }
 
     private createPaths(width: number, height: number) {
         this.paths = [];
@@ -824,25 +392,18 @@ class Level2 extends Phaser.Scene {
             }
         });
     }
-
-    private drawDebugPaths() {
-        if (this.graphics) this.graphics.destroy();
-
-        this.graphics = this.add.graphics();
-        this.graphics.lineStyle(3, 0xff0000, 1);
-        this.graphics.setDepth(100);
-
-        this.paths.forEach(p => p.draw(this.graphics));
-    }
 }
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: window.innerWidth,
+        height: window.innerHeight,
+    },
     parent: 'game-container',
     render: {
-        pixelArt: true,
         roundPixels: true
     },
     scene: [Level2]

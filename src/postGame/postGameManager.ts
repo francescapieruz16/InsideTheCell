@@ -207,7 +207,7 @@ export class PostGameManager {
         const windowUi = this.createWindow(cx, cy, 820, 420);
         
         const title = this.scene.add.text(cx, cy - 100, 'GAME OVER', {
-            fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#ff0000'
+            fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#770000'
         }).setOrigin(0.5);
 
         const text = this.scene.add.text(cx, cy - 20, 'The virus breached the cell defenses.', {

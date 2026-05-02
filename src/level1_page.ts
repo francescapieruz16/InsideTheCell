@@ -73,6 +73,8 @@ class Level1 extends Phaser.Scene {
         this.load.image('virus_triangle', '/assets/level1/virus_triangle.png');
         this.load.image('cart', '/assets/level1/cart.png');
         this.load.image('cart_full', '/assets/level1/cart_full.png');
+
+        this.load.json('level1quizzes', '/assets/quizzes/level1.json');
     }
 
     create() {
@@ -145,8 +147,6 @@ class Level1 extends Phaser.Scene {
         const knowledge = "During the binding phase, viruses use their surface proteins to attach to specific receptors on the host cell. This lock-and-key mechanism is the mandatory first step for the virus to enter the cell and cause an infection.";
 
         const defaultResponse = "Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key. Let's proceed to the quiz to review this mandatory first step of infection!"
-
-        this.load.json('level1quizzes', '/assets/quizzes/level1.json');
 
         this.postGameManager.preparePostGame(
             infoTitle,

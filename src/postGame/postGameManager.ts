@@ -28,6 +28,7 @@ export class PostGameManager {
     private minigame_description: string = "";
     private knowledge: string = "";
     private defaultResponse: string = ""
+    private nextLvl: integer = 0;
 
     private llm: ChatGoogleGenerativeAI | null = null;
 
@@ -73,6 +74,8 @@ export class PostGameManager {
         this.knowledge = knowledge;
         this.defaultResponse = defaultResponse;
         this.quizKey = quizzesKey;
+        const currentLvl = parseInt(quizzesKey.replace(/\D/g, ''), 10);
+        this.nextLvl = currentLvl  + 1;
 
         this.buildInfo();
         this.buildChat();
@@ -186,17 +189,22 @@ export class PostGameManager {
             fontFamily: this.MENU_FONT, fontSize: '48px', fontStyle: 'bold', color: '#00ff88'
         }).setOrigin(0.5);
 
-        const nextBtn = this.createButton(cx, cy + 20, 320, 70, 'Next level', () => {
-            this.chatManager.hide()
-            window.location.href = '/pages/level2.html';
-        });
-
         const menuBtn = this.createButton(cx, cy + 110, 320, 70, 'Menu', () => {
             this.chatManager.hide()
             window.location.href = '/pages/menu_page.html';
         });
 
-        this.scene.add.container(0, 0, [...windowUi.list, title, nextBtn, menuBtn]).setDepth(120);
+        if (this.nextLvl <= 6) {
+            const nextBtn = this.createButton(cx, cy + 20, 320, 70, 'Next level', () => {
+                this.chatManager.hide()
+                window.location.href = '/pages/level' + this.nextLvl + '.html';
+            });
+
+            this.scene.add.container(0, 0, [...windowUi.list, title, nextBtn, menuBtn]).setDepth(120);
+        }
+        else {
+            this.scene.add.container(0, 0, [...windowUi.list, title, menuBtn]).setDepth(120);
+        }
     }
 
     // called when player lose in vaccinated mode

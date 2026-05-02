@@ -1,0 +1,87 @@
+[
+    {
+        "quizQuestion": "What is the mandatory first step for a virus to enter a cell and cause an infection?",
+        "answers": [
+            {
+                "text": "The binding phase",
+                "isCorrect": true
+            },
+            {
+                "text": "Replicating inside the nucleus",
+                "isCorrect": false
+            },
+            {
+                "text": "Destroying the host cell",
+                "isCorrect": false
+            }
+        ]
+    },
+    {
+        "quizQuestion": "How do viruses attach to the host cell during the binding phase?",
+        "answers": [
+            {
+                "text": "By using their surface proteins to attach to specific receptors",
+                "isCorrect": true
+            },
+            {
+                "text": "By piercing the cell membrane with a tail",
+                "isCorrect": false
+            },
+            {
+                "text": "By releasing toxins into the surrounding area",
+                "isCorrect": false
+            }
+        ]
+    },
+    {
+        "quizQuestion": "What analogy is used to describe how viral surface proteins interact with host cell receptors?",
+        "answers": [
+            {
+                "text": "A lock-and-key mechanism",
+                "isCorrect": true
+            },
+            {
+                "text": "A magnet attracting iron",
+                "isCorrect": false
+            },
+            {
+                "text": "A sponge absorbing water",
+                "isCorrect": false
+            }
+        ]
+    },
+    {
+        "quizQuestion": "Which part of the virus is responsible for attaching to the host cell?",
+        "answers": [
+            {
+                "text": "Surface proteins",
+                "isCorrect": true
+            },
+            {
+                "text": "Internal DNA",
+                "isCorrect": false
+            },
+            {
+                "text": "The viral nucleus",
+                "isCorrect": false
+            }
+        ]
+    },
+    {
+        "quizQuestion": "What must the viral surface proteins attach to on the host cell?",
+        "answers": [
+            {
+                "text": "Specific receptors",
+                "isCorrect": true
+            },
+            {
+                "text": "Random parts of the membrane",
+                "isCorrect": false
+            },
+            {
+                "text": "The cell's DNA",
+                "isCorrect": false
+            }
+        ]
+    }
+]

@@ -9,7 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "phaser": "^3.80.0"
+    "@langchain/core": "^1.1.42",
+    "@langchain/google-genai": "^2.1.29",
+    "phaser": "^3.80.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "typescript": "^5.0.0",

@@ -120,6 +120,15 @@
         background-color: #4a659e;
     }
 
+    #delete-api-btn {
+        background-color: #d90000;
+        margin-top: 10px;
+    }
+
+    #delete-api-btn:hover {
+        background-color: #a30000;
+    }
+
     #api-key-status {
         color: #00ff00;
         font-weight: bold;
@@ -143,6 +152,7 @@
               placeholder="Insert your Gemini API key here" 
           >
           <button onclick="saveApiKey()">Save</button>
+          <button id="delete-api-btn" onclick="deleteApiKey()">Delete API Key</button>
           <p id="api-key-status">Saved!</p>
       </div>
   </div>
@@ -177,6 +187,21 @@
           } else {
               alert("Insert a valid API key");
           }
+      }
+
+      function deleteApiKey() {
+          localStorage.removeItem('GEMINI_API_KEY');
+          document.getElementById('gemini-api-input').value = '';
+          
+          const statusText = document.getElementById('api-key-status');
+          statusText.textContent = 'Deleted!';
+          statusText.style.color = '#ffb3b3'; // Rosso chiaro per far contrasto con lo sfondo arancione
+          statusText.style.display = 'block';
+          
+          setTimeout(() => { 
+              statusText.style.display = 'none'; 
+              toggleApiMenu();
+          }, 1000);
       }
   </script>
   <div id="app"></div>

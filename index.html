@@ -60,9 +60,125 @@
       inset 0 0 10px #FF5F1F;
     transform: translateY(2px);
   }
+  .api-key-container {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        font-family: Arial, sans-serif;
+    }
+
+    .key-btn {
+        background-color: #3d5381;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .api-menu {
+        display: none;
+        position: absolute;
+        top: 60px;
+        right: 0;
+        background-color: #ff5a0a;
+        padding: 15px;
+        border: 2px solid #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        width: 280px;
+    }
+
+    .api-menu input {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+        border: none;
+        border-radius: 4px;
+    }
+
+    .api-menu button {
+        width: 100%;
+        padding: 8px;
+        background-color: #3d5381;
+        color: white;
+        border: 2px solid #ffffff;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .api-menu button:hover {
+        background-color: #4a659e;
+    }
+
+    #api-key-status {
+        color: #00ff00;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        margin-top: 10px;
+        display: none;
+    }
 </style>
 </head>
 <body>
+  <div class="api-key-container">
+      <button class="key-btn" onclick="toggleApiMenu()" title="API Key settings">
+          🔑
+      </button>
+
+      <div id="api-menu" class="api-menu">
+          <input 
+              type="password" 
+              id="gemini-api-input" 
+              placeholder="Insert your Gemini API key here" 
+          >
+          <button onclick="saveApiKey()">Save</button>
+          <p id="api-key-status">Saved!</p>
+      </div>
+  </div>
+  <script>
+      window.onload = () => {
+          const savedKey = localStorage.getItem('GEMINI_API_KEY');
+          if (savedKey) {
+              document.getElementById('gemini-api-input').value = savedKey;
+          }
+      };
+
+      function toggleApiMenu() {
+          const menu = document.getElementById('api-menu');
+          if (menu.style.display === 'none' || menu.style.display === '') {
+              menu.style.display = 'block';
+          } else {
+              menu.style.display = 'none';
+          }
+      }
+
+      function saveApiKey() {
+          const key = document.getElementById('gemini-api-input').value.trim();
+          if (key.length === 39) {
+              localStorage.setItem('GEMINI_API_KEY', key);
+              
+              const statusText = document.getElementById('api-key-status');
+              statusText.style.display = 'block';
+              setTimeout(() => { 
+                  statusText.style.display = 'none'; 
+                  toggleApiMenu();
+              }, 2000);
+          } else {
+              alert("Insert a valid API key");
+          }
+      }
+  </script>
   <div id="app"></div>
   <img id="background" src="/assets/background.png"/>
   <button id="playBtn">Play</button>

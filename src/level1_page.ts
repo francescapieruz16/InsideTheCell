@@ -146,12 +146,15 @@ class Level1 extends Phaser.Scene {
 
         const defaultResponse = "Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key. Let's proceed to the quiz to review this mandatory first step of infection!"
 
+        this.load.json('level1quizzes', '/assets/quizzes/level1.json');
+
         this.postGameManager.preparePostGame(
             infoTitle,
             infoText,
             minigame_description,
             knowledge,
-            defaultResponse
+            defaultResponse,
+            'level1quizzes'
         );
 
         this.setupGame();

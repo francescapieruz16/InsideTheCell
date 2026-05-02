@@ -3,7 +3,6 @@ import { ChatManager } from './chatManager';
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import quiz from '../../assets/quizzes/level1_quizzes.json'
 
 export class PostGameManager {
     private scene: Phaser.Scene;
@@ -16,6 +15,7 @@ export class PostGameManager {
     private readonly MENU_FONT = 'Arial';
 
     private quizData: any = {};
+    private quizKey: string = "";
 
     private infoContainer!: Phaser.GameObjects.Container;
     private llmContainer!: Phaser.GameObjects.Container;
@@ -29,18 +29,27 @@ export class PostGameManager {
     private knowledge: string = "";
     private defaultResponse: string = ""
 
-    private llm!: ChatGoogleGenerativeAI;
+    private llm: ChatGoogleGenerativeAI | null = null;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
 
         const savedApiKey = localStorage.getItem('GEMINI_API_KEY') || "";
 
-        this.llm = new ChatGoogleGenerativeAI({
-            model: "gemini-3-flash-preview",
-            apiKey: savedApiKey,
-            temperature: 0.7,
-        });
+        if (savedApiKey.trim() !== "") {
+            try {
+                this.llm = new ChatGoogleGenerativeAI({
+                    model: "gemini-3-flash-preview",
+                    apiKey: savedApiKey,
+                    temperature: 0.7,
+                });
+            } catch (e) {
+                console.warn("Error initzializing LLM:", e);
+                this.llm = null;
+            }
+        } else {
+            this.llm = null;
+        }
         
         this.chatManager = new ChatManager(
         (playerMessage: string) => {
@@ -54,7 +63,7 @@ export class PostGameManager {
     );
     }
 
-    public preparePostGame(infoTitle: string, infoText: string, minigame_description: string, knowledge: string, defaultResponse: string) {
+    public preparePostGame(infoTitle: string, infoText: string, minigame_description: string, knowledge: string, defaultResponse: string, quizzesKey: string) {
         this.quizData = {
             infoTitle,
             infoText,
@@ -63,6 +72,7 @@ export class PostGameManager {
         this.minigame_description = minigame_description;
         this.knowledge = knowledge;
         this.defaultResponse = defaultResponse;
+        this.quizKey = quizzesKey;
 
         this.buildInfo();
         this.buildChat();
@@ -72,9 +82,16 @@ export class PostGameManager {
 
     private loadRandomQuiz() {
         try {
+            const quizzes = this.scene.cache.json.get(this.quizKey);
+
+            if (!Array.isArray(quizzes) || quizzes.length === 0) {
+                throw new Error("Invalid or empty quiz JSON");
+            }
+
+
             // pick a random quiz from the file
-            const randomIndex = Phaser.Math.Between(0, quiz.length - 1);
-            const selectedQuiz = quiz[randomIndex];
+            const randomIndex = Phaser.Math.Between(0, quizzes.length - 1);
+            const selectedQuiz = quizzes[randomIndex];
 
             this.quizData.quizQuestion = selectedQuiz.quizQuestion;
             this.quizData.answers = selectedQuiz.answers;
@@ -109,6 +126,10 @@ export class PostGameManager {
 
             this.llmResponseText.setText("Elaborating...");
             this.continueToQuizBtn.setVisible(false);
+
+            if (!this.llm) {
+                throw new Error("API key not present.");
+            }
 
             const prompt = 
                 `You are an AI tutor in an educational video game about viral infection phases, designed for middle and high school students. 

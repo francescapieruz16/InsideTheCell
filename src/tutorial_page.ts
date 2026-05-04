@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
 
+import ABI from './classes/ABI';
+import Spaceship from './classes/spaceship';
+
 const SCREEN_W = 1280;
 const SCREEN_H = 720;
 
 // --- SCENA 1: ESTERNO DELLA CELLULA ---
 // --- SCENA 1: ESTERNO DELLA CELLULA ---
 class ExternalScene extends Phaser.Scene {
-    private player!: Phaser.GameObjects.Sprite;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private interactKey!: Phaser.Input.Keyboard.Key;
     private portal!: Phaser.GameObjects.Sprite;
@@ -34,6 +36,12 @@ class ExternalScene extends Phaser.Scene {
     //variabili per la raccolta dei moduli
     private spikePartsCollected: number = 0;
     private canShowReceptorWarning: boolean = true;
+    private spikeCounterText!: Phaser.GameObjects.Text;
+    private hasFoundACE2: boolean = false;
+    private canShowDebrisWarning: boolean = true;
+
+    private player!: Spaceship;
+    private abi!: ABI;;
 
     constructor() {
         super('ExternalScene'); 
@@ -78,26 +86,12 @@ class ExternalScene extends Phaser.Scene {
         this.hasSpikeModule = false;
         this.canShowReceptorWarning = true;
 
-        //this.lipidOcean.setTileScale(2, 2); //Scala il pattern per renderlo più grande e meno ripetitivo
-        //Verifica presenza del modulo Spike         
-
-        // // LA CHIAVE (Modulo Spike)
-        // this.spikeItem = this.add.circle(SCREEN_W, 400, 20, 0xffeb3b); // Cerchietto giallo         //Valuta di rimuovere
-        // this.physics.add.existing(this.spikeItem);
-
-        // // Animazione fluttuante per la chiave (opzionale ma molto carina)
-        // this.tweens.add({
-        //     targets: this.spikeItem,
-        //     y: '-=20',
-        //     duration: 1500,
-        //     yoyo: true,
-        //     repeat: -1
-        // });
-
         // GIOCATORE
-        this.player = this.physics.add.sprite(SCREEN_W, SCREEN_H, 'nav_front');
+        this.player = new Spaceship(this, 1000, 1800, 'nav_front');
         this.player.setScale(0.35);
         (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+
+        this.abi = new ABI(this);
 
          // --- 1. GENERAZIONE DEI RELITTI VIRALI (6 in totale) ---
         // Array che definisce quali virus hanno il pezzo (true) e quali no (false)
@@ -125,7 +119,7 @@ class ExternalScene extends Phaser.Scene {
         // --- 2. GENERAZIONE DEI RECETTORI FINTI (6 in totale) ---
         const fakeReceptorsCoords = [
             { x: 500, y: 350, key: 'receptor_fake1' }, 
-            { x: 1250, y: 175, key: 'receptor_fake2' }, 
+            { x: 1600, y: 1100, key: 'receptor_fake2' }, 
             { x: 250, y: 1750, key: 'receptor_fake3' },
             { x: 1750, y: 750, key: 'receptor_fake1' }, 
             { x: 1600, y: 1800, key: 'receptor_fake2' }, 
@@ -147,9 +141,8 @@ class ExternalScene extends Phaser.Scene {
 
 
         // --- 3. IL RECETTORE CORRETTO (ACE2 - 1 solo) ---
-        this.portal = this.add.sprite(800, 1800, 'receptor_ace2');
-        this.portal.setScale(0.2);
-
+        this.portal = this.add.sprite(1000, 200, 'receptor_ace2'); 
+        this.portal.setScale(0.2); 
         this.physics.add.existing(this.portal, true);
        
         this.physics.add.collider(this.player, this.portal, () => {
@@ -178,6 +171,26 @@ class ExternalScene extends Phaser.Scene {
 
         // --- CREAZIONE DELL'INTERFACCIA DI DIALOGO ---
         this.createDialogueUI();
+
+        // --- CREAZIONE CONTATORE UI ---
+        // Lo posizioniamo in alto a destra (SCREEN_W - 20 pixel di margine)
+        this.spikeCounterText = this.add.text(this.scale.width - 20, 20, 'Spike Fragments: 0/3', {
+            fontSize: '24px',
+            fontStyle: 'bold',
+            color: '#ffeb3b',
+            backgroundColor: '#00000088',
+            padding: { x: 15, y: 10 }
+        })
+        .setOrigin(1, 0) // Ancorato in alto a destra
+        .setScrollFactor(0) // Incollato alla telecamera
+        .setDepth(100)
+        .setVisible(false)
+
+        this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+            if (this.spikeCounterText) {
+                this.spikeCounterText.setPosition(gameSize.width - 20, 20);
+            }
+        });
     }
 
     update() {
@@ -186,20 +199,23 @@ class ExternalScene extends Phaser.Scene {
         //TRIGGER SEQUENZA INTRODUTTIVA
         if (!this.hasSeenIntro && this.isTryingToMove()) {
             this.hasSeenIntro = true;
-            this.showDialogue(
+            this.abi.showDialogue(
                 "A.B.I.",
-                ["Hey! I am A.B.I.: Advanced Biometric Informer! I will be your assistant during this exploration!", "Systems online! Everything is ready for the exploration.", "We are in the extracellular space, and that thing under us is the plasma membrane—the cell's actual logistical border.", "Our mission is to infiltrate and map the internal processes.", "My sensors are detecting an ACE2 receptor on the membrane; it could be our gateway. Let's go take a closer look!"]            );
+                ["Hey! I am A.B.I.: Advanced Biometric Informer! I will be your assistant during this exploration!", "We are in the extracellular space, and that thing under us is the plasma membrane—the cell's actual logistical border.", "To infiltrate the cell, we must follow a strict protocol. Step 1: Locate the target gateway. You must search the membrane and find the ACE2 receptor first.",
+                    "Step 2: Once the ACE2 receptor is found and scanned, our systems will know exactly which molecular key we need to synthesize.",
+                    "Step 3: Only then can we scavenge those floating viral remnants to extract the necessary Spike protein fragments.",
+                    "Let's move! Explore the area and locate the ACE2 receptor first!" ]            );
             return;
         }
 
         // 2. GESTIONE STATO "TALKING": Ora manda avanti le pagine
-        if (this.gameState === 'TALKING') {
+        if (this.abi.isTalking) {
             (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
             
             if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
-                this.nextDialoguePage(); // Va alla pagina successiva invece di chiudere subito
+                this.abi.nextDialoguePage();
             }
-            return;
+            return; 
         }
         if (this.gameState === 'EXPLORING') {
             this.handleMovement();
@@ -215,7 +231,7 @@ class ExternalScene extends Phaser.Scene {
 
     private createDialogueUI() {
         // Creiamo un Container fissato allo schermo (ScrollFactor = 0)
-        this.uiContainer = this.add.container(SCREEN_W / 2, SCREEN_H - 120);
+        this.uiContainer = this.add.container(this.scale.width / 2, this.scale.height - 120);
         this.uiContainer.setScrollFactor(0); 
         this.uiContainer.setDepth(100); // Assicura che sia sempre in primo piano
 
@@ -255,29 +271,6 @@ class ExternalScene extends Phaser.Scene {
         this.uiContainer.setVisible(false);
     }
 
-    private showDialogue(name: string, text: string | string[]) {
-        this.gameState = 'TALKING';
-        this.dialogueName.setText(name);
-
-        // Se è una stringa singola, la dividiamo automaticamente
-        if (typeof text === 'string') {
-            // 180 è il limite indicativo di caratteri per pagina. Puoi alzarlo o abbassarlo.
-            this.dialoguePages = this.autoSplitText(text, 180); 
-        } else {
-            // Se gli passi un Array, usi i tuoi tagli personalizzati, per farlo usa ["Prima pagina", "Seconda pagina", "Terza pagina"] invece di una stringa lunga
-            this.dialoguePages = text;
-        }
-
-        this.currentDialoguePage = 0;
-        this.updateDialogueView();
-        this.uiContainer.setVisible(true);
-    }
-
-    // Mostra la pagina corrente e aggiorna il testo
-    private updateDialogueView() {
-        this.dialogueText.setText(this.dialoguePages[this.currentDialoguePage]);
-    }
-
 
     private startTransitionToInside() {
         this.isTransitioning = true;
@@ -293,18 +286,6 @@ class ExternalScene extends Phaser.Scene {
         });
     }
 
-    // Gestisce il click sullo SPAZIO
-    private nextDialoguePage() {
-        if (this.currentDialoguePage < this.dialoguePages.length - 1) {
-            this.currentDialoguePage++;
-            this.updateDialogueView();
-        } else {
-            this.hideDialogue();
-        }
-        if (this.waitingForTransition) {
-                this.startTransitionToInside();
-            }
-    }
 
     // Funzione che divide il testo in modo intelligente a fine frase
     private autoSplitText(text: string, maxLength: number): string[] {
@@ -389,7 +370,7 @@ class ExternalScene extends Phaser.Scene {
         this.hasSpikeModule = true;
         this.spikeItem.destroy(); // Fai sparire l'oggetto dalla mappa
 
-        this.showDialogue(
+        this.abi.showDialogue(
             "A.B.I.",
             "Great job! You've retrieved a Spike Protein Module. Our external surface now perfectly mimics the envelope of SARS-CoV-2. We can trick the ACE2 receptor. Let's return to the docking point."        );
     }
@@ -397,12 +378,25 @@ class ExternalScene extends Phaser.Scene {
     // Funzione chiamata quando sbatti contro il rettangolo verde
     private tryEnterACE2() {
         if (this.gameState === 'TALKING' || this.isTransitioning) return;
-
+        
+        if (!this.hasFoundACE2) {
+            this.hasFoundACE2 = true; // Sblocca la raccolta dei frammenti!
+            
+            // Fermiamo il player per fargli leggere il dialogo
+            (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+            
+            this.abi.showDialogue(
+                "A.B.I.",
+                "Excellent! Target identified: the Angiotensin-Converting Enzyme 2 (ACE2) receptor. This is our gateway. However, we cannot trigger endocytosis without the correct molecular key. Search the viral debris scattered nearby for Spike protein fragments!"
+            );
+            return; // Usciamo dalla funzione
+        }
+        
         if (!this.hasSpikeModule) {
             if (this.canShowReceptorWarning) {
                 this.canShowReceptorWarning = false;
                 
-                this.showDialogue(
+                this.abi.showDialogue(
                     "A.B.I.",
                     "This is the correct ACE2 receptor, but access is denied. Our biochemical affinity is currently insufficient. We need to fully assemble the Spike Module first. Let's search the area for usable viral debris to extract the missing components."
                 );
@@ -414,38 +408,74 @@ class ExternalScene extends Phaser.Scene {
         } else {
             // Hai la chiave completa e sei sul recettore giusto
             (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
-            this.waitingForTransition = true;
 
-            this.showDialogue(
+            this.abi.showDialogue(
                 "A.B.I.",
                 "Molecular recognition confirmed. Docking sequence initiated. Hold on tight, the membrane is forming an invagination to pull us inside!"
+            , () => {
+                    this.startTransitionToInside();
+                }
             );
         }
     }
 
     private extractSpikePart(debris: Phaser.GameObjects.GameObject, hasPart: boolean) {
-        if (this.gameState === 'TALKING' || this.isTransitioning) return;
+        // 1. Usiamo this.abi.isTalking invece del vecchio gameState!
+        if (this.abi.isTalking || this.isTransitioning) return;
+        
+        if (!this.hasFoundACE2) {
+            // 2. Controllo Anti-Spam
+            if (this.canShowDebrisWarning) {
+                this.canShowDebrisWarning = false;
+                
+                // 3. Fermiamo fisicamente la navicella
+                (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+
+                this.abi.showDialogue(
+                    "A.B.I.",
+                    "Wait! Don't extract random materials yet. We must locate our specific target, the ACE2 receptor, before we know exactly which viral components we need to synthesize the key."
+                );
+
+                // Ripristiniamo l'avviso dopo 3 secondi
+                this.time.delayedCall(3000, () => {
+                    this.canShowDebrisWarning = true;
+                });
+            }
+            return; // Interrompe la funzione qui: il detrito NON viene distrutto
+        }
 
         // Distruggi il relitto in modo che non possa essere interagito di nuovo
         debris.destroy();
 
         if (hasPart) {
             this.spikePartsCollected++;
+
+            this.spikeCounterText.setText(`Spike Fragments: ${this.spikePartsCollected}/3`);
+            
+            // Se è il primissimo pezzo che troviamo, rendiamo visibile il contatore
+            if (this.spikePartsCollected === 1) {
+                this.spikeCounterText.setVisible(true);
+            }
             
             if (this.spikePartsCollected < 3) {
-                this.showDialogue(
+                // 4. Corretto: this.abi.showDialogue
+                this.abi.showDialogue(
                     "A.B.I.",
                     `Usable protein fragment extracted! We currently have ${this.spikePartsCollected} out of 3 necessary components. Let's keep searching the area for more viable debris.`
                 );
             } else {
                 this.hasSpikeModule = true;
-                this.showDialogue(
+                this.spikeCounterText.setColor('#4caf50');
+                
+                // 4. Corretto: this.abi.showDialogue
+                this.abi.showDialogue(
                     "A.B.I.",
                     "Third fragment acquired! The Spike Module is fully assembled. Our hull now mimics the viral envelope perfectly. Let's locate the specific ACE2 receptor and initiate docking."
                 );
             }
         } else {
-            this.showDialogue(
+            // 4. Corretto: this.abi.showDialogue
+            this.abi.showDialogue(
                 "A.B.I.",
                 "Scanning... Negative. This viral particle is too degraded. The glycoproteins have completely denatured. There is nothing useful to extract here."
             );
@@ -459,7 +489,7 @@ class ExternalScene extends Phaser.Scene {
         if (this.canShowReceptorWarning) {
             this.canShowReceptorWarning = false;
             
-            this.showDialogue(
+            this.abi.showDialogue(
                 "A.B.I.",
                 "Negative. This is not the target receptor. The molecular structure does not match our parameters. We need to find the specific Angiotensin-Converting Enzyme 2 (ACE2) to gain entry."
             );
@@ -554,36 +584,22 @@ class InternalScene extends Phaser.Scene {
 // --- CONFIGURAZIONE E AVVIO ---
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    // width e height diventano le dimensioni "logiche" (o native) del tuo gioco
-    width: SCREEN_W, 
-    height: SCREEN_H,
-    pixelArt: true,
+    // --- NUOVA CONFIGURAZIONE DELLO SCHERMO ---
+    scale: {
+        mode: Phaser.Scale.RESIZE, // Adatta il gioco alla finestra
+        parent: 'game-container', // Assicurati di avere un div con questo ID nel tuo file HTML (se usi un container)
+        width: '100%',
+        height: '100%',
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    // ------------------------------------------
     physics: {
         default: 'arcade',
         arcade: {
-            debug: true
+            debug: false // (o true se stai ancora testando le hitbox!)
         }
     },
-    // Gestione della scalabilità
-    scale: {
-        // FIT: Ridimensiona il canvas per riempire la finestra mantenendo le proporzioni esatte. 
-        // Aggiungerà bande nere ai lati o sopra/sotto se lo schermo ha un formato diverso.
-        mode: Phaser.Scale.FIT,
-        
-        // CENTER_BOTH: Centra il gioco sia verticalmente che orizzontalmente nella pagina
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        
-        // Risoluzione minima e massima (opzionale, ma utile per evitare che diventi minuscolo su mobile)
-        min: {
-            width: 800,
-            height: 450
-        },
-        max: {
-            width: 1920,
-            height: 1080
-        }
-    },
-    scene: [ExternalScene, InternalScene] 
+    scene: [ExternalScene, InternalScene]
 };
 
 const game = new Phaser.Game(config);

@@ -9,7 +9,7 @@ class ExternalScene extends Phaser.Scene {
     private player!: Phaser.GameObjects.Sprite;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private interactKey!: Phaser.Input.Keyboard.Key;
-    private portal!: Phaser.GameObjects.Rectangle;
+    private portal!: Phaser.GameObjects.Sprite;
     private isTransitioning: boolean = false;
 
     // --- NUOVE VARIABILI PER IL DIALOGO ---
@@ -243,7 +243,7 @@ class ExternalScene extends Phaser.Scene {
         });
 
         // Suggerimento per proseguire
-        const promptText = this.add.text(480, 70, "Premi SPAZIO ▼", { 
+        const promptText = this.add.text(480, 70, "Press SPACE  ▼", { 
             fontSize: '18px', 
             color: '#aaaaaa' 
         }).setOrigin(1, 0.5);

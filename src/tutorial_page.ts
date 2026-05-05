@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-import ABI from './classes/ABI';
+import ABI from './classes/abi';
 import Spaceship from './classes/spaceship';
 
 const SCREEN_W = 1280;

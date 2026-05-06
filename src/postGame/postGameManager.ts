@@ -3,10 +3,12 @@ import { ChatManager } from './chatManager';
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
+import ABI from '../classes/abi';
 
 export class PostGameManager {
     private scene: Phaser.Scene;
     private chatManager!: ChatManager;
+    private abi!: ABI;
 
     private isQuizReady: boolean = false;
     private waitingForQuiz: boolean = false;
@@ -17,13 +19,9 @@ export class PostGameManager {
     private quizData: any = {};
     private quizKey: string = "";
 
-    private infoContainer!: Phaser.GameObjects.Container;
     private llmContainer!: Phaser.GameObjects.Container;
     private finalQuizContainer!: Phaser.GameObjects.Container;
-    private llmResponseText!: Phaser.GameObjects.Text;
     private continueToQuizBtn!: Phaser.GameObjects.Container;
-    private finalQuizResultText!: Phaser.GameObjects.Text;
-    private questionText!: Phaser.GameObjects.Text;
 
     private minigame_description: string = "";
     private knowledge: string = "";
@@ -34,6 +32,16 @@ export class PostGameManager {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
+
+        this.abi = new ABI(this.scene);
+
+        if (this.scene.input.keyboard) {
+            this.scene.input.keyboard.on('keydown-SPACE', () => {
+                if (this.abi.isTalking) {
+                    this.abi.nextDialoguePage();
+                }
+            });
+        }
 
         const savedApiKey = localStorage.getItem('GEMINI_API_KEY') || "";
 
@@ -53,15 +61,31 @@ export class PostGameManager {
         }
         
         this.chatManager = new ChatManager(
-        (playerMessage: string) => {
-            this.evaluatePlayerChatInput(playerMessage);
-        },
-        (isChatActive: boolean) => {
-            if (this.scene.input.keyboard) {
-                this.scene.input.keyboard.enabled = !isChatActive;
+            (playerMessage: string) => {
+                this.evaluatePlayerChatInput(playerMessage);
+            },
+            (isChatActive: boolean) => {
+                if (this.scene.input.keyboard) {
+                    this.scene.input.keyboard.enabled = !isChatActive
+                    if (!isChatActive) {
+                        this.scene.input.keyboard.resetKeys();
+                    }
+                }
+                
+                if (!isChatActive) {
+                    const activeElement = document.activeElement as HTMLElement;
+                    if (activeElement) {
+                        activeElement.blur();
+                    }
+                    setTimeout(() => {
+                        window.focus();
+                        if (this.scene.game.canvas) {
+                            this.scene.game.canvas.focus();
+                        }
+                    }, 50);
+                }
             }
-        }
-    );
+        );
     }
 
     public preparePostGame(infoTitle: string, infoText: string, minigame_description: string, knowledge: string, defaultResponse: string, quizzesKey: string) {
@@ -77,7 +101,6 @@ export class PostGameManager {
         const currentLvl = parseInt(quizzesKey.replace(/\D/g, ''), 10);
         this.nextLvl = currentLvl  + 1;
 
-        this.buildInfo();
         this.buildChat();
 
         this.loadRandomQuiz();
@@ -119,21 +142,19 @@ export class PostGameManager {
     }
 
     public async evaluatePlayerChatInput(playerMessage: string) {
-        const isFirstMessage = this.questionText && this.questionText.visible;
+        this.llmContainer.setVisible(false);
+        this.chatManager.hide();
+
+        if (!this.llm) {
+            this.abi.showDialogue("ABI", this.defaultResponse, () => {
+                this.proceedToQuiz();
+            });
+            return;
+        }
+
+        this.abi.showDialogue("ABI", "Elaborating...");
 
         try {
-        
-            if (isFirstMessage) {
-                this.questionText.setVisible(false);
-            }
-
-            this.llmResponseText.setText("Elaborating...");
-            this.continueToQuizBtn.setVisible(false);
-
-            if (!this.llm) {
-                throw new Error("API key not present.");
-            }
-
             const prompt = 
                 `You are an AI tutor in an educational video game about viral infection phases, designed for middle and high school students. 
                 You will be provided with a description of the specific minigame phase and a "knowledge context". The player has just lost the level. 
@@ -157,26 +178,68 @@ export class PostGameManager {
                 playerMessage: playerMessage
             });
 
-            this.llmResponseText.setText(feedback);
-            this.continueToQuizBtn.setVisible(true);
-            this.chatManager.show();
+            const feedbackPages = [
+                feedback,
+                "Do you have any other questions?\nIf not, click 'Continue' to start the quiz."
+            ];
+
+            this.abi.showDialogue("ABI", feedbackPages, () => {
+                this.continueToQuizBtn.setVisible(true);
+                this.llmContainer.setVisible(true);
+                this.chatManager.show();
+                
+                setTimeout(() => {
+                    if (typeof (this.chatManager as any).focus === 'function') {
+                        (this.chatManager as any).focus();
+                    } else {
+                        const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+                        if(inputElement) inputElement.focus();
+                    }
+                }, 50);
+            });
+
         } catch (e) {
-            console.log("LLM error" + e)
-            if (isFirstMessage) {
-                this.llmResponseText.setText(this.defaultResponse);
-                this.continueToQuizBtn.setVisible(true);
-                this.chatManager.hide();
-            } else {
-                this.llmResponseText.setText("Error contacting LLM. Proceed to quiz.");
-                this.continueToQuizBtn.setVisible(true);
-                this.chatManager.hide();
-            }
+            console.log("LLM error: " + e);
+            this.abi.showDialogue("ABI", this.defaultResponse, () => {
+                this.proceedToQuiz();
+            });
         }
+    }
+
+    private proceedToQuiz() {
+        this.abi.showDialogue("ABI", "Let's proceed to the quiz!", () => {
+            if (this.isQuizReady) {
+                this.finalQuizContainer.setVisible(true);
+            } else {
+                this.waitingForQuiz = true;
+                const cx = this.scene.cameras.main.width / 2;
+                const cy = this.scene.cameras.main.height / 2;
+                this.loadingText = this.scene.add.text(cx, cy, 'Loading quiz...', {
+                    fontFamily: this.MENU_FONT, fontSize: '24px', color: '#ffffff',
+                }).setOrigin(0.5).setDepth(200);
+            }
+        });
     }
 
     // called when player lose
     public showLearningPhase() {
-        this.infoContainer.setVisible(true);
+        const dialoguePages = [
+            this.quizData.infoTitle,
+            this.quizData.infoText,
+            "Why do you think you lost?"
+        ];
+
+        this.abi.showDialogue("ABI", dialoguePages, () => {
+            this.continueToQuizBtn.setVisible(false);
+            this.llmContainer.setVisible(true);
+            this.chatManager.show();
+            
+            setTimeout(() => {
+                if (typeof (this.chatManager as any).focus === 'function') {
+                    (this.chatManager as any).focus();
+                }
+            }, 50);
+        });
     }
 
     // called when player win
@@ -235,59 +298,21 @@ export class PostGameManager {
         this.scene.add.container(0, 0, [...windowUi.list, title, text, retryBtn, menuBtn]).setDepth(120);
     }
 
-    private buildInfo() {
-        const cx = this.scene.cameras.main.width / 2;
-        const cy = this.scene.cameras.main.height / 2;
-
-        const windowUi = this.createWindow(cx, cy, 980, 540);
-        const title = this.scene.add.text(cx, cy - 145, this.quizData.infoTitle, {
-            fontFamily: this.MENU_FONT, fontSize: '36px', fontStyle: 'bold', color: '#ffffff'
-        }).setOrigin(0.5);
-
-        const text = this.scene.add.text(cx, cy - 15, this.quizData.infoText, {
-            fontFamily: this.MENU_FONT, fontSize: '24px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: 760 }, lineSpacing: 12
-        }).setOrigin(0.5);
-
-        const continueBtn = this.createButton(cx, cy + 180, 340, 70, 'Continue', () => {
-            this.infoContainer.setVisible(false);
-            this.llmContainer.setVisible(true);
-            this.chatManager.show();
-        });
-
-        this.infoContainer = this.scene.add.container(0, 0, [...windowUi.list, title, text, continueBtn])
-            .setDepth(95).setVisible(false);
-    }
-
     private buildChat() {
         const cx = this.scene.cameras.main.width / 2;
         const cy = this.scene.cameras.main.height / 2;
 
         const windowUi = this.createWindow(cx, cy, 980, 560);
 
-        this.questionText = this.scene.add.text(cx, cy - 95, "Why do you think you lost?", {
-            fontFamily: this.MENU_FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: 760 }
-        }).setOrigin(0.5); 
-
-        this.llmResponseText = this.scene.add.text(cx, cy + 20, '', {
-            fontFamily: this.MENU_FONT, fontSize: '24px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: 760 }, lineSpacing: 10
-        }).setOrigin(0.5);
-
-        this.continueToQuizBtn = this.createButton(cx + 330, cy - 230, 260, 64, 'Continue', () => {
+        this.continueToQuizBtn = this.createButton(cx + 320, cy + 210, 260, 64, 'Continue', () => {
             this.llmContainer.setVisible(false);
             this.chatManager.hide();
-            
-            if (this.isQuizReady) {
-                this.finalQuizContainer.setVisible(true);
-            } else {
-                this.waitingForQuiz = true;
-                this.loadingText = this.scene.add.text(cx, cy, 'Loading quiz...', {
-                    fontFamily: this.MENU_FONT, fontSize: '24px', color: '#ffffff',
-                }).setOrigin(0.5).setDepth(200);
-            }
+            this.proceedToQuiz();
         });
+
         this.continueToQuizBtn.setVisible(false);
 
-        this.llmContainer = this.scene.add.container(0, 0, [...windowUi.list, this.questionText, this.llmResponseText, this.continueToQuizBtn]).setDepth(100).setVisible(false);
+        this.llmContainer = this.scene.add.container(0, 0, [...windowUi.list, this.continueToQuizBtn]).setDepth(100).setVisible(false);
     }
 
     private buildQuiz() {
@@ -307,24 +332,21 @@ export class PostGameManager {
             buttons.push(btn);
         });
 
-        this.finalQuizResultText = this.scene.add.text(cx, cy - 195, '', {
-            fontFamily: this.MENU_FONT, fontSize: '28px', fontStyle: 'bold', color: '#ffffff', align: 'center'
-        }).setOrigin(0.5);
-
-        this.finalQuizContainer = this.scene.add.container(0, 0, [...windowUi.list, question, ...buttons, this.finalQuizResultText]).setDepth(110).setVisible(false);
+        this.finalQuizContainer = this.scene.add.container(0, 0, [...windowUi.list, question, ...buttons]).setDepth(110).setVisible(false);
     }
 
     private handleQuizAnswer(isCorrect: boolean) {
+        this.finalQuizContainer.setVisible(false);
+
         if (isCorrect) {
-            this.finalQuizResultText.setText('Correct! Vaccinated mode unlocked.');
-            this.finalQuizResultText.setColor('#00ff00');
-            this.scene.time.delayedCall(1000, () => {
-                this.chatManager.hide()
+            this.abi.showDialogue("ABI", "Correct! You are now vaccinated!", () => {
+                this.chatManager.hide();
                 this.scene.scene.restart({ vaccinated: true });
             });
         } else {
-            this.finalQuizResultText.setText('Wrong answer. Try again.');
-            this.finalQuizResultText.setColor('#770000');
+            this.abi.showDialogue("ABI", "Wrong answer. Try again!", () => {
+                this.finalQuizContainer.setVisible(true);
+            });
         }
     }
 

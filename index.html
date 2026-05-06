@@ -130,7 +130,6 @@
     }
 
     #api-key-status {
-        color: #00ff00;
         font-weight: bold;
         font-size: 14px;
         text-align: center;
@@ -179,6 +178,8 @@
               localStorage.setItem('GEMINI_API_KEY', key);
               
               const statusText = document.getElementById('api-key-status');
+              statusText.textContent = 'Saved!';
+              statusText.style.color = '#00ff00';
               statusText.style.display = 'block';
               setTimeout(() => { 
                   statusText.style.display = 'none'; 
@@ -195,7 +196,7 @@
           
           const statusText = document.getElementById('api-key-status');
           statusText.textContent = 'Deleted!';
-          statusText.style.color = '#ffb3b3'; // Rosso chiaro per far contrasto con lo sfondo arancione
+          statusText.style.color = '#ffb3b3';
           statusText.style.display = 'block';
           
           setTimeout(() => { 

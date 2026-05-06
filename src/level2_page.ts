@@ -63,6 +63,7 @@ class Level2 extends Phaser.Scene {
         this.load.image('explosion', '/assets/level 2/explosion.png');
 
         this.load.json('level2quizzes', '/assets/quizzes/level2.json');
+        this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
 
         this.virusKeys.forEach(key => {
             this.load.image(key, `/assets/level1/${key}.png`);
@@ -101,7 +102,7 @@ class Level2 extends Phaser.Scene {
         this.postGameManager = new PostGameManager(this);
         
         const infoTitle = "Viruses entered the membrane!";
-        const infoText = "\nYou were not able to stop them in time.\nThe virus fused with the cell membrane.\nThis is the second step of the infection.";
+        const infoText = "You were not able to stop them in time.\nThe virus fused with the cell membrane.\nThis is the second step of the infection.";
 
         const minigame_description = 
             `The objective of the minigame is to prevent viruses from entering the cell membrane

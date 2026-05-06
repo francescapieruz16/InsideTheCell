@@ -27,12 +27,11 @@ export default class ABI {
         this.uiContainer.setScrollFactor(0); 
         this.uiContainer.setDepth(100); 
 
-        const bg = this.scene.add.rectangle(0, 0, 1000, 200, 0x000000, 0.8);
+        const bg = this.scene.add.rectangle(0, 0, 1000, 200, 0x000000, 0.87);
         bg.setStrokeStyle(4, 0x4caf50);
 
-        const portraitBg = this.scene.add.rectangle(-400, 0, 150, 150, 0x333333);
         this.portrait = this.scene.add.image(-400, 0, 'ABI_standard');
-        this.portrait.setDisplaySize(140, 140);
+        this.portrait.setDisplaySize(200, 200);
 
         this.dialogueName = this.scene.add.text(-280, -70, "", { 
             fontSize: '28px', fontStyle: 'bold', color: '#4caf50' 
@@ -46,7 +45,7 @@ export default class ABI {
             fontSize: '18px', color: '#aaaaaa' 
         }).setOrigin(1, 0.5);
 
-        this.uiContainer.add([bg, portraitBg, this.portrait, this.dialogueName, this.dialogueText, promptText]);
+        this.uiContainer.add([bg, this.portrait, this.dialogueName, this.dialogueText, promptText]);
         this.uiContainer.setVisible(false);
 
         this.scene.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
@@ -108,10 +107,11 @@ export default class ABI {
         this.isTalking = false;
         this.uiContainer.setVisible(false);
         
-        // Se c'era un'azione speciale da fare (es. la transizione), la eseguiamo ORA
-        if (this.onCloseCallback) {
-            this.onCloseCallback();
-            this.onCloseCallback = undefined; // Puliamo per sicurezza
+        const callback = this.onCloseCallback;
+        this.onCloseCallback = undefined; 
+        
+        if (callback) {
+            callback();
         }
     }
 }

@@ -17,6 +17,14 @@ export class ChatManager {
         this.chatInput = document.getElementById('llm-chat-input') as HTMLInputElement;
         this.chatSend = document.getElementById('llm-chat-send') as HTMLButtonElement;
 
+        Object.assign(this.chatUi.style, {
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: '1000'
+        });
+
         this.initListeners();
         this.hide();
     }
@@ -41,7 +49,7 @@ export class ChatManager {
         this.chatInput.value = '';
         this.chatUi.style.display = 'flex';
         this.onChatStateChange(true);
-        setTimeout(() => this.chatInput.focus(), 0);
+        setTimeout(() => this.chatInput.focus(), 50);
     }
 
     public hide() {

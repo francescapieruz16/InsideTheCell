@@ -249,7 +249,7 @@ export class PostGameManager {
 
         const windowUi = this.createWindow(cx, cy, 820, 380);
         const title = this.scene.add.text(cx, cy - 90, 'LEVEL COMPLETED!', {
-            fontFamily: this.MENU_FONT, fontSize: '48px', fontStyle: 'bold', color: '#00ff88'
+            fontFamily: this.MENU_FONT, fontSize: '48px', fontStyle: 'bold', color: '#00ff00'
         }).setOrigin(0.5);
 
         const menuBtn = this.createButton(cx, cy + 110, 320, 70, 'Menu', () => {

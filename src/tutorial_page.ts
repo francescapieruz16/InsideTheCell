@@ -201,10 +201,13 @@ class ExternalScene extends Phaser.Scene {
             this.hasSeenIntro = true;
             this.abi.showDialogue(
                 "A.B.I.",
-                ["Hey! I am A.B.I.: Advanced Biometric Informer! I will be your assistant during this exploration!", "We are in the extracellular space, and that thing under us is the plasma membrane—the cell's actual logistical border.", "To infiltrate the cell, we must follow a strict protocol. Step 1: Locate the target gateway. You must search the membrane and find the ACE2 receptor first.",
-                    "Step 2: Once the ACE2 receptor is found and scanned, our systems will know exactly which molecular key we need to synthesize.",
-                    "Step 3: Only then can we scavenge those floating viral remnants to extract the necessary Spike protein fragments.",
-                    "Let's move! Explore the area and locate the ACE2 receptor first!" ]            );
+                ["Hey! I am A.B.I.: Advanced Biometric Informer! I will be your assistant during this exploration!", 
+                "We are in the extracellular space. Below us is the plasma membrane. To enter, we will mimic the infection strategy of the Coronavirus.", 
+                "The virus uses a specific 'molecular handshake': its Spike protein must bind to a human receptor called ACE2 to unlock the cell.",
+                "Step 1: Locate the target gateway. You must search the membrane and find the ACE2 receptor first, just like a real virus would.",
+                "Step 2: Once scanned, our systems will calculate the exact shape of the Spike protein fragments we need to synthesize the key.",
+                "Step 3: Only then can we scavenge those floating viral remnants to extract the necessary protein components.",
+                "Let's move! Explore the area and locate the ACE2 receptor first!" ]            );
             return;
         }
 

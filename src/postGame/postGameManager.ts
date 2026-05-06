@@ -28,6 +28,8 @@ export class PostGameManager {
     private defaultResponse: string = ""
     private nextLvl: integer = 0;
 
+    private isWaitingForLLM: boolean = false;
+
     private llm: ChatGoogleGenerativeAI | null = null;
 
     constructor(scene: Phaser.Scene) {
@@ -37,7 +39,7 @@ export class PostGameManager {
 
         if (this.scene.input.keyboard) {
             this.scene.input.keyboard.on('keydown-SPACE', () => {
-                if (this.abi.isTalking) {
+                if (this.abi.isTalking && !this.isWaitingForLLM) {
                     this.abi.nextDialoguePage();
                 }
             });
@@ -152,7 +154,9 @@ export class PostGameManager {
             return;
         }
 
-        this.abi.showDialogue("ABI", "Elaborating...");
+        this.isWaitingForLLM = true
+
+        this.abi.showDialogue("ABI", "Elaborating...", undefined, true);
 
         try {
             const prompt = 
@@ -183,6 +187,8 @@ export class PostGameManager {
                 "Do you have any other questions?\nIf not, click 'Continue' to start the quiz."
             ];
 
+            this.isWaitingForLLM = false;
+
             this.abi.showDialogue("ABI", feedbackPages, () => {
                 this.continueToQuizBtn.setVisible(true);
                 this.llmContainer.setVisible(true);
@@ -200,6 +206,7 @@ export class PostGameManager {
 
         } catch (e) {
             console.log("LLM error: " + e);
+            this.isWaitingForLLM = false;
             this.abi.showDialogue("ABI", this.defaultResponse, () => {
                 this.proceedToQuiz();
             });

@@ -6,10 +6,12 @@ export default class ABI {
     private dialogueText!: Phaser.GameObjects.Text;
     private dialogueName!: Phaser.GameObjects.Text;
     private portrait!: Phaser.GameObjects.Image;
+    private promptText!: Phaser.GameObjects.Text;
     private dialoguePages: string[] = [];
     private currentDialoguePage: number = 0;
     
     public isTalking: boolean = false;
+    public isUnskippable: boolean = false;
     
     // Questa variabile salverà l'azione speciale da fare a fine dialogo (es. cambiare scena)
     private onCloseCallback?: () => void; 
@@ -41,11 +43,11 @@ export default class ABI {
             fontSize: '22px', color: '#ffffff', wordWrap: { width: 750 } 
         });
 
-        const promptText = this.scene.add.text(480, 70, "Press SPACE ▼", { 
+        this.promptText = this.scene.add.text(480, 70, "Press SPACE ▼", { 
             fontSize: '18px', color: '#aaaaaa' 
         }).setOrigin(1, 0.5);
 
-        this.uiContainer.add([bg, this.portrait, this.dialogueName, this.dialogueText, promptText]);
+        this.uiContainer.add([bg, this.portrait, this.dialogueName, this.dialogueText, this.promptText]);
         this.uiContainer.setVisible(false);
 
         this.scene.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
@@ -57,10 +59,13 @@ export default class ABI {
     }
 
     // Nota l'aggiunta di "onClose": è una funzione opzionale!
-    public showDialogue(name: string, text: string | string[], onClose?: () => void) {
+    public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false) {
         this.isTalking = true;
+        this.isUnskippable = unskippable;
         this.dialogueName.setText(name);
         this.onCloseCallback = onClose; // Salviamo l'azione da fare alla fine
+
+        this.promptText.setVisible(!unskippable);
 
         if (typeof text === 'string') {
             this.dialoguePages = this.autoSplitText(text, 180); 
@@ -105,6 +110,7 @@ export default class ABI {
 
     public hideDialogue() {
         this.isTalking = false;
+        this.isUnskippable = false;
         this.uiContainer.setVisible(false);
         
         const callback = this.onCloseCallback;

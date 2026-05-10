@@ -14,9 +14,53 @@ export default class ABI {
     // Questa variabile salverà l'azione speciale da fare a fine dialogo (es. cambiare scena)
     private onCloseCallback?: () => void; 
 
+    // Variabili per la sintesi vocale
+    private synth: SpeechSynthesis;
+    private robotVoice: SpeechSynthesisVoice | null = null;
+
+
+    // Variabili per l'effetto di digitazione
+    private isTyping: boolean = false;
+    private currentFullText: string = "";
+    private currentVisibleText: string = "";
+    private typingTimer?: Phaser.Time.TimerEvent;
+    private readonly TYPING_SPEED: number = 40; // Millisecondi tra una lettera e l'altra (regolabile)
+
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.createDialogueUI();
+
+        this.synth = window.speechSynthesis;
+        this.initVoice();
+
+        if (this.synth.onvoiceschanged !== undefined) {
+            this.synth.onvoiceschanged = this.initVoice.bind(this);
+        }
+    }
+
+    // --- METODO PER CARICARE LA VOCE ---
+    private initVoice() {
+        const voices = this.synth.getVoices();
+        // Cerca una voce italiana, altrimenti prende il fallback di sistema
+        this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;  
+      }
+
+    // --- METODO PER SINTETIZZARE E RIPRODURRE L'AUDIO ---
+    private speakText(text: string) {
+        // Fondamentale: cancella qualsiasi audio in coda o in riproduzione
+        this.synth.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-GB'; // Imposta la lingua (puoi cambiarla in base alla voce scelta)
+        if (this.robotVoice) {
+            utterance.voice = this.robotVoice;
+        }
+
+        // Parametri per l'effetto robotico
+        utterance.pitch = 1.5; // Tonalità molto bassa e piatta
+        utterance.rate = 1.5;  // Leggermente rallentato
+        
+        this.synth.speak(utterance);
     }
 
     private createDialogueUI() {
@@ -74,7 +118,47 @@ export default class ABI {
     }
 
     private updateDialogueView() {
-        this.dialogueText.setText(this.dialoguePages[this.currentDialoguePage]);
+        this.currentFullText = this.dialoguePages[this.currentDialoguePage];
+        this.currentVisibleText = "";
+        this.dialogueText.setText("");
+        this.isTyping = true;
+
+        // 1. Avvia la voce per l'intera stringa
+        this.speakText(this.currentFullText);
+
+        // 2. Pulisci eventuali timer precedenti
+        if (this.typingTimer) {
+            this.typingTimer.remove();
+        }
+
+        // 3. Avvia l'evento ciclico di Phaser per stampare il testo
+        this.typingTimer = this.scene.time.addEvent({
+            delay: this.TYPING_SPEED,
+            callback: this.typeNextChar,
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+
+    private typeNextChar() {
+        // Aggiunge il carattere successivo
+        this.currentVisibleText += this.currentFullText[this.currentVisibleText.length];
+        this.dialogueText.setText(this.currentVisibleText);
+
+        // Controlla se abbiamo finito di scrivere l'intera pagina
+        if (this.currentVisibleText.length === this.currentFullText.length) {
+            this.completeTyping();
+        }
+    }
+
+    private completeTyping() {
+        this.isTyping = false;
+        if (this.typingTimer) {
+            this.typingTimer.remove();
+        }
+        // Assicura che tutto il testo sia mostrato
+        this.dialogueText.setText(this.currentFullText);
     }
 
     private autoSplitText(text: string, maxLength: number): string[] {
@@ -95,17 +179,26 @@ export default class ABI {
     }
 
     public nextDialoguePage() {
-        if (this.currentDialoguePage < this.dialoguePages.length - 1) {
-            this.currentDialoguePage++;
-            this.updateDialogueView();
+        if (this.isTyping) {
+            // STATO 1: Sta scrivendo. Premendo spazio forziamo la comparsa di tutto il testo.
+            this.completeTyping();
         } else {
-            this.hideDialogue();
+            // STATO 2: Ha finito di scrivere. Premendo spazio passiamo alla pagina dopo.
+            if (this.currentDialoguePage < this.dialoguePages.length - 1) {
+                this.currentDialoguePage++;
+                this.updateDialogueView();
+            } else {
+                this.hideDialogue();
+            }
         }
     }
 
     public hideDialogue() {
         this.isTalking = false;
         this.uiContainer.setVisible(false);
+
+        // --- FERMA L'AUDIO ALLA CHIUSURA DEL DIALOGO ---
+        this.synth.cancel();
         
         const callback = this.onCloseCallback;
         this.onCloseCallback = undefined; 

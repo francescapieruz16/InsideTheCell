@@ -17,16 +17,17 @@ export class PostGameManager {
     private readonly MENU_FONT = 'Arial';
 
     private quizData: any = {};
-    private quizKey: string = "";
 
     private llmContainer!: Phaser.GameObjects.Container;
     private finalQuizContainer!: Phaser.GameObjects.Container;
     private continueToQuizBtn!: Phaser.GameObjects.Container;
 
+    private prompt: string = "";
     private minigame_description: string = "";
     private knowledge: string = "";
     private defaultResponse: string = ""
-    private nextLvl: integer = 0;
+    private currentLevel: integer = 0;
+    private nextLevel: integer = 0;
 
     private isWaitingForLLM: boolean = false;
 
@@ -90,56 +91,41 @@ export class PostGameManager {
         );
     }
 
-    public preparePostGame(infoTitle: string, infoText: string, minigame_description: string, knowledge: string, defaultResponse: string, quizzesKey: string) {
+    public preparePostGame(infoTitle: string, infoText: string, level: number) {
         this.quizData = {
             infoTitle,
             infoText,
         };
 
-        this.minigame_description = minigame_description;
-        this.knowledge = knowledge;
-        this.defaultResponse = defaultResponse;
-        this.quizKey = quizzesKey;
-        const currentLvl = parseInt(quizzesKey.replace(/\D/g, ''), 10);
-        this.nextLvl = currentLvl  + 1;
+        this.currentLevel = level;
+        this.nextLevel = this.currentLevel + 1;
+
+        this.prompt = localStorage.getItem('GAME_PROMPT') || "";
+        this.minigame_description = this.extractTextForLevel(this.currentLevel, localStorage.getItem('MINIGAME_DESCRIPTIONS') || "");
+        this.knowledge = this.extractTextForLevel(this.currentLevel, localStorage.getItem('MINIGAME_KNOWLEDGES') || "");
+        this.defaultResponse = this.extractTextForLevel(this.currentLevel, localStorage.getItem('DEFAULT_CHAT_RESPONSES') || "");
 
         this.buildChat();
 
         this.loadRandomQuiz();
     }
 
-    private loadRandomQuiz() {
-        try {
-            const quizzes = this.scene.cache.json.get(this.quizKey);
+    private loadRandomQuiz() {        
 
-            if (!Array.isArray(quizzes) || quizzes.length === 0) {
-                throw new Error("Invalid or empty quiz JSON");
-            }
+        const availableQuizzes = this.extractQuizzesForLevel(this.currentLevel  , localStorage.getItem('QUIZZES') || "");
 
+        const randomIndex = Phaser.Math.Between(0, availableQuizzes.length - 1);
+        const selectedQuiz = availableQuizzes[randomIndex];
 
-            // pick a random quiz from the file
-            const randomIndex = Phaser.Math.Between(0, quizzes.length - 1);
-            const selectedQuiz = quizzes[randomIndex];
+        this.quizData.quizQuestion = selectedQuiz.question;
+        this.quizData.answers = selectedQuiz.answers;
 
-            this.quizData.quizQuestion = selectedQuiz.quizQuestion;
-            this.quizData.answers = selectedQuiz.answers;
-            
-            this.buildQuiz();
-            this.isQuizReady = true;
+        this.buildQuiz();
+        this.isQuizReady = true;
 
-            if (this.waitingForQuiz) {
-                if (this.loadingText) this.loadingText.destroy();
-                this.finalQuizContainer.setVisible(true);
-            }
-        } catch (e) {
-            this.quizData.quizQuestion = "What is the mandatory first step for infection is?";
-            this.quizData.answers = [
-                { text: "Binding phase", isCorrect: true },
-                { text: "Replicating inside the nucleus", isCorrect: false },
-                { text: "Destroying the host cell", isCorrect: false }
-            ];
-            this.buildQuiz();
-            this.isQuizReady = true;
+        if (this.waitingForQuiz) {
+            if (this.loadingText) this.loadingText.destroy();
+            this.finalQuizContainer.setVisible(true);
         }
     }
 
@@ -159,9 +145,8 @@ export class PostGameManager {
         this.abi.showDialogue("ABI", "Elaborating...", undefined, true);
 
         try {
-            const prompt = 
-                `You are an AI tutor in an educational video game about viral infection phases, designed for middle and high school students. 
-                You will be provided with a description of the specific minigame phase and a "knowledge context". The player has just lost the level. 
+            const prompt = this.prompt + 
+                `You will be provided with a description of the specific minigame phase and a "knowledge context". The player has just lost the level. 
                 They will initially respond to the prompt "Why do you think you lost?", and may subsequently ask you follow-up questions.
 
                 Follow these strict rules to formulate your response:
@@ -264,10 +249,10 @@ export class PostGameManager {
             window.location.href = '/pages/menu_page.html';
         });
 
-        if (this.nextLvl <= 6) {
+        if (this.nextLevel <= 6) {
             const nextBtn = this.createButton(cx, cy + 20, 320, 70, 'Next level', () => {
                 this.chatManager.hide()
-                window.location.href = '/pages/level' + this.nextLvl + '.html';
+                window.location.href = '/pages/level' + this.nextLevel + '.html';
             });
 
             this.scene.add.container(0, 0, [...windowUi.list, title, nextBtn, menuBtn]).setDepth(120);
@@ -388,5 +373,53 @@ export class PostGameManager {
         
         container.add([outer, text, hit]);
         return container;
+    }
+
+    private extractTextForLevel(level: number, text: string): string {
+        const lines = text.split('\n');
+        for (const line of lines) {
+            if (line.trim().startsWith(`${level}:`)) {
+                return line.substring(line.indexOf(':') + 1).trim();
+            }
+        }
+        return "Description not found.";
+    }
+
+    private extractQuizzesForLevel(level: number, quizzesText: string) {
+        const lines = quizzesText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const quizzes: any[] = [];
+        
+        let currentQuestion = "";
+        let currentAnswers: any[] = [];
+
+        for (const line of lines) {
+            if (line.startsWith(`${level}:`)) {
+                if (currentQuestion !== "") {
+                    quizzes.push({ question: currentQuestion, answers: currentAnswers });
+                }
+                
+                currentQuestion = line.substring(line.indexOf(':') + 1).trim();
+                currentAnswers = [];
+            } 
+            else if (currentQuestion !== "") {
+                const answerRegex = new RegExp(`^${level}[a-z]\\((T|F)\\):(.*)`);
+                const match = line.match(answerRegex);
+
+                if (match) {
+                    const isCorrect = match[1] === 'T';
+                    const text = match[2].trim();
+                    currentAnswers.push({ text, isCorrect });
+                } 
+                else if (line.match(/^\d+:/)) {
+                    break;
+                }
+            }
+        }
+
+        if (currentQuestion !== "") {
+            quizzes.push({ question: currentQuestion, answers: currentAnswers });
+        }
+
+        return quizzes;
     }
 }

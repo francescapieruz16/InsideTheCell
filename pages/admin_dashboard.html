@@ -112,6 +112,32 @@
             margin-top: 15px;
             display: none;
         }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #ff5a0a;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 30px 0 20px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 2px solid #ff5a0a;
+        }
+
+        .divider::before {
+            margin-right: 15px;
+        }
+
+        .divider::after {
+            margin-left: 15px;
+        }
     </style>
 </head>
 <body>
@@ -148,6 +174,8 @@
             <label for="quizzes">Minigames quizzes (numbered list)</label>
             <textarea id="quizzes" class="textarea-large" placeholder="Insert the quizzes..."></textarea>
         </div>
+
+        <div class="divider">Offline mode defaults</div>
 
         <div class="form-group">
             <label for="default-chat-responses">Default chat responses (numbered list)</label>
@@ -235,7 +263,7 @@
             document.getElementById('quizzes').value = DEFAULTS['QUIZZES'];
             document.getElementById('default-chat-responses').value = DEFAULTS['DEFAULT_CHAT_RESPONSES'];
             document.getElementById('default-postgame-info').value = DEFAULTS['DEFAULT_POSTGAME_INFORMATIONS'];
-Z
+
             showStatusMessage('Settings reset to default values.', '#e74c3c', '#fdedec');
         }
 

@@ -136,12 +136,7 @@ class Level1 extends Phaser.Scene {
 
         this.postGameManager = new PostGameManager(this);
 
-        const infoTitle = "The virus reached the cell!";
-        const infoText = "You were not able to stop it in time.\nThe virus reached the receptors on the surface of the cell and attached to it.\nThis is the first step of the infection.";
-
         this.postGameManager.preparePostGame(
-            infoTitle,
-            infoText,
             1
         );
 

@@ -100,12 +100,7 @@ class Level2 extends Phaser.Scene {
 
         this.postGameManager = new PostGameManager(this);
         
-        const infoTitle = "Viruses entered the membrane!";
-        const infoText = "You were not able to stop them in time.\nThe virus fused with the cell membrane.\nThis is the second step of the infection.";
-
         this.postGameManager.preparePostGame(
-            infoTitle,
-            infoText,
             2
         );
     }

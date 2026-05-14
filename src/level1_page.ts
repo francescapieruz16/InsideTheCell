@@ -6,10 +6,10 @@ class Level1 extends Phaser.Scene {
     private receptorsGroup!: Phaser.Physics.Arcade.Group;
 
     private receptorVirusData = [
-        { receptor: 'receptor_circle', virus: 'virus_circle', pX: 0.125, pY: 0.73, scale: 0.08},
-        { receptor: 'receptor_hexagon', virus: 'virus_hexagon', pX: 0.375, pY: 0.73, scale: 0.09},
-        { receptor: 'receptor_square', virus: 'virus_square', pX: 0.625, pY: 0.73, scale: 0.09},
-        { receptor: 'receptor_triangle', virus: 'virus_triangle', pX: 0.875, pY: 0.73, scale: 0.08}
+        { receptor: 'receptor_circle', virus: 'virus_circle', pX: 0.125, pY: 0.88, scale: 0.08},
+        { receptor: 'receptor_hexagon', virus: 'virus_hexagon', pX: 0.375, pY: 0.87, scale: 0.09},
+        { receptor: 'receptor_square', virus: 'virus_square', pX: 0.625, pY: 0.87, scale: 0.09},
+        { receptor: 'receptor_triangle', virus: 'virus_triangle', pX: 0.875, pY: 0.88, scale: 0.08}
     ];
 
     private playerCart!: Phaser.Physics.Arcade.Sprite;
@@ -90,7 +90,7 @@ class Level1 extends Phaser.Scene {
 
         this.playerCart = this.physics.add.sprite(
             this.cameras.main.width / 2,
-            400,
+            this.cameras.main.height * 0.45,
             'cart'
         );
 
@@ -218,14 +218,13 @@ class Level1 extends Phaser.Scene {
         this.cartFull = false;
         this.playerCart.setTexture('cart');
         this.playerCart.clearTint();
-        this.playerCart.setPosition(this.cameras.main.width / 2, 400);
         this.playerCart.setVelocity(0, 0);
         this.playerCart.setAcceleration(0, 0);
 
         const screenW = this.cameras.main.width;
         const screenH = this.cameras.main.height;
 
-        this.playerCart.setPosition(screenW / 2, screenH * 0.45);
+        this.playerCart.setPosition(screenW / 2, screenH * 0.60);
 
         if (this.isVaccinated) {
             this.playerCart.displayWidth = screenW * 0.15;

@@ -28,6 +28,8 @@ export default class ABI {
     private typingTimer?: Phaser.Time.TimerEvent;
     private readonly TYPING_SPEED: number = 40; // Millisecondi tra una lettera e l'altra (regolabile)
 
+    private radioTimer?: Phaser.Time.TimerEvent; //gestisce il timer per i dialoghi radio
+
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.createDialogueUI();
@@ -104,6 +106,8 @@ export default class ABI {
 
     // Nota l'aggiunta di "onClose": è una funzione opzionale!
     public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false) {
+        this.interrupt(); // Interrompe qualsiasi messaggio o dialogo precedente
+
         this.isTalking = true;
         this.isUnskippable = unskippable;
         this.dialogueName.setText(name);
@@ -212,5 +216,67 @@ export default class ABI {
         if (callback) {
             callback();
         }
+    }
+
+    /**
+     * Interrompe qualsiasi dialogo o messaggio radio in corso.
+     * Cancella i timer, ferma la sintesi vocale e resetta gli stati interni.
+     */
+    private interrupt() {
+        // Interrompe il timer dell'effetto "macchina da scrivere" del dialogo interattivo
+        if (this.typingTimer) {
+            this.typingTimer.remove();
+        }
+        // Interrompe il timer del messaggio radio
+        if (this.radioTimer) {
+            this.radioTimer.remove();
+        }
+
+        // Ferma la sintesi vocale in corso
+        this.synth.cancel();
+        
+        // Resetta gli stati principali. La nuova funzione li imposterà se necessario.
+        this.isTyping = false;
+        this.isTalking = false;
+        
+        // Annulla la callback del dialogo interrotto per evitare che venga eseguita al suo posto
+        if (this.onCloseCallback) {
+            this.onCloseCallback = undefined;
+        }
+    }
+
+    public showRadioMessage(text: string, durationPerPage: number = 8000) {
+        this.interrupt(); // Interrompe qualsiasi messaggio o dialogo precedente
+
+        this.uiContainer.setVisible(true);
+        this.dialogueName.setText("A.B.I.");
+        this.promptText.setVisible(false); // I messaggi radio non sono interattivi
+
+        const pages = this.autoSplitText(text, 180);
+        let pageIndex = 0;
+
+        const showNextPage = () => {
+            // Se abbiamo finito le pagine, nascondi la UI e termina.
+            if (pageIndex >= pages.length) {
+                if (!this.isTalking) { // Controlla che un dialogo normale non sia iniziato nel frattempo
+                    this.uiContainer.setVisible(false);
+                    this.synth.cancel();
+                }
+                return;
+            }
+
+            // Mostra la pagina corrente
+            const pageText = pages[pageIndex];
+            this.dialogueText.setText(pageText);
+            this.speakText(pageText);
+
+            pageIndex++;
+
+            // Imposta il timer per mostrare la pagina successiva dopo la durata specificata
+            this.radioTimer = this.scene.time.delayedCall(durationPerPage, showNextPage);
+        };
+
+        // Avvia il ciclo mostrando la prima pagina
+        showNextPage();
     }
 }

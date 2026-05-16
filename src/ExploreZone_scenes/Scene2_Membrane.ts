@@ -24,7 +24,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
         this.load.image('wall_cytoskeleton', '/assets/tutorial/sfondi/wall_labyrinth2.png');        // Ipotetico filamento del citoscheletro o organello che fa da muro
         this.load.image('nuclear_pore', '/assets/tutorial/sfondi/nuclear_pore.png');     // L'uscita, ad esempio un poro nucleare
         this.load.image('background_scene2', '/assets/tutorial/sfondi/scene2_background.png'); 
-        this.load.image('exit_portal', '/assets/tutorial/sfondi/exit_labyrinth.png') 
+        this.load.image('exit_portal', '/assets/tutorial/sfondi/exit_labyrinth2.png') 
         this.load.image('viral_wreck', '/assets/tutorial/obstacles/viral_wreck.png');
         this.load.image('lipid_iceberg', '/assets/tutorial/obstacles/lipid_iceberg.png');         
     }
@@ -41,30 +41,11 @@ export default class Scene2_Membrane extends Phaser.Scene {
     }
 
     create() {
-        // Imposta i limiti di mondo e telecamera a 2000x2000 (come in Scene1_External)
-        const WORLD_SIZE = 5000;
-        this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
-        this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-        this.background_scene = this.add.tileSprite(
-            WORLD_SIZE / 2, 
-            WORLD_SIZE / 2, 
-            WORLD_SIZE, 
-            WORLD_SIZE, 
-            'background_scene2'
-        ).setDepth(-1); // Assicura che sia sempre il livello più basso
-        
-        // Ridimensiona il pattern dell'immagine all'interno del TileSprite (es. 0.5 = 50%)
-        this.background_scene.setTileScale(0.5, 0.5);
-
-        
-        // Effetto di Fade In quando si entra nella nuova stanza
-        this.cameras.main.fadeIn(800, 0, 0, 0);
-
-        // 0 = Vuoto, 1 = Muro (Actina), 2 = Spawn, 3 = Uscita (Poro Nucleare), 4= relitto, 5= iceberg lipidico
+        // 0 = Vuoto, 1 = Muro (Actina), 2 = Spawn, 3 = Uscita (Poro Nucleare), 4= relitto, 5= iceberg lipidico, 6=messaggio1, 7=messaggio2
         const mazeGrid = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,2,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
+            [1,2,0,8,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
             [1,0,1,0,1,0,1,1,1,1,1,1,0,1,0,1,1,1,0,1],
             [1,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,1],
             [1,0,1,1,1,0,1,0,1,1,0,1,1,1,1,5,0,1,1,1],
@@ -74,27 +55,52 @@ export default class Scene2_Membrane extends Phaser.Scene {
             [1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,1,0,1,0,1],
             [1,0,1,0,0,0,0,0,1,0,1,0,1,0,0,0,0,0,0,1],
             [1,0,1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1],
-            [1,4,0,0,1,0,0,0,0,0,1,0,1,0,1,0,0,0,0,1],
+            [1,4,0,0,1,6,0,0,0,0,1,0,1,0,1,0,0,0,0,1],
             [1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,0,1,1,0,1],
             [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,1],
             [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1],
             [1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1],
-            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1],
-            [1,1,1,0,0,0,1,1,1,1,1,3,1,1,1,1,0,0,0,1],
+            [1,0,0,0,1,0,0,7,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,0,1,3,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
         // Imposta TILE_SIZE ad almeno 150 per garantire spazio fisico.
         const TILE_SIZE = 150;
 
+        // 2. Calcola i limiti del mondo DINAMICAMENTE
+        const worldWidth = mazeGrid[0].length * TILE_SIZE;  // 20 * 150 = 3000
+        const worldHeight = mazeGrid.length * TILE_SIZE;    // 20 * 150 = 3000
+
+        // 3. Imposta i Bounds con i calcoli esatti
+        this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+        this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+
+        // 4. Crea il Background basato sulle nuove dimensioni
+        this.background_scene = this.add.tileSprite(
+            worldWidth / 2, 
+            worldHeight / 2, 
+            worldWidth, 
+            worldHeight, 
+            'background_scene2'
+        ).setDepth(-1);
+        
+        this.background_scene.setTileScale(0.5, 0.5);
+
+        // Effetto di Fade In
+        this.cameras.main.fadeIn(800, 0, 0, 0);
+
+        // GIOCATORE: Lo creiamo QUI, prima del ciclo, così esiste per gli overlap
+        this.player = new Spaceship(this, 0, 0, this.startingTexture);
+        this.player.setVisible(false); // Lo nascondiamo finché non troviamo lo spawn
+        this.player.setScale(0.25); // La navicella è leggermente più piccola in questa scena
+        (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+
         // Creiamo il gruppo statico per i muri
         this.wallsGroup = this.physics.add.staticGroup();
 
         this.loreItemsGroup = this.physics.add.staticGroup();
-        
-        let spawnX = 0;
-        let spawnY = 0;
         
         // Cicliamo sulla matrice: 'row' è la riga (Y), 'col' è la colonna (X)
         for (let row = 0; row < mazeGrid.length; row++) {
@@ -115,9 +121,9 @@ export default class Scene2_Membrane extends Phaser.Scene {
                     wall.refreshBody(); // Aggiorna la hitbox statica
                 } 
                 else if (cellValue === 2) {
-                    // È l'entrata: salviamo queste coordinate per la navicella
-                    spawnX = posX;
-                    spawnY = posY;
+                    // È l'entrata: posizioniamo la navicella e la rendiamo visibile
+                    this.player.setPosition(posX, posY);
+                    this.player.setVisible(true);
                 }
                 else if (cellValue === 3) {
                     // È l'uscita: creiamo il portale del nucleo
@@ -127,7 +133,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
                 }
                 else if (cellValue === 4) {
                     let wreck = this.loreItemsGroup.create(posX, posY, 'viral_wreck');
-                    wreck.setDisplaySize(TILE_SIZE, TILE_SIZE);
+                    wreck.setDisplaySize(TILE_SIZE * 0.6, TILE_SIZE * 0.6);
                     // Salviamo i dati per riconoscerlo
                     wreck.setData('itemName', 'ViralWreck');
                     wreck.setData('hasBeenScanned', false);
@@ -135,20 +141,55 @@ export default class Scene2_Membrane extends Phaser.Scene {
                 }
                 else if (cellValue === 5) {
                     let iceberg = this.loreItemsGroup.create(posX, posY, 'lipid_iceberg');
-                    iceberg.setDisplaySize(TILE_SIZE, TILE_SIZE);
+                    iceberg.setDisplaySize(TILE_SIZE*0.6, TILE_SIZE*0.6);
                     // Salviamo i dati per riconoscerlo
                     iceberg.setData('itemName', 'CholesterolIceberg');
                     iceberg.setData('hasBeenScanned', false);
                     iceberg.refreshBody(); // Aggiorna la hitbox statica
                 }
+                else if (cellValue === 6 || cellValue === 7 || cellValue === 8) {
+                    // 1. Creiamo una zona invisibile grande quanto un blocco TILE_SIZE
+                    let triggerZone = this.add.zone(posX, posY, TILE_SIZE, TILE_SIZE);
+                    
+                    // 2. Aggiungiamo la fisica statica alla zona
+                    this.physics.add.existing(triggerZone, true);
+                    
+                    // 3. Usiamo i Data per assicurarci che si attivi una volta sola
+                    triggerZone.setData('hasTriggered', false);
+
+                    // 4. Creiamo immediatamente l'overlap tra navicella e QUESTA specifica zona
+                    this.physics.add.overlap(this.player, triggerZone, () => {
+                        
+                        // Se non è ancora scattata...
+                        if (!triggerZone.getData('hasTriggered')) {
+                            
+                            // Segnala come scattata per il futuro
+                            triggerZone.setData('hasTriggered', true);
+                            
+                            // Mostra il testo corretto in base al numero
+                            if (cellValue === 6) {
+                                this.abi.showRadioMessage(
+                                    "Hey! Can you see it? The structures around us are constantly shifting! This membrane isn't a solid wall, but a two-dimensional liquid. The lipids and proteins drift laterally, like icebergs in a microscopic ocean. Biologists call this the 'Fluid Mosaic Model'.",
+                                    7500
+                                );
+                            } 
+                            else if (cellValue === 7) {
+                                this.abi.showRadioMessage(
+                                    "We are approaching the nuclear pore complex. Once we breach this gate, we will enter the deep cytoplasm. Prepare yourself: the environment will expand dramatically, filled with massive organelles like mitochondria and free-floating ribosomes.", 
+                                    6000
+                                );
+                            }
+                                else if (cellValue === 8) {
+                                this.abi.showRadioMessage(
+                                    "Analyzing barrier depth... Did you know this membrane is only about 8 nanometers thick? To put that in perspective, a standard sheet of paper is about 12,000 times thicker than this structure.",
+                                    5500
+                                );
+                            }
+                        }
+                    });
+                }
             }
         }
-
-        
-        // GIOCATORE: Usiamo la classe Spaceship e lo posizioniamo allo spawn
-        this.player = new Spaceship(this, spawnX, spawnY, this.startingTexture);
-        this.player.setScale(0.25); // La navicella è leggermente più piccola in questa scena
-        (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
 
         // INPUTS
         if (this.input.keyboard) {
@@ -164,6 +205,8 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
         // ABI: Inizializziamo l'assistente e mostriamo un dialogo iniziale
         this.abi = new ABI(this);
+        // this.abi.showRadioMessage("Entering the cytoplasm. Sensors are picking up complex structures and obstacles. Stay alert, we need to find the nuclear pore to proceed.");
+
         this.abi.showDialogue(
             "A.B.I.",
             "We're inside the cytoplasm! It's a maze of cytoskeletal filaments. We must navigate carefully to reach the nuclear pore, our next destination."
@@ -193,8 +236,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
                 else if (loreItem.getData('itemName') === 'CholesterolIceberg') {
                     this.abi.showDialogue("A.B.I.", [
                         "Path blocked. Scanners show a massive accumulation of crystallized cholesterol molecules.",
-                        "It seems the host organism has built up rigid 'lipid icebergs' within its fluid membrane.",
-                        "Our drills cannot penetrate this density."
+                        "It seems the host organism has built up rigid 'lipid icebergs' within its fluid membrane."
                     ]);
                 }
             }
@@ -212,41 +254,11 @@ export default class Scene2_Membrane extends Phaser.Scene {
         }
 
         // Altrimenti, se non sta parlando, gestiamo il movimento e lo sfondo
-        this.handleMovement();
+        this.player.update(); // La logica di movimento è ora nella classe Spaceship
 
         // L'EFFETTO FLUIDO: come in Scene1, lo sfondo si muove
         this.background_scene.tilePositionX += 0.1;
         this.background_scene.tilePositionY += 0.05;
-    }
-
-    private handleMovement() {
-        const body = this.player.body as Phaser.Physics.Arcade.Body;
-        body.setVelocity(0);
-        const speed = 400;
-
-        // Gestione asse X e cambio texture laterale
-        if (this.cursors.left.isDown) {
-            body.setVelocityX(-speed);
-            this.player.setTexture('nav_left');
-        } else if (this.cursors.right.isDown) {
-            body.setVelocityX(speed);
-            this.player.setTexture('nav_right');
-        }
-
-        // Gestione asse Y e cambio texture verticale
-        if (this.cursors.up.isDown) {
-            body.setVelocityY(-speed);
-            if (!this.cursors.left.isDown && !this.cursors.right.isDown) {
-                this.player.setTexture('nav_back');
-            }
-        } else if (this.cursors.down.isDown) {
-            body.setVelocityY(speed);
-            if (!this.cursors.left.isDown && !this.cursors.right.isDown) {
-                this.player.setTexture('nav_front');
-            }
-        }
-
-        body.velocity.normalize().scale(speed);
     }
 
     private exitScene() {

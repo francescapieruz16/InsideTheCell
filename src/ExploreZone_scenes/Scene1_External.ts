@@ -4,6 +4,7 @@ import ABI from '../classes/abi';
 import Spaceship from '../classes/spaceship';
 
 export default class Scene1_External extends Phaser.Scene {
+    private static hasShownControls = false;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private interactKey!: Phaser.Input.Keyboard.Key;
     private portal!: Phaser.GameObjects.Sprite;
@@ -194,7 +195,16 @@ export default class Scene1_External extends Phaser.Scene {
             // Ferma eventuali musiche o robe in sospeso
             this.scene.start('Scene2_Membrane', { incomingTexture: this.player.texture.key });
         });
+
+        
         // -----------------------------------------------------------------
+
+        // Mostra i controlli la prima volta che si entra nella scena
+        if (!Scene1_External.hasShownControls) {
+            Scene1_External.hasShownControls = true;
+            this.scene.pause(this.scene.key);
+            this.scene.launch('ControlsScene', { parentScene: this.scene.key });
+        }
     }
 
     update() {
@@ -225,7 +235,7 @@ export default class Scene1_External extends Phaser.Scene {
             return; 
         }
         if (this.gameState === 'EXPLORING') {
-            this.handleMovement();
+            this.player.update(); // La logica di movimento è ora nella classe Spaceship
             
             // L'EFFETTO FLUIDO:
             this.lipidOcean.tilePositionX += 0.1;
@@ -326,35 +336,11 @@ export default class Scene1_External extends Phaser.Scene {
 
     // Controlla se il giocatore sta premendo almeno un tasto direzionale
     private isTryingToMove(): boolean {
-        return this.cursors.left.isDown || this.cursors.right.isDown || 
-               this.cursors.up.isDown || this.cursors.down.isDown;
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        return body.velocity.x !== 0 || body.velocity.y !== 0;
     }
 
     // --- LOGICA DI MOVIMENTO E TRANSIZIONE ---
-
-    private handleMovement() {
-        const body = this.player.body as Phaser.Physics.Arcade.Body;
-        body.setVelocity(0);
-        const speed = 400;
-
-        if (this.cursors.left.isDown) {
-            body.setVelocityX(-speed);
-            this.player.setTexture('nav_left');
-        } else if (this.cursors.right.isDown) {
-            body.setVelocityX(speed);
-            this.player.setTexture('nav_right');
-        }
-
-        if (this.cursors.up.isDown) {
-            body.setVelocityY(-speed);
-            if (!this.cursors.left.isDown && !this.cursors.right.isDown) this.player.setTexture('nav_back');
-        } else if (this.cursors.down.isDown) {
-            body.setVelocityY(speed);
-            if (!this.cursors.left.isDown && !this.cursors.right.isDown) this.player.setTexture('nav_front');
-        }
-
-        body.velocity.normalize().scale(speed);
-    }
 
     private changeZone() {
         if (this.isTransitioning || this.gameState === 'TALKING') return;

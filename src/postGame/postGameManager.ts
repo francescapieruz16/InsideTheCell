@@ -318,10 +318,6 @@ export class PostGameManager {
             fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#770000'
         }).setOrigin(0.5);
 
-        const text = this.scene.add.text(cx, cy - 20, 'The virus breached the cell defenses.', {
-            fontFamily: this.MENU_FONT, fontSize: '28px', fontStyle: 'bold', color: '#ffffff'
-        }).setOrigin(0.5);
-
         const retryBtn = this.createButton(cx, cy + 70, 320, 70, 'Try Again', () => {
             this.chatManager.hide();
             this.scene.scene.restart({ vaccinated: true }); 
@@ -332,7 +328,7 @@ export class PostGameManager {
             window.location.href = '/pages/menu_page.html';
         });
 
-        this.scene.add.container(0, 0, [...windowUi.list, title, text, retryBtn, menuBtn]).setDepth(120);
+        this.scene.add.container(0, 0, [...windowUi.list, title, retryBtn, menuBtn]).setDepth(120);
     }
 
     private buildChat() {

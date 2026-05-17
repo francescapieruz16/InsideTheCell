@@ -149,6 +149,14 @@ export default class Scene1_External extends Phaser.Scene {
         if (this.input.keyboard) {
             // this.cursors = this.input.keyboard.createCursorKeys();
             this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+            this.input.keyboard.on('keydown-ESC', () => {
+                // Se A.B.I. sta parlando, potresti voler bloccare la pausa per evitare conflitti grafici
+                if (!this.abi.isTalking) {
+                    this.scene.pause();
+                    this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+                }
+            });
         }
 
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);

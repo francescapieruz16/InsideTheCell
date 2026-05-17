@@ -31,7 +31,8 @@ export default class ControlsScene extends Phaser.Scene {
         // 3. Testo dei Comandi
         this.add.text(width / 2, height / 2, 
             'ARROW KEYS : Spaceship Controls\n\n' +
-            'SPACEBAR : Interact / Next Dialog', {
+            'SPACEBAR : Interact / Next Dialog\n\n' +
+            'ESC : Pause Game', {
             fontSize: '24px',
             color: '#cccccc',
             align: 'center'

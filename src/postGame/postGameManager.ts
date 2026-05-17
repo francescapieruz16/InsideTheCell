@@ -17,16 +17,19 @@ export class PostGameManager {
     private readonly MENU_FONT = 'Arial';
 
     private quizData: any = {};
-    private quizKey: string = "";
 
     private llmContainer!: Phaser.GameObjects.Container;
     private finalQuizContainer!: Phaser.GameObjects.Container;
     private continueToQuizBtn!: Phaser.GameObjects.Container;
 
+    private prompt: string = "";
     private minigame_description: string = "";
     private knowledge: string = "";
     private defaultResponse: string = ""
-    private nextLvl: integer = 0;
+    private defaultInfos: string = "";
+    private dialogues: string[] = [];
+    private currentLevel: integer = 0;
+    private nextLevel: integer = 0;
 
     private isWaitingForLLM: boolean = false;
 
@@ -90,56 +93,84 @@ export class PostGameManager {
         );
     }
 
-    public preparePostGame(infoTitle: string, infoText: string, minigame_description: string, knowledge: string, defaultResponse: string, quizzesKey: string) {
-        this.quizData = {
-            infoTitle,
-            infoText,
-        };
+    public preparePostGame(level: number) {
+        this.currentLevel = level;
+        this.nextLevel = this.currentLevel + 1;
 
-        this.minigame_description = minigame_description;
-        this.knowledge = knowledge;
-        this.defaultResponse = defaultResponse;
-        this.quizKey = quizzesKey;
-        const currentLvl = parseInt(quizzesKey.replace(/\D/g, ''), 10);
-        this.nextLvl = currentLvl  + 1;
+        this.prompt = localStorage.getItem('GAME_PROMPT') || "";
+        this.minigame_description = this.extractTextForLevel(this.currentLevel, localStorage.getItem('MINIGAME_DESCRIPTIONS') || "");
+        this.knowledge = this.extractTextForLevel(this.currentLevel, localStorage.getItem('MINIGAME_KNOWLEDGES') || "");
+        this.defaultResponse = this.extractTextForLevel(this.currentLevel, localStorage.getItem('DEFAULT_CHAT_RESPONSES') || "");
+        this.defaultInfos = localStorage.getItem('DEFAULT_POSTGAME_INFO') || "";
+        this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
 
         this.buildChat();
-
         this.loadRandomQuiz();
     }
 
-    private loadRandomQuiz() {
+    private async createDialogues() {
+
+        if (!this.llm) {
+            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
+            return;
+        }
+
         try {
-            const quizzes = this.scene.cache.json.get(this.quizKey);
+            const prompt = this.prompt + 
+                `You will be provided with a description of the specific minigame phase and a "knowledge context". The player has just lost the level.
+                Your task is to create a brief post-game feedback to inform the player of their failure and explain the biological mechanic of the specific infection phase.
 
-            if (!Array.isArray(quizzes) || quizzes.length === 0) {
-                throw new Error("Invalid or empty quiz JSON");
-            }
+                Follow these strict rules to formulate your response:
+                1. EXCLUSIVELY use the provided "knowledge context" or minigame description. Do not introduce outside scientific facts.
+                2. Your response must follow this exact 3-part narrative structure:
+                - Part 1: A short, dramatic exclamation announcing the virus's success (max 6-8 words).
+                - Part 2: A direct gentle statement of the player's failure (e.g., "You were not able to stop it in time.").
+                - Part 3: A brief, 1-2 sentence explanation of the biological event that just occurred, using the context.
+                3. You MUST format the output exactly like the example below, line by line. Notice that the explanation lines DO NOT have letter prefixes (like 'c:'):
+                
+                ${this.currentLevel}a: [Part 1 - Short exclamation!]
+                ${this.currentLevel}b: [Part 2 - Failure acknowledgment.]
+                    [Part 3 - First sentence of the explanation.]
+                    [Part 3 - Second sentence of the explanation (optional).]
 
+                4. Your response MUST be extremely brief—strictly a maximum of 2 to 3 short sentences. This is mandatory so the text fits inside a small UI container.`
 
-            // pick a random quiz from the file
-            const randomIndex = Phaser.Math.Between(0, quizzes.length - 1);
-            const selectedQuiz = quizzes[randomIndex];
+            const chatPromptTemplate = ChatPromptTemplate.fromMessages([
+                ["system", prompt],
+                ["user", "Minigame description: {minigame_description}\n\nKnowledge context: {knowledge}"]
+            ]);
 
-            this.quizData.quizQuestion = selectedQuiz.quizQuestion;
-            this.quizData.answers = selectedQuiz.answers;
-            
-            this.buildQuiz();
-            this.isQuizReady = true;
+            const chain = chatPromptTemplate.pipe(this.llm).pipe(new StringOutputParser());
 
-            if (this.waitingForQuiz) {
-                if (this.loadingText) this.loadingText.destroy();
-                this.finalQuizContainer.setVisible(true);
-            }
+            const feedback = await chain.invoke({
+                minigame_description: this.minigame_description,
+                knowledge: this.knowledge,
+            });
+
+            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, feedback);
+
         } catch (e) {
-            this.quizData.quizQuestion = "What is the mandatory first step for infection is?";
-            this.quizData.answers = [
-                { text: "Binding phase", isCorrect: true },
-                { text: "Replicating inside the nucleus", isCorrect: false },
-                { text: "Destroying the host cell", isCorrect: false }
-            ];
-            this.buildQuiz();
-            this.isQuizReady = true;
+            console.log("LLM error: " + e);
+            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
+        }
+    }
+
+    private loadRandomQuiz() {        
+
+        const availableQuizzes = this.extractQuizzesForLevel(this.currentLevel  , localStorage.getItem('QUIZZES') || "");
+
+        const randomIndex = Phaser.Math.Between(0, availableQuizzes.length - 1);
+        const selectedQuiz = availableQuizzes[randomIndex];
+
+        this.quizData.quizQuestion = selectedQuiz.question;
+        this.quizData.answers = selectedQuiz.answers;
+
+        this.buildQuiz();
+        this.isQuizReady = true;
+
+        if (this.waitingForQuiz) {
+            if (this.loadingText) this.loadingText.destroy();
+            this.finalQuizContainer.setVisible(true);
         }
     }
 
@@ -159,9 +190,8 @@ export class PostGameManager {
         this.abi.showDialogue("ABI", "Elaborating...", undefined, true);
 
         try {
-            const prompt = 
-                `You are an AI tutor in an educational video game about viral infection phases, designed for middle and high school students. 
-                You will be provided with a description of the specific minigame phase and a "knowledge context". The player has just lost the level. 
+            const prompt = this.prompt + 
+                `You will be provided with a description of the specific minigame phase and a "knowledge context". The player has just lost the level. 
                 They will initially respond to the prompt "Why do you think you lost?", and may subsequently ask you follow-up questions.
 
                 Follow these strict rules to formulate your response:
@@ -184,7 +214,7 @@ export class PostGameManager {
 
             const feedbackPages = [
                 feedback,
-                "Do you have any other questions?\nIf not, click 'Continue' to start the quiz."
+                "Do you have any other questions?\nIf not, proceed to the quiz."
             ];
 
             this.isWaitingForLLM = false;
@@ -229,12 +259,12 @@ export class PostGameManager {
     }
 
     // called when player lose
-    public showLearningPhase() {
-        const dialoguePages = [
-            this.quizData.infoTitle,
-            this.quizData.infoText,
-            "Why do you think you lost?"
-        ];
+    public async showLearningPhase() {
+
+        this.abi.showDialogue("ABI", "Analyzing the infection...", undefined, true);
+
+        await this.createDialogues();
+        const dialoguePages = [...this.dialogues, "Why do you think you lost?"];
 
         this.abi.showDialogue("ABI", dialoguePages, () => {
             this.continueToQuizBtn.setVisible(false);
@@ -264,10 +294,10 @@ export class PostGameManager {
             window.location.href = '/pages/menu_page.html';
         });
 
-        if (this.nextLvl <= 6) {
+        if (this.nextLevel <= 6) {
             const nextBtn = this.createButton(cx, cy + 20, 320, 70, 'Next level', () => {
                 this.chatManager.hide()
-                window.location.href = '/pages/level' + this.nextLvl + '.html';
+                window.location.href = '/pages/level' + this.nextLevel + '.html';
             });
 
             this.scene.add.container(0, 0, [...windowUi.list, title, nextBtn, menuBtn]).setDepth(120);
@@ -288,10 +318,6 @@ export class PostGameManager {
             fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#770000'
         }).setOrigin(0.5);
 
-        const text = this.scene.add.text(cx, cy - 20, 'The virus breached the cell defenses.', {
-            fontFamily: this.MENU_FONT, fontSize: '28px', fontStyle: 'bold', color: '#ffffff'
-        }).setOrigin(0.5);
-
         const retryBtn = this.createButton(cx, cy + 70, 320, 70, 'Try Again', () => {
             this.chatManager.hide();
             this.scene.scene.restart({ vaccinated: true }); 
@@ -302,7 +328,7 @@ export class PostGameManager {
             window.location.href = '/pages/menu_page.html';
         });
 
-        this.scene.add.container(0, 0, [...windowUi.list, title, text, retryBtn, menuBtn]).setDepth(120);
+        this.scene.add.container(0, 0, [...windowUi.list, title, retryBtn, menuBtn]).setDepth(120);
     }
 
     private buildChat() {
@@ -311,7 +337,7 @@ export class PostGameManager {
 
         const windowUi = this.createWindow(cx, cy, 980, 560);
 
-        this.continueToQuizBtn = this.createButton(cx + 320, cy + 210, 260, 64, 'Continue', () => {
+        this.continueToQuizBtn = this.createButton(cx + 320, cy + 210, 260, 64, 'Go to the quiz', () => {
             this.llmContainer.setVisible(false);
             this.chatManager.hide();
             this.proceedToQuiz();
@@ -388,5 +414,81 @@ export class PostGameManager {
         
         container.add([outer, text, hit]);
         return container;
+    }
+
+    private extractTextForLevel(level: number, text: string): string {
+        const lines = text.split('\n');
+        for (const line of lines) {
+            if (line.trim().startsWith(`${level}:`)) {
+                return line.substring(line.indexOf(':') + 1).trim();
+            }
+        }
+        return "Description not found.";
+    }
+
+    private extractQuizzesForLevel(level: number, quizzesText: string) {
+        const lines = quizzesText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const quizzes: any[] = [];
+        
+        let currentQuestion = "";
+        let currentAnswers: any[] = [];
+
+        for (const line of lines) {
+            if (line.startsWith(`${level}:`)) {
+                if (currentQuestion !== "") {
+                    quizzes.push({ question: currentQuestion, answers: currentAnswers });
+                }
+                
+                currentQuestion = line.substring(line.indexOf(':') + 1).trim();
+                currentAnswers = [];
+            } 
+            else if (currentQuestion !== "") {
+                const answerRegex = new RegExp(`^${level}[a-z]\\((T|F)\\):(.*)`);
+                const match = line.match(answerRegex);
+
+                if (match) {
+                    const isCorrect = match[1] === 'T';
+                    const text = match[2].trim();
+                    currentAnswers.push({ text, isCorrect });
+                } 
+                else if (line.match(/^\d+:/)) {
+                    break;
+                }
+            }
+        }
+
+        if (currentQuestion !== "") {
+            quizzes.push({ question: currentQuestion, answers: currentAnswers });
+        }
+
+        return quizzes;
+    }
+
+    extractDefaultInfoForLevel(level: number, text: string): string[] {
+        const lines = text.split('\n');
+        let isCapturing = false;
+        const extractedLines: string[] = [];
+
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+
+            if (trimmedLine.startsWith(`${level}a:`)) {
+                isCapturing = true;
+                extractedLines.push(trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim());
+            } 
+            else if (isCapturing && trimmedLine.startsWith(`${level}b:`)) {
+                extractedLines.push(trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim());
+            } 
+            else if (isCapturing && trimmedLine.match(/^\d+a:/) && !trimmedLine.startsWith(`${level}a:`)) {
+                break;
+            } 
+            else if (isCapturing && trimmedLine.length > 0) {
+                if (extractedLines.length > 0) {
+                    extractedLines[extractedLines.length - 1] += '\n' + trimmedLine;
+                }
+            }
+        }
+
+        return extractedLines.length > 0 ? extractedLines : ["Default info not found."];
     }
 }

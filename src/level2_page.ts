@@ -62,7 +62,6 @@ class Level2 extends Phaser.Scene {
         this.load.image('crosshair', '/assets/level 2/crosshair.png');
         this.load.image('explosion', '/assets/level 2/explosion.png');
 
-        this.load.json('level2quizzes', '/assets/quizzes/level2.json');
         this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
 
         this.virusKeys.forEach(key => {
@@ -101,32 +100,8 @@ class Level2 extends Phaser.Scene {
 
         this.postGameManager = new PostGameManager(this);
         
-        const infoTitle = "Viruses entered the membrane!";
-        const infoText = "You were not able to stop them in time.\nThe virus fused with the cell membrane.\nThis is the second step of the infection.";
-
-        const minigame_description = 
-            `The objective of the minigame is to prevent viruses from entering the cell membrane
-            The player controls the crosshair and can destroy the viruses before reaching the entry point, if too many viruses
-            get through they enters the cell .`;
-
-        // TODO: add knowledge
-        const knowledge = 
-            `After binding to the cell receptors, viruses proceed to the next phase: entry into the cell.
-            They can cross the cell membrane either by membrane fusion or by endocytosis.
-            Stopping the virus before it enters the cell is crucial to prevent the infection from progressing.`;
-
-        const defaultResponse = 
-            `Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane.
-            They do this through mechanisms like membrane fusion or endocytosis. 
-            Stopping the virus before it enters is essential to prevent the infection from progressing.`;
-
         this.postGameManager.preparePostGame(
-            infoTitle,
-            infoText,
-            minigame_description,
-            knowledge,
-            defaultResponse,
-            'level2quizzes'
+            2
         );
     }
 

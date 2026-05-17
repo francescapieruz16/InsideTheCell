@@ -74,7 +74,6 @@ class Level1 extends Phaser.Scene {
         this.load.image('cart', '/assets/level1/cart.png');
         this.load.image('cart_full', '/assets/level1/cart_full.png');
 
-        this.load.json('level1quizzes', '/assets/quizzes/level1.json');
         this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
     }
 
@@ -137,25 +136,8 @@ class Level1 extends Phaser.Scene {
 
         this.postGameManager = new PostGameManager(this);
 
-        const infoTitle = "The virus reached the cell!";
-        const infoText = "You were not able to stop it in time.\nThe virus reached the receptors on the surface of the cell and attached to it.\nThis is the first step of the infection.";
-
-        const minigame_description = 
-           `The objective of the minigame is to prevent viruses falling from the top of the screen from binding to the receptors located on the cell 
-            membrane. The player controls a movable cart to catch the viruses before they can successfully attach to a receptor.` 
-
-        // TODO: add knowledge
-        const knowledge = "During the binding phase, viruses use their surface proteins to attach to specific receptors on the host cell. This lock-and-key mechanism is the mandatory first step for the virus to enter the cell and cause an infection.";
-
-        const defaultResponse = "Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key."
-
         this.postGameManager.preparePostGame(
-            infoTitle,
-            infoText,
-            minigame_description,
-            knowledge,
-            defaultResponse,
-            'level1quizzes'
+            1
         );
 
         this.setupGame();

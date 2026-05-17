@@ -21,12 +21,15 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
     preload() {
      
-        this.load.image('wall_cytoskeleton', '/assets/tutorial/sfondi/wall_labyrinth2.png');        // Ipotetico filamento del citoscheletro o organello che fa da muro
-        this.load.image('nuclear_pore', '/assets/tutorial/sfondi/nuclear_pore.png');     // L'uscita, ad esempio un poro nucleare
+        //this.load.image('wall_cytoskeleton', '/assets/tutorial/sfondi/wall_labyrinth2.png');        // Ipotetico filamento del citoscheletro o organello che fa da muro
         this.load.image('background_scene2', '/assets/tutorial/sfondi/scene2_background.png'); 
-        this.load.image('exit_portal', '/assets/tutorial/sfondi/exit_labyrinth2.png') 
+        this.load.image('exit_portal', '/assets/tutorial/sfondi/exit_labyrinth3.png') 
         this.load.image('viral_wreck', '/assets/tutorial/obstacles/viral_wreck.png');
-        this.load.image('lipid_iceberg', '/assets/tutorial/obstacles/lipid_iceberg.png');         
+        this.load.image('lipid_iceberg', '/assets/tutorial/obstacles/lipid_iceberg.png');    
+        this.load.spritesheet('wall_cytoskeleton_anim', '/assets/tutorial/sfondi/wall_spritesheet.png', {
+            frameWidth: 313, // La larghezza di UN singolo fotogramma nel PNG
+            frameHeight: 313 // L'altezza del fotogramma
+        });     
     }
 
     constructor() {
@@ -97,6 +100,14 @@ export default class Scene2_Membrane extends Phaser.Scene {
         this.player.setScale(0.25); // La navicella è leggermente più piccola in questa scena
         (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
 
+        this.anims.create({
+            key: 'wall_shimmer',
+            frames: this.anims.generateFrameNumbers('wall_cytoskeleton_anim', { start: 0, end: 3 }), // Usa i frame da 0 a 3
+            frameRate: 2, // Velocità dell'animazione (fotogrammi al secondo)
+            repeat: -1,   // Ripeti all'infinito
+            yoyo: true    // Torna indietro (0-1-2-3-2-1-0) per un movimento più fluido
+        });
+
         // Creiamo il gruppo statico per i muri
         this.wallsGroup = this.physics.add.staticGroup();
 
@@ -115,10 +126,11 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
                 if (cellValue === 1) {
                     // È un muro: crealo e mettilo nel gruppo
-                    let wall = this.wallsGroup.create(posX, posY, 'wall_cytoskeleton');
+                    let wall = this.wallsGroup.create(posX, posY, 'wall_cytoskeleton_anim');
                     // Moltiplica TILE_SIZE (es. per 1.2) per rendere il muro del 20% più grande e far sovrapporre meglio i blocchi
                     wall.setDisplaySize(TILE_SIZE * 1.2, TILE_SIZE * 1.2); 
                     wall.refreshBody(); // Aggiorna la hitbox statica
+                    wall.anims.play('wall_shimmer', true);
                 } 
                 else if (cellValue === 2) {
                     // È l'entrata: posizioniamo la navicella e la rendiamo visibile
@@ -176,13 +188,13 @@ export default class Scene2_Membrane extends Phaser.Scene {
                             else if (cellValue === 7) {
                                 this.abi.showRadioMessage(
                                     "We are approaching the nuclear pore complex. Once we breach this gate, we will enter the deep cytoplasm. Prepare yourself: the environment will expand dramatically, filled with massive organelles like mitochondria and free-floating ribosomes.", 
-                                    6000
+                                    7000
                                 );
                             }
                                 else if (cellValue === 8) {
                                 this.abi.showRadioMessage(
                                     "Analyzing barrier depth... Did you know this membrane is only about 8 nanometers thick? To put that in perspective, a standard sheet of paper is about 12,000 times thicker than this structure.",
-                                    5500
+                                    6000
                                 );
                             }
                         }
@@ -193,7 +205,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
         // INPUTS
         if (this.input.keyboard) {
-            this.cursors = this.input.keyboard.createCursorKeys();
+            // this.cursors = this.input.keyboard.createCursorKeys();
             this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         }
 

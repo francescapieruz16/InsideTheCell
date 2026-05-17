@@ -13,15 +13,15 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
 
     constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
 
-        scene.input.keyboard!.addCapture('W,A,S,D,UP,DOWN,LEFT,RIGHT');
         // Chiama il costruttore del Phaser.Sprite originale
         super(scene, x, y, texture);
+        
+        scene.input.keyboard!.addCapture('W,A,S,D,UP,DOWN,LEFT,RIGHT');
 
         // Aggiunge la navicella alla scena visiva e alla fisica
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // Impostazioni base che avevi nel create()
         this.setCollideWorldBounds(true);
 
         // Inizializza i controlli
@@ -101,10 +101,9 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Normalizziamo la velocità per evitare che il movimento diagonale sia più veloce
-        body.velocity.normalize().scale(speed);
-        if (!left && !right && !up && !down) {
-            this.setTexture('nav_front');
+        // Normalizziamo la velocità solo se la navicella è in movimento per evitare errori
+        if (body.velocity.length() > 0) {
+            body.velocity.normalize().scale(speed);
         }
     }
 }

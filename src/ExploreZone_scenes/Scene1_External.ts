@@ -5,7 +5,6 @@ import Spaceship from '../classes/spaceship';
 
 export default class Scene1_External extends Phaser.Scene {
     private static hasShownControls = false;
-    private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private interactKey!: Phaser.Input.Keyboard.Key;
     private portal!: Phaser.GameObjects.Sprite;
     private isTransitioning: boolean = false;
@@ -148,7 +147,7 @@ export default class Scene1_External extends Phaser.Scene {
 
         // INPUTS
         if (this.input.keyboard) {
-            this.cursors = this.input.keyboard.createCursorKeys();
+            // this.cursors = this.input.keyboard.createCursorKeys();
             this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         }
 
@@ -208,7 +207,7 @@ export default class Scene1_External extends Phaser.Scene {
     }
 
     update() {
-        if (this.isTransitioning || !this.cursors) return;
+        if (this.isTransitioning) return;
 
         //TRIGGER SEQUENZA INTRODUTTIVA
         if (!this.hasSeenIntro && this.isTryingToMove()) {

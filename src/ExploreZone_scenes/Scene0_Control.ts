@@ -22,7 +22,7 @@ export default class ControlsScene extends Phaser.Scene {
         bg.setOrigin(0, 0); // Lo allineiamo in alto a sinistra
 
         // 2. Testo del Titolo
-        this.add.text(width / 2, height / 2 - 120, 'COMANDI DI GIOCO', {
+        this.add.text(width / 2, height / 2 - 120, 'C O N T R O L   K E Y S', {
             fontSize: '36px',
             color: '#ffffff',
             fontStyle: 'bold'
@@ -30,15 +30,15 @@ export default class ControlsScene extends Phaser.Scene {
 
         // 3. Testo dei Comandi
         this.add.text(width / 2, height / 2, 
-            'FRECCE DIREZIONALI : Pilotaggio Navicella\n\n' +
-            'BARRA SPAZIATRICE : Interagisci / Avanti nei dialoghi', {
+            'ARROW KEYS : Spaceship Controls\n\n' +
+            'SPACEBAR : Interact / Next Dialog', {
             fontSize: '24px',
             color: '#cccccc',
             align: 'center'
         }).setOrigin(0.5);
 
-        // 4. Testo di interazione (Skippabile)
-        const promptText = this.add.text(width / 2, height / 2 + 150, 'Premi [INVIO] per continuare', {
+        // 4. Testo di interazione (Skippable)
+        const promptText = this.add.text(width / 2, height / 2 + 150, 'Press [Enter] to continue', {
             fontSize: '20px',
             color: '#ffff00'
         }).setOrigin(0.5);

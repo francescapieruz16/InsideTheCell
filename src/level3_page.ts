@@ -79,9 +79,15 @@ class Level3 extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
+        const baseHeight = 1080; 
+        const scaleRatio = height / baseHeight;
+
+        this.moveSpeed = 250 * scaleRatio;
+        this.jumpSpeed = 500 * scaleRatio;
+
         this.cameraLockX = width / 2;
 
-        const floorY = height - 50;
+        const floorY = height - 70;
         const platformBaseY = height - 150;
 
         this.bg = this.add.tileSprite(
@@ -104,15 +110,15 @@ class Level3 extends Phaser.Scene {
 
         this.player = this.physics.add.sprite(
             this.startX,
-            floorY - 70,
+            floorY - 90,
             'player_idle'
         );
 
         this.player.setOrigin(0, 0);
-        this.player.setScale(0.08);
+        this.player.setScale(0.12 * scaleRatio);
         this.player.setDepth(100);
         this.player.setCollideWorldBounds(true);
-        this.player.setGravityY(900);
+        this.player.setGravityY(900 * scaleRatio);
 
         this.cursors = this.input.keyboard!.createCursorKeys();
 
@@ -243,10 +249,10 @@ class Level3 extends Phaser.Scene {
         this.addSpikes(4670, floorY + 20, 0.10);
         this.addSpikes(5050, floorY + 20, 0.10);
 
-        this.addSpikes(930, platformBaseY - 40 - 20, 0.08);
-        this.addSpikes(1750, platformBaseY - 160 - 20, 0.08);
-        this.addSpikes(3020, platformBaseY + 2 - 20, 0.08);
-        this.addSpikes(4020, platformBaseY - 120 - 20, 0.08);
+        this.addSpikes(930, platformBaseY - 63, 0.08);
+        this.addSpikes(1750, platformBaseY - 193, 0.08);
+        this.addSpikes(3020, platformBaseY -21, 0.08);
+        this.addSpikes(4020, platformBaseY - 151, 0.08);
 
         /**
          * PIATTAFORMA FINALE + BANDIERINA

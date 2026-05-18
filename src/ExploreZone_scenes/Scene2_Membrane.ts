@@ -19,6 +19,8 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
     private background_scene!: Phaser.GameObjects.TileSprite;
 
+    private isTransitioning: boolean = false;
+
     preload() {
      
         //this.load.image('wall_cytoskeleton', '/assets/tutorial/sfondi/wall_labyrinth2.png');        // Ipotetico filamento del citoscheletro o organello che fa da muro
@@ -44,6 +46,8 @@ export default class Scene2_Membrane extends Phaser.Scene {
     }
 
     create() {
+
+        this.isTransitioning = false;
 
         // 0 = Vuoto, 1 = Muro (Actina), 2 = Spawn, 3 = Uscita (Poro Nucleare), 4= relitto, 5= iceberg lipidico, 6=messaggio1, 7=messaggio2
         const mazeGrid = [
@@ -221,7 +225,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
         // FISICA: Aggiungiamo le collisioni
         this.physics.add.collider(this.player, this.wallsGroup);
-        this.physics.add.overlap(this.player, this.exitPortal, this.exitScene, undefined, this);
+        this.physics.add.overlap(this.player, this.exitPortal, this.handleExit, undefined, this);
 
         // ABI: Inizializziamo l'assistente e mostriamo un dialogo iniziale
         this.abi = new ABI(this);
@@ -261,6 +265,14 @@ export default class Scene2_Membrane extends Phaser.Scene {
                 }
             }
         });
+
+          // --- SCORCIATOIA DI DEBUG (Da rimuovere prima della consegna!) ---
+            this.input.keyboard!.on('keydown-O', () => {
+            console.log("DEBUG: Salto direttamente alla Scene3_Internal!");
+            
+            // Ferma eventuali musiche o robe in sospeso
+            this.scene.start('Scene3_Internal', { incomingTexture: this.player.texture.key });
+        });
     }
 
     update() {
@@ -281,12 +293,26 @@ export default class Scene2_Membrane extends Phaser.Scene {
         this.background_scene.tilePositionY += 0.05;
     }
 
-    private exitScene() {
-        // Funzione per gestire la transizione alla scena successiva
-        this.cameras.main.fadeOut(800, 0, 0, 0);
-        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-            // this.scene.start('NextScene'); // TODO: Cambia con il nome della scena successiva
-            console.log("Reached the exit!");
-        });
+    private handleExit() {
+        // Se stiamo già facendo la transizione o parlando, non fare nulla
+        if (this.isTransitioning || this.abi.isTalking) {
+            return;
+        }
+        this.isTransitioning = true;
+
+        // Ferma il giocatore
+        (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+
+        // Mostra il dialogo e, alla chiusura, avvia la transizione di scena
+        this.abi.showDialogue(
+            "A.B.I.",
+            "Nuclear pore complex breached. We are proceeding into the cytoplasm. Brace for environmental shift.",
+            () => { // Questa è la funzione di callback che viene eseguita alla fine del dialogo
+                this.cameras.main.fadeOut(800, 0, 0, 0);
+                this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+                    this.scene.start('Scene3_Internal', { incomingTexture: this.player.texture.key });
+                });
+            }
+        );
     }
 }

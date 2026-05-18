@@ -63,47 +63,47 @@ class Level4 extends Phaser.Scene {
     preload() {
         this.load.image(
             'background_level4',
-            '/assets/level%204/background_level_4.png'
+            '/assets/level4/background_level_4.png'
         );
 
         this.load.image(
             'card_back',
-            '/assets/level%204/card_back.png'
+            '/assets/level4/card_back.png'
         );
 
         this.load.image(
             'card_viral_rna',
-            '/assets/level%204/card_viral_rna.png'
+            '/assets/level4/card_viral_rna.png'
         );
 
         this.load.image(
             'card_adenine',
-            '/assets/level%204/card_adenine.png'
+            '/assets/level4/card_adenine.png'
         );
 
         this.load.image(
             'card_uracil',
-            '/assets/level%204/card_uracil.png'
+            '/assets/level4/card_uracil.png'
         );
 
         this.load.image(
             'card_cytosine',
-            '/assets/level%204/card_cytosine.png'
+            '/assets/level4/card_cytosine.png'
         );
 
         this.load.image(
             'card_guanine',
-            '/assets/level%204/card_guanine.png'
+            '/assets/level4/card_guanine.png'
         );
 
         this.load.image(
             'card_buffer_1',
-            '/assets/level%204/card_buffer_1.png'
+            '/assets/level4/card_buffer_1.png'
         );
 
         this.load.image(
             'card_buffer_2',
-            '/assets/level%204/card_buffer_2.png'
+            '/assets/level4/card_buffer_2.png'
         );
 
         this.load.image(

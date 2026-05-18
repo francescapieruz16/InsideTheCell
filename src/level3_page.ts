@@ -26,8 +26,8 @@ class Level3 extends Phaser.Scene {
     private cameraLockX = 0;
 
     private postGameManager!: PostGameManager;
-    private isVaccinated : boolean = false;
-    private hasShownQuiz : boolean = false;
+    private isVaccinated: boolean = false;
+    private hasShownQuiz: boolean = false;
 
     private genomeTimer = 0;
     private genomeReleaseTime = 15000;
@@ -272,6 +272,9 @@ class Level3 extends Phaser.Scene {
         this.finishFlag.setScale(0.12);
         this.finishFlag.setDepth(30);
 
+        // Salva la posizione iniziale della bandierina
+        this.finishFlag.setData('startX', this.finishFlag.x);
+
         const flagBody = this.finishFlag.body as Phaser.Physics.Arcade.Body;
 
         flagBody.allowGravity = false;
@@ -308,9 +311,8 @@ class Level3 extends Phaser.Scene {
         this.physics.add.collider(this.player, this.platforms);
 
         this.postGameManager = new PostGameManager(this);
-        
+
         this.postGameManager.preparePostGame(3);
-        
     }
 
     private addPlatform(
@@ -334,6 +336,9 @@ class Level3 extends Phaser.Scene {
         platform.setScale(scale);
         platform.setDepth(5);
         platform.setImmovable(true);
+
+        // Salva la posizione iniziale della piattaforma
+        platform.setData('startX', x);
 
         platform.setData('bodyWidthPercent', bodyWidthPercent);
         platform.setData('bodyHeightPercent', bodyHeightPercent);
@@ -361,6 +366,9 @@ class Level3 extends Phaser.Scene {
         spike.setScale(scale);
         spike.setDepth(25);
         spike.setImmovable(true);
+
+        // Salva la posizione iniziale dello spike
+        spike.setData('startX', x);
 
         const body = spike.body as Phaser.Physics.Arcade.Body;
 
@@ -429,6 +437,39 @@ class Level3 extends Phaser.Scene {
 
         if (this.finishFlag) {
             this.finishFlag.x += amount;
+
+            const flagBody = this.finishFlag.body as Phaser.Physics.Arcade.Body;
+            flagBody.updateFromGameObject();
+        }
+    }
+
+    private resetLevelPositions() {
+        this.platforms.children.iterate((child) => {
+            const platform = child as Phaser.Physics.Arcade.Image;
+            const startX = platform.getData('startX') as number;
+
+            platform.x = startX;
+            this.updatePlatformBody(platform);
+
+            return true;
+        });
+
+        this.spikes.children.iterate((child) => {
+            const spike = child as Phaser.Physics.Arcade.Image;
+            const startX = spike.getData('startX') as number;
+
+            spike.x = startX;
+
+            const body = spike.body as Phaser.Physics.Arcade.Body;
+            body.updateFromGameObject();
+
+            return true;
+        });
+
+        if (this.finishFlag) {
+            const startX = this.finishFlag.getData('startX') as number;
+
+            this.finishFlag.x = startX;
 
             const flagBody = this.finishFlag.body as Phaser.Physics.Arcade.Body;
             flagBody.updateFromGameObject();
@@ -552,10 +593,15 @@ class Level3 extends Phaser.Scene {
 
         this.gameOver = true;
 
-        this.player.setVelocityX(0);
-        this.player.setVelocityY(0);
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
 
-        this.time.delayedCall(50, () => {
+        this.player.setVelocity(0, 0);
+        body.stop();
+
+        // Disabilita il body del player per evitare overlap continui con gli spikes
+        body.enable = false;
+
+        this.time.delayedCall(100, () => {
             this.respawnPlayer();
         });
     }
@@ -567,28 +613,24 @@ class Level3 extends Phaser.Scene {
         const spawnX = this.startX;
         const spawnY = floorY - 70;
 
-        // Riporta piattaforme, spike e bandiera alla posizione iniziale
-        if (this.worldScroll !== 0) {
-            this.movePlatforms(this.worldScroll + 140);
-        }
+        // Reset sicuro: rimette piattaforme, spikes e bandierina alla posizione iniziale
+        this.resetLevelPositions();
 
-        // Reset dello scroll
         this.worldScroll = 0;
         this.bg.tilePositionX = 0;
 
         const body = this.player.body as Phaser.Physics.Arcade.Body;
 
-        // Reset completo del giocatore
-        body.enable = true;
-        body.stop();
-
+        this.player.setPosition(spawnX, spawnY);
         this.player.setVelocity(0, 0);
         this.player.setAcceleration(0, 0);
-        this.player.setPosition(spawnX, spawnY);
         this.player.setFlipX(false);
         this.player.anims.play('idle', true);
 
+        // Riattiva il body solo dopo aver rimesso il player allo spawn
+        body.enable = true;
         body.reset(spawnX, spawnY);
+        body.stop();
         body.updateFromGameObject();
 
         this.gameOver = false;

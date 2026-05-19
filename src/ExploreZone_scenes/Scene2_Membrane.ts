@@ -192,7 +192,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
                             else if (cellValue === 7) {
                                 this.abi.showRadioMessage(
                                     "We are approaching the nuclear pore complex. Once we breach this gate, we will enter the deep cytoplasm. Prepare yourself: the environment will expand dramatically, filled with massive organelles like mitochondria and free-floating ribosomes.", 
-                                    7000
+                                    7500
                                 );
                             }
                                 else if (cellValue === 8) {

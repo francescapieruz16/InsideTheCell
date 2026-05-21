@@ -319,7 +319,7 @@ export class PostGameManager {
     }
 
     public async showLearningPhase() {
-        this.abi.showDialogue("ABI", "Analyzing the infection...", undefined, true);
+        this.abi.showDialogue("ABI", "Analyzing the infection...", undefined, true, true);
         await this.createDialogues();
 
         const dialoguePages = [...this.dialogues, "Why do you think you lost?"];
@@ -393,7 +393,7 @@ export class PostGameManager {
         const cy = this.scene.cameras.main.height / 2;
         const zoom = this.scene.cameras.main.height / 1080;
 
-        this.continueToQuizBtn = this.createButton(320, 210, 260, 64, 'Go to the quiz', '28px', () => {
+        this.continueToQuizBtn = this.createButton(cx - 150, cy - 110, 260, 64, 'Go to the quiz', '28px', () => {
             this.llmContainer.setVisible(false);
             this.chatManager.hide();
             this.proceedToQuiz();

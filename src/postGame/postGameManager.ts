@@ -18,8 +18,11 @@ export class PostGameManager {
 
     private quizData: any = {};
 
+    private allUIContainers: Phaser.GameObjects.Container[] = [];
+
     private llmContainer!: Phaser.GameObjects.Container;
     private finalQuizContainer!: Phaser.GameObjects.Container;
+    private quizButtons: Phaser.GameObjects.Container[] = [];
     private continueToQuizBtn!: Phaser.GameObjects.Container;
 
     private prompt: string = "";
@@ -39,6 +42,8 @@ export class PostGameManager {
         this.scene = scene;
 
         this.abi = new ABI(this.scene);
+
+        this.scene.scale.on('resize', this.handleResize, this);
 
         if (this.scene.input.keyboard) {
             this.scene.input.keyboard.on('keydown-SPACE', () => {
@@ -93,8 +98,35 @@ export class PostGameManager {
                         }
                     }, 50);
                 }
+                if (isChatActive) {
+                    this.abi.MoveDialogueY(-150); 
+                } else {
+                    this.abi.MoveDialogueY(0); 
+                }
             }
         );
+    }
+
+    private handleResize(gameSize: Phaser.Structs.Size) {
+        const cx = gameSize.width / 2;
+        const cy = gameSize.height / 2;
+        const zoom = gameSize.height / 1080;
+        
+        this.allUIContainers.forEach(container => {
+            if (container && container.active) {
+                container.setPosition(cx, cy);
+                container.setScale(zoom);
+            }
+        });
+
+        if (this.loadingText && this.loadingText.active) {
+            this.loadingText.setPosition(cx, cy);
+            this.loadingText.setScale(zoom);
+        }
+
+        if (this.quizButtons && this.quizButtons.length > 0) {
+            this.repositionQuizButtons();
+        }
     }
 
     public preparePostGame(level: number) {
@@ -102,28 +134,11 @@ export class PostGameManager {
         this.nextLevel = this.currentLevel + 1;
 
         this.prompt = localStorage.getItem('GAME_PROMPT') || "";
-
-        this.minigame_description = this.extractTextForLevel(
-            this.currentLevel,
-            localStorage.getItem('MINIGAME_DESCRIPTIONS') || ""
-        );
-
-        this.knowledge = this.extractTextForLevel(
-            this.currentLevel,
-            localStorage.getItem('MINIGAME_KNOWLEDGES') || ""
-        );
-
-        this.defaultResponse = this.extractTextForLevel(
-            this.currentLevel,
-            localStorage.getItem('DEFAULT_CHAT_RESPONSES') || ""
-        );
-
+        this.minigame_description = this.extractTextForLevel(this.currentLevel, localStorage.getItem('MINIGAME_DESCRIPTIONS') || "");
+        this.knowledge = this.extractTextForLevel(this.currentLevel, localStorage.getItem('MINIGAME_KNOWLEDGES') || "");
+        this.defaultResponse = this.extractTextForLevel(this.currentLevel, localStorage.getItem('DEFAULT_CHAT_RESPONSES') || "");
         this.defaultInfos = localStorage.getItem('DEFAULT_POSTGAME_INFO') || "";
-
-        this.dialogues = this.extractDefaultInfoForLevel(
-            this.currentLevel,
-            this.defaultInfos
-        );
+        this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
 
         this.buildChat();
         this.loadRandomQuiz();
@@ -131,10 +146,7 @@ export class PostGameManager {
 
     private async createDialogues() {
         if (!this.llm) {
-            this.dialogues = this.extractDefaultInfoForLevel(
-                this.currentLevel,
-                this.defaultInfos
-            );
+            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
             return;
         }
 
@@ -163,60 +175,37 @@ export class PostGameManager {
                 ["user", "Minigame description: {minigame_description}\n\nKnowledge context: {knowledge}"]
             ]);
 
-            const chain = chatPromptTemplate
-                .pipe(this.llm)
-                .pipe(new StringOutputParser());
+            const chain = chatPromptTemplate.pipe(this.llm).pipe(new StringOutputParser());
 
             const feedback = await chain.invoke({
                 minigame_description: this.minigame_description,
                 knowledge: this.knowledge,
             });
 
-            this.dialogues = this.extractDefaultInfoForLevel(
-                this.currentLevel,
-                feedback
-            );
+            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, feedback);
 
         } catch (e) {
             console.log("LLM error: " + e);
-
-            this.dialogues = this.extractDefaultInfoForLevel(
-                this.currentLevel,
-                this.defaultInfos
-            );
+            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
         }
     }
 
     private loadRandomQuiz() {
-        const availableQuizzes = this.extractQuizzesForLevel(
-            this.currentLevel,
-            localStorage.getItem('QUIZZES') || ""
-        );
+        const availableQuizzes = this.extractQuizzesForLevel(this.currentLevel, localStorage.getItem('QUIZZES') || "");
 
         if (!availableQuizzes || availableQuizzes.length === 0) {
-            console.warn(
-                `No quiz found for level ${this.currentLevel}. Check the admin dashboard data.`
-            );
-
+            console.warn(`No quiz found for level ${this.currentLevel}. Check the admin dashboard data.`);
             this.buildMissingQuizScreen();
             this.isQuizReady = true;
 
             if (this.waitingForQuiz) {
-                if (this.loadingText) {
-                    this.loadingText.destroy();
-                }
-
+                if (this.loadingText) this.loadingText.destroy();
                 this.finalQuizContainer.setVisible(true);
             }
-
             return;
         }
 
-        const randomIndex = Phaser.Math.Between(
-            0,
-            availableQuizzes.length - 1
-        );
-
+        const randomIndex = Phaser.Math.Between(0, availableQuizzes.length - 1);
         const selectedQuiz = availableQuizzes[randomIndex];
 
         this.quizData.quizQuestion = selectedQuiz.question;
@@ -226,10 +215,7 @@ export class PostGameManager {
         this.isQuizReady = true;
 
         if (this.waitingForQuiz) {
-            if (this.loadingText) {
-                this.loadingText.destroy();
-            }
-
+            if (this.loadingText) this.loadingText.destroy();
             this.finalQuizContainer.setVisible(true);
         }
     }
@@ -242,12 +228,10 @@ export class PostGameManager {
             this.abi.showDialogue("ABI", this.defaultResponse, () => {
                 this.proceedToQuiz();
             });
-
             return;
         }
 
         this.isWaitingForLLM = true;
-
         this.abi.showDialogue("ABI", "Elaborating...", undefined, true);
 
         try {
@@ -265,9 +249,7 @@ export class PostGameManager {
                 ["user", "Minigame description: {minigame_description}\n\nKnowledge context: {knowledge}\n\nPlayer answer: {playerMessage}"]
             ]);
 
-            const chain = chatPromptTemplate
-                .pipe(this.llm)
-                .pipe(new StringOutputParser());
+            const chain = chatPromptTemplate.pipe(this.llm).pipe(new StringOutputParser());
 
             const feedback = await chain.invoke({
                 minigame_description: this.minigame_description,
@@ -291,22 +273,15 @@ export class PostGameManager {
                     if (typeof (this.chatManager as any).focus === 'function') {
                         (this.chatManager as any).focus();
                     } else {
-                        const inputElement = document.querySelector(
-                            'input[type="text"]'
-                        ) as HTMLInputElement;
-
-                        if (inputElement) {
-                            inputElement.focus();
-                        }
+                        const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+                        if (inputElement) inputElement.focus();
                     }
                 }, 50);
             });
 
         } catch (e) {
             console.log("LLM error: " + e);
-
             this.isWaitingForLLM = false;
-
             this.abi.showDialogue("ABI", this.defaultResponse, () => {
                 this.proceedToQuiz();
             });
@@ -315,48 +290,42 @@ export class PostGameManager {
 
     private proceedToQuiz() {
         this.abi.showDialogue("ABI", "Let's proceed to the quiz!", () => {
-            if (this.isQuizReady) {
-                this.finalQuizContainer.setVisible(true);
-            } else {
-                this.waitingForQuiz = true;
-
-                const cx = this.scene.cameras.main.width / 2;
-                const cy = this.scene.cameras.main.height / 2;
-
-                this.loadingText = this.scene.add.text(
-                    cx,
-                    cy,
-                    'Loading quiz...',
-                    {
-                        fontFamily: this.MENU_FONT,
-                        fontSize: '24px',
-                        color: '#ffffff',
-                    }
-                )
-                    .setOrigin(0.5)
-                    .setDepth(200);
-            }
+            this.showQuizQuestion();
         });
     }
 
-    public async showLearningPhase() {
-        this.abi.showDialogue(
-            "ABI",
-            "Analyzing the infection...",
-            undefined,
-            true
-        );
+    private showQuizQuestion() {
+        if (this.isQuizReady) {
+            this.abi.showDialogue("ABI", this.quizData.quizQuestion, undefined, true, true);
+            this.abi.MoveDialogueY(-180); 
+            this.repositionQuizButtons();
+            this.quizButtons.forEach(btn => btn.setVisible(true));
+        } else {
+            this.waitingForQuiz = true;
 
+            const cx = this.scene.cameras.main.width / 2;
+            const cy = this.scene.cameras.main.height / 2;
+            const zoom = this.scene.cameras.main.height / 1080;
+
+            this.loadingText = this.scene.add.text(
+                cx, cy, 'Loading quiz...',
+                { fontFamily: this.MENU_FONT, fontSize: '28px', color: '#ffffff' }
+            )
+            .setOrigin(0.5)
+            .setScale(zoom)
+            .setDepth(200)
+            .setScrollFactor(0);
+        }
+    }
+
+    public async showLearningPhase() {
+        this.abi.showDialogue("ABI", "Analyzing the infection...", undefined, true);
         await this.createDialogues();
 
-        const dialoguePages = [
-            ...this.dialogues,
-            "Why do you think you lost?"
-        ];
+        const dialoguePages = [...this.dialogues, "Why do you think you lost?"];
 
         this.abi.showDialogue("ABI", dialoguePages, () => {
             this.continueToQuizBtn.setVisible(false);
-            this.llmContainer.setVisible(true);
             this.chatManager.show();
 
             setTimeout(() => {
@@ -364,386 +333,264 @@ export class PostGameManager {
                     (this.chatManager as any).focus();
                 }
             }, 50);
-        });
+        }, false, true);
     }
 
     public showWinScreen() {
         const cx = this.scene.cameras.main.width / 2;
         const cy = this.scene.cameras.main.height / 2;
+        const zoom = this.scene.cameras.main.height / 1080;
 
-        const windowUi = this.createWindow(cx, cy, 820, 380);
+        const windowUi = this.createWindow(820, 380);
+        const title = this.scene.add.text(0, -90, 'LEVEL COMPLETED!', { fontFamily: this.MENU_FONT, fontSize: '48px', fontStyle: 'bold', color: '#00ff00' }).setOrigin(0.5);
+        const menuBtn = this.createButton(0, 110, 320, 70, 'Menu', '28px', () => {
+            this.chatManager.hide();
+            window.location.href = '/pages/menu_page.html';
+        });
 
-        const title = this.scene.add.text(
-            cx,
-            cy - 90,
-            'LEVEL COMPLETED!',
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '48px',
-                fontStyle: 'bold',
-                color: '#00ff00'
-            }
-        ).setOrigin(0.5);
-
-        const menuBtn = this.createButton(
-            cx,
-            cy + 110,
-            320,
-            70,
-            'Menu',
-            () => {
-                this.chatManager.hide();
-                window.location.href = '/pages/menu_page.html';
-            }
-        );
+        const winContainer = this.scene.add.container(cx, cy).setDepth(120).setScrollFactor(0);
 
         if (this.nextLevel <= 6) {
-            const nextBtn = this.createButton(
-                cx,
-                cy + 20,
-                320,
-                70,
-                'Next level',
-                () => {
-                    this.chatManager.hide();
-                    window.location.href = '/pages/level' + this.nextLevel + '.html';
-                }
-            );
-
-            this.scene.add.container(
-                0,
-                0,
-                [...windowUi.list, title, nextBtn, menuBtn]
-            ).setDepth(120);
+            const nextBtn = this.createButton(0, 20, 320, 70, 'Next level', '28px', () => {
+                this.chatManager.hide();
+                window.location.href = '/pages/level' + this.nextLevel + '.html';
+            });
+            winContainer.add([...windowUi.list, title, nextBtn, menuBtn]);
         } else {
-            this.scene.add.container(
-                0,
-                0,
-                [...windowUi.list, title, menuBtn]
-            ).setDepth(120);
+            winContainer.add([...windowUi.list, title, menuBtn]);
         }
+
+        winContainer.setScale(zoom);
+        this.allUIContainers.push(winContainer);
     }
 
     public showGameOverScreen() {
         const cx = this.scene.cameras.main.width / 2;
         const cy = this.scene.cameras.main.height / 2;
+        const zoom = this.scene.cameras.main.height / 1080;
 
-        const windowUi = this.createWindow(cx, cy, 820, 420);
+        const windowUi = this.createWindow(820, 420);
+        const title = this.scene.add.text(0, -100, 'GAME OVER', { fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#770000' }).setOrigin(0.5);
+        const retryBtn = this.createButton(0, 70, 320, 70, 'Try Again', '28px', () => {
+            this.chatManager.hide();
+            this.scene.scene.restart({ vaccinated: true });
+        });
+        const menuBtn = this.createButton(0, 160, 320, 70, 'Menu', '28px', () => {
+            this.chatManager.hide();
+            window.location.href = '/pages/menu_page.html';
+        });
 
-        const title = this.scene.add.text(
-            cx,
-            cy - 100,
-            'GAME OVER',
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '56px',
-                fontStyle: 'bold',
-                color: '#770000'
-            }
-        ).setOrigin(0.5);
+        const goContainer = this.scene.add.container(cx, cy, [...windowUi.list, title, retryBtn, menuBtn])
+            .setDepth(120)
+            .setScrollFactor(0);
 
-        const retryBtn = this.createButton(
-            cx,
-            cy + 70,
-            320,
-            70,
-            'Try Again',
-            () => {
-                this.chatManager.hide();
-                this.scene.scene.restart({ vaccinated: true });
-            }
-        );
-
-        const menuBtn = this.createButton(
-            cx,
-            cy + 160,
-            320,
-            70,
-            'Menu',
-            () => {
-                this.chatManager.hide();
-                window.location.href = '/pages/menu_page.html';
-            }
-        );
-
-        this.scene.add.container(
-            0,
-            0,
-            [...windowUi.list, title, retryBtn, menuBtn]
-        ).setDepth(120);
+        goContainer.setScale(zoom);
+        this.allUIContainers.push(goContainer);
     }
 
     private buildChat() {
         const cx = this.scene.cameras.main.width / 2;
         const cy = this.scene.cameras.main.height / 2;
+        const zoom = this.scene.cameras.main.height / 1080;
 
-        const windowUi = this.createWindow(cx, cy, 980, 560);
-
-        this.continueToQuizBtn = this.createButton(
-            cx + 320,
-            cy + 210,
-            260,
-            64,
-            'Go to the quiz',
-            () => {
-                this.llmContainer.setVisible(false);
-                this.chatManager.hide();
-                this.proceedToQuiz();
-            }
-        );
-
+        this.continueToQuizBtn = this.createButton(320, 210, 260, 64, 'Go to the quiz', '28px', () => {
+            this.llmContainer.setVisible(false);
+            this.chatManager.hide();
+            this.proceedToQuiz();
+        });
         this.continueToQuizBtn.setVisible(false);
 
-        this.llmContainer = this.scene.add.container(
-            0,
-            0,
-            [...windowUi.list, this.continueToQuizBtn]
-        )
+        this.llmContainer = this.scene.add.container(cx, cy, [this.continueToQuizBtn])
             .setDepth(100)
-            .setVisible(false);
+            .setVisible(false)
+            .setScrollFactor(0);
+
+        this.llmContainer.setScale(zoom);
+        this.allUIContainers.push(this.llmContainer);
     }
 
     private buildQuiz() {
-        const cx = this.scene.cameras.main.width / 2;
-        const cy = this.scene.cameras.main.height / 2;
+        const zoom = this.scene.cameras.main.height / 1080;
 
-        const windowUi = this.createWindow(cx, cy, 960, 560);
+        const totalAnswers = this.quizData.answers.length;
+        const buttonWidth = 450; 
+        const buttonHeight = 150; 
+        const spacing = 40; 
 
-        const question = this.scene.add.text(
-            cx,
-            cy - 100,
-            this.quizData.quizQuestion,
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '28px',
-                fontStyle: 'bold',
-                color: '#ffffff',
-                align: 'center',
-                wordWrap: {
-                    width: 720
-                }
-            }
-        ).setOrigin(0.5);
-
-        const buttons: Phaser.GameObjects.Container[] = [];
+        const totalWidth = (buttonWidth * totalAnswers) + (spacing * (totalAnswers - 1));
+        const startX = -(totalWidth / 2) + (buttonWidth / 2);
+        
+        const fixedY = 0; 
 
         this.quizData.answers.forEach((ans: any, index: number) => {
-            const yOffset = cy + 30 + (index * 85);
-
-            const btn = this.createButton(
-                cx,
-                yOffset,
-                700,
-                68,
-                ans.text,
-                () => this.handleQuizAnswer(ans.isCorrect)
-            );
-
-            buttons.push(btn);
+            const xOffset = startX + index * (buttonWidth + spacing);
+            
+            const btn = this.createButton(xOffset, fixedY, buttonWidth, buttonHeight, ans.text, '35px', () => this.handleQuizAnswer(ans.isCorrect));
+            
+            btn.setDepth(110);
+            btn.setScrollFactor(0);
+            btn.setVisible(false);
+            
+            (btn as any).quizIndex = index;
+            (btn as any).totalAnswers = totalAnswers;
+            (btn as any).btnWidth = buttonWidth;
+            (btn as any).spacing = spacing;
+            (btn as any).xOffset = xOffset;
+            
+            this.quizButtons.push(btn);
         });
 
-        this.finalQuizContainer = this.scene.add.container(
-            0,
-            0,
-            [...windowUi.list, question, ...buttons]
-        )
-            .setDepth(110)
-            .setVisible(false);
+        this.repositionQuizButtons();
+    }
+
+    private repositionQuizButtons() {
+        const screenW = this.scene.cameras.main.width;
+        const screenH = this.scene.cameras.main.height;
+        
+        const camZoom = this.scene.cameras.main.zoom;
+
+        const cx = (screenW / 2) / camZoom;
+        const bottomY = screenH / camZoom;
+        const targetUIZoom = screenH / 1080;
+        const uiScale = targetUIZoom / camZoom;
+
+        const scaledPadding = 30 * uiScale;
+        const scaledHalfHeight = 75 * uiScale; 
+
+        const fixedY = bottomY - scaledHalfHeight - scaledPadding;
+
+        this.quizButtons.forEach(btn => {
+            const index = (btn as any).quizIndex;
+            const totalAnswers = (btn as any).totalAnswers;
+            const bWidth = (btn as any).btnWidth;
+            const spacing = (btn as any).spacing;
+
+            const totalWidth = (bWidth * totalAnswers) + (spacing * (totalAnswers - 1));
+            const startX = -(totalWidth / 2) + (bWidth / 2);
+            const xOffset = startX + index * (bWidth + spacing);
+
+            btn.setScale(uiScale);
+            (btn as any).baseScale = uiScale; 
+
+            btn.setPosition(cx + (xOffset * uiScale), fixedY);
+        });
     }
 
     private buildMissingQuizScreen() {
         const cx = this.scene.cameras.main.width / 2;
         const cy = this.scene.cameras.main.height / 2;
+        const zoom = this.scene.cameras.main.height / 1080;
 
-        const windowUi = this.createWindow(cx, cy, 900, 420);
+        const windowUi = this.createWindow(1400, 900);
+        const message = this.scene.add.text(0, -70, `No quiz configured for level ${this.currentLevel}.\nPlease add it from the Admin Dashboard.`, {
+            fontFamily: this.MENU_FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: 720 }
+        }).setOrigin(0.5);
 
-        const message = this.scene.add.text(
-            cx,
-            cy - 70,
-            `No quiz configured for level ${this.currentLevel}.\nPlease add it from the Admin Dashboard.`,
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '30px',
-                fontStyle: 'bold',
-                color: '#ffffff',
-                align: 'center',
-                wordWrap: {
-                    width: 720
-                }
-            }
-        );
+        const menuBtn = this.createButton(0, 90, 320, 70, 'Menu', '28px', () => {
+            this.chatManager.hide();
+            window.location.href = '/pages/menu_page.html';
+        });
 
-        message.setOrigin(0.5);
-
-        const menuBtn = this.createButton(
-            cx,
-            cy + 90,
-            320,
-            70,
-            'Menu',
-            () => {
-                this.chatManager.hide();
-                window.location.href = '/pages/menu_page.html';
-            }
-        );
-
-        this.finalQuizContainer = this.scene.add.container(
-            0,
-            0,
-            [...windowUi.list, message, menuBtn]
-        )
+        this.finalQuizContainer = this.scene.add.container(cx, cy, [...windowUi.list, message, menuBtn])
             .setDepth(110)
-            .setVisible(false);
+            .setVisible(false)
+            .setScrollFactor(0);
+
+        this.finalQuizContainer.setScale(zoom);
+        this.allUIContainers.push(this.finalQuizContainer);
     }
 
     private handleQuizAnswer(isCorrect: boolean) {
-        this.finalQuizContainer.setVisible(false);
+        this.quizButtons.forEach(btn => btn.setVisible(false));
 
         if (isCorrect) {
+            this.abi.MoveDialogueY(0);
             this.abi.showDialogue("ABI", "Correct! You are now vaccinated!", () => {
                 this.chatManager.hide();
                 this.scene.scene.restart({ vaccinated: true });
             });
         } else {
+            this.abi.MoveDialogueY(0);
             this.abi.showDialogue("ABI", "Wrong answer. Try again!", () => {
-                this.finalQuizContainer.setVisible(true);
+                this.showQuizQuestion();
             });
         }
     }
 
-    private createWindow(
-        x: number,
-        y: number,
-        width: number,
-        height: number
-    ) {
+    private createWindow(width: number, height: number) {
         const container = this.scene.add.container(0, 0);
 
-        const shadow = this.scene.add.rectangle(
-            x + 8,
-            y + 8,
-            width,
-            height,
-            0x000000,
-            0.35
-        );
-
-        const outer = this.scene.add.rectangle(
-            x,
-            y,
-            width,
-            height,
-            0xff5a0a,
-            1
-        ).setStrokeStyle(4, 0xffffff);
-
-        const inner = this.scene.add.rectangle(
-            x,
-            y,
-            width - 12,
-            height - 12,
-            0xd94700,
-            1
-        );
+        const shadow = this.scene.add.rectangle(8, 8, width, height, 0x000000, 0.35);
+        const outer = this.scene.add.rectangle(0, 0, width, height, 0xff5a0a, 1).setStrokeStyle(4, 0xffffff);
+        const inner = this.scene.add.rectangle(0, 0, width - 12, height - 12, 0xd94700, 1);
 
         container.add([shadow, outer, inner]);
-
         return container;
     }
 
-    private createButton(
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-        label: string,
-        onClick: () => void
-    ) {
+    private createButton(x: number, y: number, width: number, height: number, label: string, fontSize: string, onClick: () => void) {
         const container = this.scene.add.container(x, y);
+        (container as any).baseScale = 1; 
 
-        const outer = this.scene.add.rectangle(
-            0,
-            0,
-            width,
-            height,
-            0x3d5381,
-            1
-        ).setStrokeStyle(4, 0xffffff);
-
-        const text = this.scene.add.text(
-            0,
-            0,
-            label,
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: '28px',
-                fontStyle: 'bold',
-                color: '#ffffff'
-            }
-        ).setOrigin(0.5);
+        const outer = this.scene.add.rectangle(0, 0, width, height, 0x3d5381, 1).setStrokeStyle(4, 0xffffff);
+        
+        const text = this.scene.add.text(0, 0, label, { 
+            fontFamily: this.MENU_FONT, 
+            fontSize: fontSize,
+            fontStyle: 'bold', 
+            color: '#ffffff',
+            align: 'center',
+            wordWrap: { width: width - 40 } 
+        }).setOrigin(0.5);
 
         const maxTextWidth = width - 40;
+        if (text.width > maxTextWidth) text.setScale(maxTextWidth / text.width);
 
-        if (text.width > maxTextWidth) {
-            text.setScale(maxTextWidth / text.width);
-        }
+        container.add([outer, text]);
 
-        const hit = this.scene.add.rectangle(
-            0,
-            0,
-            width,
-            height,
-            0xffffff,
-            0.001
-        ).setInteractive({
-            useHandCursor: true
+        outer.setScrollFactor(0);
+        outer.setInteractive({ useHandCursor: true });
+
+        outer.on('pointerover', () => {
+            container.setScale((container as any).baseScale * 1.05);
+            this.scene.game.canvas.style.cursor = 'pointer';
         });
-
-        hit.on('pointerover', () => container.setScale(1.05));
-        hit.on('pointerout', () => container.setScale(1));
-        hit.on('pointerdown', () => {
-            container.setScale(0.95);
+        
+        outer.on('pointerout', () => {
+            container.setScale((container as any).baseScale);
+            this.scene.game.canvas.style.cursor = 'default';
+        });
+        
+        outer.on('pointerdown', () => {
+            container.setScale((container as any).baseScale * 0.95);
+            this.scene.game.canvas.style.cursor = 'default';
             onClick();
         });
-        hit.on('pointerup', () => container.setScale(1.05));
-
-        container.add([outer, text, hit]);
+        
+        outer.on('pointerup', () => {
+            container.setScale((container as any).baseScale * 1.05);
+        });
 
         return container;
     }
 
     private extractTextForLevel(level: number, text: string): string {
         const lines = text.split('\n');
-
         for (const line of lines) {
-            if (line.trim().startsWith(`${level}:`)) {
-                return line.substring(line.indexOf(':') + 1).trim();
-            }
+            if (line.trim().startsWith(`${level}:`)) return line.substring(line.indexOf(':') + 1).trim();
         }
-
         return "Description not found.";
     }
 
     private extractQuizzesForLevel(level: number, quizzesText: string) {
-        const lines = quizzesText
-            .split('\n')
-            .map(l => l.trim())
-            .filter(l => l.length > 0);
-
+        const lines = quizzesText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const quizzes: any[] = [];
-
         let currentQuestion = "";
         let currentAnswers: any[] = [];
 
         for (const line of lines) {
             if (line.startsWith(`${level}:`)) {
-                if (currentQuestion !== "") {
-                    quizzes.push({
-                        question: currentQuestion,
-                        answers: currentAnswers
-                    });
-                }
-
+                if (currentQuestion !== "") quizzes.push({ question: currentQuestion, answers: currentAnswers });
                 currentQuestion = line.substring(line.indexOf(':') + 1).trim();
                 currentAnswers = [];
             } else if (currentQuestion !== "") {
@@ -753,32 +600,20 @@ export class PostGameManager {
                 if (match) {
                     const isCorrect = match[1] === 'T';
                     const text = match[2].trim();
-
-                    currentAnswers.push({
-                        text,
-                        isCorrect
-                    });
+                    currentAnswers.push({ text, isCorrect });
                 } else if (line.match(/^\d+:/)) {
                     break;
                 }
             }
         }
 
-        if (currentQuestion !== "") {
-            quizzes.push({
-                question: currentQuestion,
-                answers: currentAnswers
-            });
-        }
-
+        if (currentQuestion !== "") quizzes.push({ question: currentQuestion, answers: currentAnswers });
         return quizzes;
     }
 
     public extractDefaultInfoForLevel(level: number, text: string): string[] {
         const lines = text.split('\n');
-
         let isCapturing = false;
-
         const extractedLines: string[] = [];
 
         for (const line of lines) {
@@ -786,19 +621,10 @@ export class PostGameManager {
 
             if (trimmedLine.startsWith(`${level}a:`)) {
                 isCapturing = true;
-
-                extractedLines.push(
-                    trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim()
-                );
+                extractedLines.push(trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim());
             } else if (isCapturing && trimmedLine.startsWith(`${level}b:`)) {
-                extractedLines.push(
-                    trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim()
-                );
-            } else if (
-                isCapturing &&
-                trimmedLine.match(/^\d+a:/) &&
-                !trimmedLine.startsWith(`${level}a:`)
-            ) {
+                extractedLines.push(trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim());
+            } else if (isCapturing && trimmedLine.match(/^\d+a:/) && !trimmedLine.startsWith(`${level}a:`)) {
                 break;
             } else if (isCapturing && trimmedLine.length > 0) {
                 if (extractedLines.length > 0) {
@@ -807,8 +633,6 @@ export class PostGameManager {
             }
         }
 
-        return extractedLines.length > 0
-            ? extractedLines
-            : ["Default info not found."];
+        return extractedLines.length > 0 ? extractedLines : ["Default info not found."];
     }
 }

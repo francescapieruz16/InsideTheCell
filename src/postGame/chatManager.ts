@@ -19,10 +19,43 @@ export class ChatManager {
 
         Object.assign(this.chatUi.style, {
             position: 'absolute',
-            top: '50%',
+            top: '90%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: '1000'
+            zIndex: '1000',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '15px',
+            width: '60%',
+            maxWidth: '750px'
+        });
+
+        Object.assign(this.chatInput.style, {
+            flex: '1',
+            height: '60px',
+            padding: '0 20px',
+            fontSize: '24px',
+            fontFamily: 'Arial, sans-serif',
+            border: '3px solid #ff5a0a',
+            borderRadius: '20px',
+            boxSizing: 'border-box',
+            outline: 'none'
+        });
+
+        Object.assign(this.chatSend.style, {
+            height: '60px',
+            padding: '0 30px',
+            backgroundColor: '#ff5a0a',
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: 'bold',
+            fontFamily: 'Arial, sans-serif',
+            border: '3px solid white',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            boxSizing: 'border-box'
         });
 
         this.initListeners();
@@ -54,6 +87,7 @@ export class ChatManager {
 
     public hide() {
         this.chatUi.style.display = 'none';
+        this.chatUi.style.pointerEvents = 'none';
         this.onChatStateChange(false);
     }
 

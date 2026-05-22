@@ -14,12 +14,12 @@ const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     // --- NUOVA CONFIGURAZIONE DELLO SCHERMO ---
     scale: {
-        mode: Phaser.Scale.RESIZE, // Adatta il gioco alla finestra
-        parent: 'game-container', // Assicurati di avere un div con questo ID nel tuo file HTML (se usi un container)
-        width: '100%',
-        height: '100%',
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 1920,
+        height: 1080,
     },
+    parent: 'game-container',
     // ------------------------------------------
     physics: {
         default: 'arcade',

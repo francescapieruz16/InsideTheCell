@@ -30,6 +30,10 @@ export default class ABI {
 
     private radioTimer?: Phaser.Time.TimerEvent; //gestisce il timer per i dialoghi radio
 
+    private keepOpen: boolean = false;
+    private baseY: number = 0;         
+    private currentOffsetY: number = 0;
+
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.createDialogueUI();
@@ -68,28 +72,30 @@ export default class ABI {
     }
 
     private createDialogueUI() {
-        const screenW = this.scene.scale.width;
-        const screenH = this.scene.scale.height;
+        const screenW = this.scene.cameras.main.width;
+        const screenH = this.scene.cameras.main.height;
 
-        this.uiContainer = this.scene.add.container(screenW / 2, screenH - 120);
+        this.uiContainer = this.scene.add.container(screenW / 2, screenH / 2);
         this.uiContainer.setScrollFactor(0); 
-        this.uiContainer.setDepth(100); 
+        this.uiContainer.setDepth(100);
 
-        const bg = this.scene.add.rectangle(0, 0, 1000, 200, 0x000000, 0.87);
+        const offsetY = 420;
+
+        const bg = this.scene.add.rectangle(0, offsetY - 20, 1300, 240, 0x000000, 0.92);
         bg.setStrokeStyle(4, 0x4caf50);
 
-        this.portrait = this.scene.add.image(-400, 0, 'ABI_standard');
-        this.portrait.setDisplaySize(200, 200);
+        this.portrait = this.scene.add.image(-530, offsetY - 20, 'ABI_standard');
+        this.portrait.setDisplaySize(250, 250);
 
-        this.dialogueName = this.scene.add.text(-280, -70, "", { 
-            fontSize: '28px', fontStyle: 'bold', color: '#4caf50' 
+        this.dialogueName = this.scene.add.text(-380, offsetY -100, "", { 
+            fontSize: '32px', fontStyle: 'bold', color: '#4caf50' 
         });
 
-        this.dialogueText = this.scene.add.text(-280, -30, "", { 
-            fontSize: '22px', color: '#ffffff', wordWrap: { width: 750 } 
+        this.dialogueText = this.scene.add.text(-380, offsetY -50, "", { 
+            fontSize: '24px', color: '#ffffff', wordWrap: { width: 1000 }
         });
 
-        this.promptText = this.scene.add.text(480, 70, "Press SPACE ▼", { 
+        this.promptText = this.scene.add.text(640, offsetY + 85, "Press SPACE ▼", { 
             fontSize: '18px', color: '#aaaaaa' 
         }).setOrigin(1, 0.5);
 
@@ -98,15 +104,30 @@ export default class ABI {
 
         this.scene.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
             if (this.uiContainer) {
-                // Ricalcola il centro esatto e il fondo dello schermo ad ogni ridimensionamento
-                this.uiContainer.setPosition(gameSize.width / 2, gameSize.height - 120);
+                this.uiContainer.setPosition(gameSize.width / 2, (gameSize.height / 2) + this.currentOffsetY);
             }
         });
     }
 
+    public MoveDialogueY(offsetY: number) {
+        if (!this.uiContainer) return; 
+
+        this.currentOffsetY = offsetY;
+        const centerY = this.scene.cameras.main.height / 2;
+
+        this.scene.tweens.add({
+            targets: this.uiContainer,
+            y: centerY + offsetY,
+            duration: 300,
+            ease: 'Power2'
+        });
+    }
+
     // Nota l'aggiunta di "onClose": è una funzione opzionale!
-    public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false) {
+    public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false, keepOpen: boolean = false) {
         this.interrupt(); // Interrompe qualsiasi messaggio o dialogo precedente
+
+        this.keepOpen = keepOpen;
 
         this.isTalking = true;
         this.isUnskippable = unskippable;
@@ -197,7 +218,16 @@ export default class ABI {
                 this.currentDialoguePage++;
                 this.updateDialogueView();
             } else {
-                this.hideDialogue();
+                if (this.keepOpen) {
+                    this.isTalking = false;
+                    this.promptText.setVisible(false);
+                    
+                    const callback = this.onCloseCallback;
+                    this.onCloseCallback = undefined; 
+                    if (callback) callback();
+                } else {
+                    this.hideDialogue();
+                }
             }
         }
     }

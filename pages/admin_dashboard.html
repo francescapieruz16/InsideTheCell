@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - InsideTheCell</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -61,7 +62,8 @@
             white-space: pre-wrap;
         }
 
-        input:focus, textarea:focus {
+        input:focus,
+        textarea:focus {
             border-color: #3d5381;
             outline: none;
         }
@@ -111,6 +113,8 @@
             font-weight: bold;
             margin-top: 15px;
             display: none;
+            padding: 10px;
+            border-radius: 6px;
         }
 
         .divider {
@@ -140,11 +144,11 @@
         }
     </style>
 </head>
-<body>
 
+<body>
     <div class="dashboard-card">
         <h1>Admin Dashboard</h1>
-        
+
         <div class="form-group">
             <label for="api-key">Gemini API Key</label>
             <input type="password" id="api-key" placeholder="Insert your Gemini API Key here...">
@@ -192,24 +196,191 @@
 
     <script>
         const DEFAULTS = {
-            //TODO: add missing default values
             'GEMINI_API_KEY': '',
-            'GAME_PROMPT': 'You are an AI tutor in an educational video game about viral infection phases, designed for middle and high school students. The player needs to complete a minigame for each phase of the viral infection process. After each minigame the player can ask you questions about the phase they just played and the related minigame, and you will answer based on the specific knowledge provided for that phase and minigame. If the player asks a question that is not related to the current phase and minigame, you will answer based on the general knowledge you have about viral infections. Always keep in mind that your answers should be appropriate for middle and high school students, avoiding technical jargon and providing clear explanations.',
-            'MINIGAME_DESCRIPTIONS': '1: The objective of the minigame is to prevent viruses falling from the top of the screen from binding to the receptors located on the cell membrane. The player controls a movable cart to catch the viruses before they can successfully attach to a receptor.\n2: The objective of the minigame is to prevent viruses from entering the cell membrane. The player controls the crosshair and can destroy the viruses before reaching the entry point, if too many viruses get through they enters the cell.\n3: The objective of the minigame is to complete the platform path before the virus at the top of the screen fully opens and releases its genome. The player controls the character through platforms and spikes (if the player touches a spikes it respawns at the start), trying to reach the final flag before time runs out; if the timer runs out the genome is relased and the level is failed.\n4: The objective of the minigame is to complete a memory game about viral genome replication. The player must match the correct genome component cards while avoiding buffer cards that represent mutations or replication errors. If the player matches two identical buffer cards, the replication becomes unstable and the level is failed.',
-            'MINIGAME_KNOWLEDGES': '1: During the binding phase, viruses use their surface proteins to attach to specific receptors on the host cell. This lock-and-key mechanism is the mandatory first step for the virus to enter the cell and cause an infection.\n2: Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane. They do this through mechanisms like membrane fusion or endocytosis. Stopping the virus before it enters is essential to prevent the infection from progressing.\n3: After entering the cell, the virus releases its genetic material into the host cell. This step is called genome release or uncoating. Once the viral genome is free inside the cell, it can take control of the host machinery and begin producing new viral components\n4: After the viral genome has been released inside the host cell, the virus must copy its genetic material. This step is called genome replication. Correct genome components help the virus produce new copies of its genetic instructions, while mutations or replication errors can create unstable copies.',
-            'QUIZZES': '1: What is the mandatory first step for a virus to enter a cell and cause an infection?\n1a(F): Replicating inside the nucleus\n1b(F): Destroying the host cell\n1c(T): The binding phase\n1: How do viruses attach to the host cell during the binding phase?\n1a(F): By releasing toxins into the surrounding area\n1b(T): By using their surface proteins to attach to specific receptors\n1c(F): By piercing the cell membrane with a tail\n1: What analogy is used to describe how viral surface proteins interact with host cell receptors?\n1a(F): A magnet attracting iron\n1b(T): A lock-and-key mechanism\n1c(F): A sponge absorbing water\n1: Which part of the virus is responsible for attaching to the host cell?\n1a(F): The viral nucleus\n1b(F): Internal DNA\n1c(T): Surface proteins\n1: What must the viral surface proteins attach to on the host cell?\n1a(F): Random parts of the membrane\n1b(T): Specific receptors\n1c(F): The cell\'s DNA\n2: What happens immediately after a virus binds to a host cell?\n2a(F): It destroys the cell instantly\n2b(T): It attempts to enter the cell\n2c(F): It starts replicating outside the cell\n2: What is the main goal of the virus during the entry phase?\n2a(F): To replicate its DNA immediately\n2b(F): To attack other viruses\n2c(T): To cross the cell membrane\n2: Which structure must the virus cross to enter the cell?\n2a(F): The mitochondria\n2b(T): The cell membrane\n2c(F): The nucleus\n2: Which process allows the virus to merge with the host cell membrane?\n2a(F): DNA replication\n2b(T): Membrane fusion\n2c(F): Protein synthesis\n2: Which mechanism allows the cell to engulf the virus during entry?\n2a(F): Photosynthesis\n2b(F): Respiration\n2c(T): Endocytosis\n3: What happens during the genome release phase?\n3a(F): The virus attaches to the cell receptors\n3b(T): The virus releases its genetic material inside the host cell\n3c(F): The virus leaves the cell immediately\n3: What is another name for genome release?\n3a(T): Uncoating\n3b(F): Binding\n3c(F): Membrane fusion\n3: Why is genome release dangerous for the host cell?\n3a(F): Because it prevents the virus from entering the cell\n3b(F): Because it destroys the viral genome\n3c(T): Because the viral genome can take control of the host cell machinery\n3: What does the virus release during the genome release phase?\n3a(F): Cell receptors\n3b(T): Its genetic material\n3c(F): Oxygen molecules\n3: What can happen after the viral genome is released inside the cell?\n3a(T): The host cell can begin producing new viral components\n3b(F): The virus becomes harmless\n3c(F): The cell membrane disappears\n3: Where is the viral genome released?\n3a(F): Outside the host cell\n3b(F): On the cell surface receptors\n3c(T): Inside the host cell\n3: Why is it important to stop the virus before genome release?\n3a(F): To help the virus attach better\n3b(T): To prevent the infection from advancing\n3c(F): To make the virus enter faster\n3: Which phase comes before the virus can use the host machinery to produce new viral components?\n3a(F): Photosynthesis\n3b(T): Genome release\n3c(F): Cell division\n4: What happens during viral genome replication?\n4a(T): The virus copies its genetic material inside the host cell\n4b(F): The virus attaches to receptors on the outside of the cell\n4c(F): The virus immediately leaves the host cell\n4: Why is genome replication important for the virus?\n4a(F): Because it helps the virus enter the cell for the first time\n4b(T): Because it creates new copies of the viral genetic instructions\n4c(F): Because it destroys all host cell receptors\n4: What do the buffer cards represent in the memory game?\n4a(F): Healthy cell nutrients\n4b(F): Cell membrane receptors\n4c(T): Mutations or replication errors\n4: What can happen if replication errors occur?\n4a(T): The copied genetic material can become unstable\n4b(F): The virus disappears immediately\n4c(F): The cell becomes immune forever\n4: Which phase comes after the viral genome has been released?\n4a(F): Binding\n4b(T): Genome replication\n4c(F): Receptor attachment',
-            'DEFAULT_CHAT_RESPONSES': '1: Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key.\n2: Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane. They do this through mechanisms like membrane fusion or endocytosis. Stopping the virus before it enters is essential to prevent the infection from progressing.\n3: Remember that after entering the cell, the virus releases its genetic material during a process called genome release or uncoating. Once the viral genome is free inside the host cell, it can take control of the cell machinery and start producing new viral components\n4: Remember that after genome release, the virus must copy its genetic material. In this level, the correct memory cards represent stable genome components, while the buffer cards represent mutations or replication errors.',
-            'DEFAULT_POSTGAME_INFO': '1a: The virus reached the cell!\n1b: You were not able to stop it in time.\nThe virus reached the receptors on the surface of the cell and attached to it.\nThis is the first step of the infection.\n2a: Viruses entered the membrane!\n2b: You were not able to stop them in time.\nThe virus fused with the cell membrane.\nThis is the second step of the infection.\n3a: The viral genome was released!\n3b: You were not able to reach the end in time.\nThe virus opened and released its genetic material inside the cell.\nNow the viral genome can take control of the host cell machinery and start producing new viral components.\nThis is the third step of the infection.\n4a: Replication error detected!\n4b: You matched unstable genetic material.\nDuring genome replication, the virus tries to copy its genetic instructions inside the host cell.\nMutation and replication-error fragments can make the copied genome unstable.\nThis represents the fourth step of the infection.'
+
+            'GAME_PROMPT': `You are an AI tutor in an educational video game about viral infection phases, designed for middle and high school students. The player needs to complete a minigame for each phase of the viral infection process. After each minigame the player can ask you questions about the phase they just played and the related minigame, and you will answer based on the specific knowledge provided for that phase and minigame. If the player asks a question that is not related to the current phase and minigame, you will answer based on the general knowledge you have about viral infections. Always keep in mind that your answers should be appropriate for middle and high school students, avoiding technical jargon and providing clear explanations.`,
+
+            'MINIGAME_DESCRIPTIONS': `1: The objective of the minigame is to prevent viruses falling from the top of the screen from binding to the receptors located on the cell membrane. The player controls a movable cart to catch the viruses before they can successfully attach to a receptor.
+2: The objective of the minigame is to prevent viruses from entering the cell membrane. The player controls the crosshair and can destroy the viruses before reaching the entry point, if too many viruses get through they enters the cell.
+3: The objective of the minigame is to complete the platform path before the virus at the top of the screen fully opens and releases its genome. The player controls the character through platforms and spikes, trying to reach the final flag before time runs out; if the timer runs out the genome is released and the level is failed.
+4: The objective of the minigame is to complete a memory game about viral genome replication. The player must match the correct genome component cards while avoiding buffer cards that represent mutations or replication errors. If the player matches two identical buffer cards, the replication becomes unstable and the level is failed.
+5: The objective of the minigame is to stop viral components from assembling into complete virus particles. The player controls two defensive flippers and must hit away viral parts arriving from the top and sides before they pass through the defense. If too many viral components get past the flippers, viral assembly progresses and the level is failed.`,
+
+            'MINIGAME_KNOWLEDGES': `1: During the binding phase, viruses use their surface proteins to attach to specific receptors on the host cell. This lock-and-key mechanism is the mandatory first step for the virus to enter the cell and cause an infection.
+2: After binding to the cell receptors, viruses can enter the cell by crossing the membrane. They do this through mechanisms like membrane fusion or endocytosis. Stopping the virus before it enters is essential to prevent the infection from progressing.
+3: After entering the cell, the virus releases its genetic material into the host cell. This step is called genome release or uncoating. Once the viral genome is free inside the cell, it can take control of the host machinery and begin producing new viral components.
+4: After the viral genome has been released inside the host cell, the virus must copy its genetic material. This step is called genome replication. Correct genome components help the virus produce new copies of its genetic instructions, while mutations or replication errors can create unstable copies.
+5: After genome replication, the virus uses the newly copied genetic material and viral proteins to assemble new virus particles. This step is called viral assembly. If enough components come together successfully, the infection can continue because new viruses can later leave the cell and spread.`,
+
+            'QUIZZES': `1: What is the mandatory first step for a virus to enter a cell and cause an infection?
+1a(F): Replicating inside the nucleus
+1b(F): Destroying the host cell
+1c(T): The binding phase
+1: How do viruses attach to the host cell during the binding phase?
+1a(F): By releasing toxins into the surrounding area
+1b(T): By using their surface proteins to attach to specific receptors
+1c(F): By piercing the cell membrane with a tail
+1: What analogy is used to describe how viral surface proteins interact with host cell receptors?
+1a(F): A magnet attracting iron
+1b(T): A lock-and-key mechanism
+1c(F): A sponge absorbing water
+1: Which part of the virus is responsible for attaching to the host cell?
+1a(F): The viral nucleus
+1b(F): Internal DNA
+1c(T): Surface proteins
+1: What must the viral surface proteins attach to on the host cell?
+1a(F): Random parts of the membrane
+1b(T): Specific receptors
+1c(F): The cell's DNA
+
+2: What happens immediately after a virus binds to a host cell?
+2a(F): It destroys the cell instantly
+2b(T): It attempts to enter the cell
+2c(F): It starts replicating outside the cell
+2: What is the main goal of the virus during the entry phase?
+2a(F): To replicate its DNA immediately
+2b(F): To attack other viruses
+2c(T): To cross the cell membrane
+2: Which structure must the virus cross to enter the cell?
+2a(F): The mitochondria
+2b(T): The cell membrane
+2c(F): The nucleus
+2: Which process allows the virus to merge with the host cell membrane?
+2a(F): DNA replication
+2b(T): Membrane fusion
+2c(F): Protein synthesis
+2: Which mechanism allows the cell to engulf the virus during entry?
+2a(F): Photosynthesis
+2b(F): Respiration
+2c(T): Endocytosis
+
+3: What happens during the genome release phase?
+3a(F): The virus attaches to the cell receptors
+3b(T): The virus releases its genetic material inside the host cell
+3c(F): The virus leaves the cell immediately
+3: What is another name for genome release?
+3a(T): Uncoating
+3b(F): Binding
+3c(F): Membrane fusion
+3: Why is genome release dangerous for the host cell?
+3a(F): Because it prevents the virus from entering the cell
+3b(F): Because it destroys the viral genome
+3c(T): Because the viral genome can take control of the host cell machinery
+3: What does the virus release during the genome release phase?
+3a(F): Cell receptors
+3b(T): Its genetic material
+3c(F): Oxygen molecules
+3: What can happen after the viral genome is released inside the cell?
+3a(T): The host cell can begin producing new viral components
+3b(F): The virus becomes harmless
+3c(F): The cell membrane disappears
+3: Where is the viral genome released?
+3a(F): Outside the host cell
+3b(F): On the cell surface receptors
+3c(T): Inside the host cell
+3: Why is it important to stop the virus before genome release?
+3a(F): To help the virus attach better
+3b(T): To prevent the infection from advancing
+3c(F): To make the virus enter faster
+3: Which phase comes before the virus can use the host machinery to produce new viral components?
+3a(F): Photosynthesis
+3b(T): Genome release
+3c(F): Cell division
+
+4: What happens during viral genome replication?
+4a(T): The virus copies its genetic material inside the host cell
+4b(F): The virus attaches to receptors on the outside of the cell
+4c(F): The virus immediately leaves the host cell
+4: Why is genome replication important for the virus?
+4a(F): Because it helps the virus enter the cell for the first time
+4b(T): Because it creates new copies of the viral genetic instructions
+4c(F): Because it destroys all host cell receptors
+4: What do the buffer cards represent in the memory game?
+4a(F): Healthy cell nutrients
+4b(F): Cell membrane receptors
+4c(T): Mutations or replication errors
+4: What can happen if replication errors occur?
+4a(T): The copied genetic material can become unstable
+4b(F): The virus disappears immediately
+4c(F): The cell becomes immune forever
+4: Which phase comes after the viral genome has been released?
+4a(F): Binding
+4b(T): Genome replication
+4c(F): Receptor attachment
+
+5: What happens during viral assembly?
+5a(F): The virus attaches to the cell surface for the first time
+5b(T): Viral components come together to form new virus particles
+5c(F): The host cell creates healthy receptors
+5: Why is stopping viral assembly important?
+5a(T): Because it prevents new virus particles from being built
+5b(F): Because it helps the virus copy its genome faster
+5c(F): Because it opens the cell membrane
+5: In the flipper minigame, what do the incoming components represent?
+5a(F): Cell food particles
+5b(F): Healthy cell organelles
+5c(T): Viral parts that could be assembled into new viruses
+5: What can happen if too many viral components pass the defense?
+5a(F): The virus becomes unable to spread
+5b(T): Viral assembly progresses and new particles can form
+5c(F): Genome replication stops automatically
+5: Which phase comes after viral genome replication?
+5a(F): Binding
+5b(F): Entry through the membrane
+5c(T): Viral assembly`,
+
+            'DEFAULT_CHAT_RESPONSES': `1: Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key.
+2: Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane. They do this through mechanisms like membrane fusion or endocytosis. Stopping the virus before it enters is essential to prevent the infection from progressing.
+3: Remember that after entering the cell, the virus releases its genetic material during a process called genome release or uncoating. Once the viral genome is free inside the host cell, it can take control of the cell machinery and start producing new viral components.
+4: Remember that after genome release, the virus must copy its genetic material. In this level, the correct memory cards represent stable genome components, while the buffer cards represent mutations or replication errors.
+5: Remember that after genome replication, the virus must assemble its copied genome and proteins into new virus particles. In this level, each component that passes the flippers represents viral material successfully contributing to assembly.`,
+
+            'DEFAULT_POSTGAME_INFO': `1a: The virus reached the cell!
+1b: You were not able to stop it in time.
+The virus reached the receptors on the surface of the cell and attached to it.
+This is the first step of the infection.
+2a: Viruses entered the membrane!
+2b: You were not able to stop them in time.
+The virus fused with the cell membrane.
+This is the second step of the infection.
+3a: The viral genome was released!
+3b: You were not able to reach the end in time.
+The virus opened and released its genetic material inside the cell.
+Now the viral genome can take control of the host cell machinery and start producing new viral components.
+This is the third step of the infection.
+4a: Replication error detected!
+4b: You matched unstable genetic material.
+During genome replication, the virus tries to copy its genetic instructions inside the host cell.
+Mutation and replication-error fragments can make the copied genome unstable.
+This represents the fourth step of the infection.
+5a: Viral assembly completed!
+5b: You were not able to block enough components.
+After genome replication, viral parts must come together to build new virus particles.
+Each component that passed your flippers helped the virus continue the assembly phase.
+This represents the fifth step of the infection.`
         };
 
         window.onload = () => {
-            document.getElementById('api-key').value = localStorage.getItem('GEMINI_API_KEY') || DEFAULTS['GEMINI_API_KEY'];
-            document.getElementById('generic-prompt').value = localStorage.getItem('GAME_PROMPT') || DEFAULTS['GAME_PROMPT'];
-            document.getElementById('minigame-descriptions').value = localStorage.getItem('MINIGAME_DESCRIPTIONS') || DEFAULTS['MINIGAME_DESCRIPTIONS'];
-            document.getElementById('minigame-knowledge').value = localStorage.getItem('MINIGAME_KNOWLEDGES') || DEFAULTS['MINIGAME_KNOWLEDGES'];
-            document.getElementById('quizzes').value = localStorage.getItem('QUIZZES') || DEFAULTS['QUIZZES'];
-            document.getElementById('default-chat-responses').value = localStorage.getItem('DEFAULT_CHAT_RESPONSES') || DEFAULTS['DEFAULT_CHAT_RESPONSES'];
-            document.getElementById('default-postgame-info').value = localStorage.getItem('DEFAULT_POSTGAME_INFO') || DEFAULTS['DEFAULT_POSTGAME_INFO'];
+            document.getElementById('api-key').value =
+                localStorage.getItem('GEMINI_API_KEY') || DEFAULTS['GEMINI_API_KEY'];
+
+            document.getElementById('generic-prompt').value =
+                localStorage.getItem('GAME_PROMPT') || DEFAULTS['GAME_PROMPT'];
+
+            document.getElementById('minigame-descriptions').value =
+                localStorage.getItem('MINIGAME_DESCRIPTIONS') || DEFAULTS['MINIGAME_DESCRIPTIONS'];
+
+            document.getElementById('minigame-knowledge').value =
+                localStorage.getItem('MINIGAME_KNOWLEDGES') || DEFAULTS['MINIGAME_KNOWLEDGES'];
+
+            document.getElementById('quizzes').value =
+                localStorage.getItem('QUIZZES') || DEFAULTS['QUIZZES'];
+
+            document.getElementById('default-chat-responses').value =
+                localStorage.getItem('DEFAULT_CHAT_RESPONSES') || DEFAULTS['DEFAULT_CHAT_RESPONSES'];
+
+            document.getElementById('default-postgame-info').value =
+                localStorage.getItem('DEFAULT_POSTGAME_INFO') || DEFAULTS['DEFAULT_POSTGAME_INFO'];
         };
 
         function saveAdminSettings() {
@@ -258,6 +429,7 @@
 
         function showStatusMessage(text, textColor, backgroundColor) {
             const statusMsg = document.getElementById('status-message');
+
             statusMsg.textContent = text;
             statusMsg.style.color = textColor;
             statusMsg.style.backgroundColor = backgroundColor;

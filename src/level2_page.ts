@@ -58,9 +58,9 @@ class Level2 extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background_level_2', '/assets/level 2/background_level_2.png');
-        this.load.image('crosshair', '/assets/level 2/crosshair.png');
-        this.load.image('explosion', '/assets/level 2/explosion.png');
+        this.load.image('background_level_2', '/assets/level2/background_level_2.png');
+        this.load.image('crosshair', '/assets/level2/crosshair.png');
+        this.load.image('explosion', '/assets/level2/explosion.png');
 
         this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
 
@@ -375,8 +375,8 @@ const config: Phaser.Types.Core.GameConfig = {
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: window.innerWidth,
-        height: window.innerHeight,
+        width: 1920,
+        height: 1080,
     },
     parent: 'game-container',
     render: {

@@ -30,5 +30,5 @@ btnOptions?.addEventListener('click', () => {
 
 btnBack?.addEventListener('click', () => {
   console.log('Ritorno al menu principale...');
-   window.history.back();
+   window.location.href = '/index.html';
 });

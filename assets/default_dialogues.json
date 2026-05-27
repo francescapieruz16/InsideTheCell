@@ -1,0 +1,56 @@
+{
+    "tutorials": {
+        "tutorial_1": {
+            "dialogue_1": "Welcome to InsideTheCell! Today we will learn how the human body fights infections.",
+            "dialogue_2": "You will act as the commander of the cell defenses. Get ready!"
+        },
+        "tutorial_2": {
+            "dialogue_1": "Use the directional arrows to move your character.",
+            "dialogue_2": "Press the Spacebar to interact with objects and structures."
+        },
+        "tutorial_3": {
+            "dialogue_1": "Your primary objective is to defend the cell at all costs.",
+            "dialogue_2": "If you fail, the virus will take over. Good luck!"
+        }
+    },
+    "minigames": {
+        "minigame_1": {
+            "dialogue_1": "The virus reached the cell!",
+            "dialogue_2": "You were not able to stop it in time.\nThe virus reached the receptors on the surface of the cell and attached to it.\nThis is the first step of the infection.",
+            "dialogue_3": "Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key."
+        },
+        "minigame_2": {
+            "dialogue_1": "Viruses entered the membrane!",
+            "dialogue_2": "You were not able to stop them in time.\nThe virus fused with the cell membrane.\nThis is the second step of the infection.",
+            "dialogue_3": "Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane.\nThey do this through mechanisms like membrane fusion or endocytosis.\nStopping the virus before it enters is essential to prevent the infection from progressing."
+        },
+        "minigame_3": {
+            "dialogue_1": "The viral genome was released!",
+            "dialogue_2": "You were not able to reach the end in time.\nThe virus opened and released its genetic material inside the cell.\nNow the viral genome can take control of the host cell machinery and start producing new viral components.\nThis is the third step of the infection.",
+            "dialogue:3": "Remember that after entering the cell, the virus releases its genetic material during a process called genome release or uncoating.\nOnce the viral genome is free inside the host cell, it can take control of the cell machinery and start producing new viral components."
+
+        },
+        "minigame_4": {
+            "dialogue_1": "Replication error detected!",
+            "dialogue_2": "You matched unstable genetic material.\nDuring genome replication, the virus tries to copy its genetic instructions inside the host cell.\nMutation and replication-error fragments can make the copied genome unstable.\nMutation and replication-error fragments can make the copied genome unstable.",
+            "dialogue_3": "Remember that after genome release, the virus must copy its genetic material.\nIn this level, the correct memory cards represent stable genome components, while the buffer cards represent mutations or replication errors."
+
+        },
+        "minigame_5": {
+            "dialogue_1": "Viral assembly escaped containment!",
+            "dialogue_2": "The box overflowed above the red line.\nToo many viral parts accumulated and assembly became uncontrolled.\nTo defeat the virus, keep components contained and prevent overflow.\nThis represents the fifth step of infection.",
+            "dialogue_3": "Remember that after genome replication, viral components can assemble into new virus particles.\nIn this level, your goal is to contain that process: merge matching components, clear the largest structures, and stop the box from overflowing above the red line."
+        },
+        "minigame_6": {
+            "dialogue_1": "The new virions are trying to escape the host cell.",
+            "dialogue_2": "Stop the egress phase to prevent the infection from spreading further!"
+        }
+    },
+    "post_minigames" : {
+        "dialogue_1": "Why do you think you lost?",
+        "dialogue_2": "Do you have any other questions?\nIf not, proceed to the quiz.",
+        "dialogue_3": "Let's proceed to the quiz!",
+        "dialogue_4": "Correct! You are now vaccinated!",
+        "dialogue_5": "Wrong answer. Try again!"
+    }
+}

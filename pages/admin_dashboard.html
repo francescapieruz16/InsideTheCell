@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -160,29 +160,29 @@
         </div>
 
         <div class="form-group">
-            <label for="minigame-descriptions">Minigames descriptions (numbered list)</label>
+            <label for="minigame-descriptions">Minigame Descriptions</label>
             <textarea id="minigame-descriptions" class="textarea-large" placeholder="Insert descriptions for the minigames..."></textarea>
         </div>
 
         <div class="form-group">
-            <label for="minigame-knowledge">Minigame knowledge (numbered list)</label>
+            <label for="minigame-knowledge">Minigame Knowledge</label>
             <textarea id="minigame-knowledge" class="textarea-large" placeholder="Insert knowledge for the minigames..."></textarea>
         </div>
 
         <div class="form-group">
-            <label for="quizzes">Minigames quizzes (numbered list)</label>
+            <label for="quizzes">Minigame Quizzes</label>
             <textarea id="quizzes" class="textarea-large" placeholder="Insert the quizzes..."></textarea>
         </div>
 
-        <div class="divider">Offline mode defaults</div>
+        <div class="divider">Offline Mode Defaults</div>
 
         <div class="form-group">
-            <label for="default-chat-responses">Default chat responses (numbered list)</label>
+            <label for="default-chat-responses">Default Chat Responses</label>
             <textarea id="default-chat-responses" class="textarea-large" placeholder="Insert the default responses for the chat..."></textarea>
         </div>
 
         <div class="form-group">
-            <label for="default-postgame-info">Default postgame information text (numbered list)</label>
+            <label for="default-postgame-info">Default Postgame Information Text</label>
             <textarea id="default-postgame-info" class="textarea-large" placeholder="Insert the default postgame information..."></textarea>
         </div>
 
@@ -204,13 +204,15 @@
 2: The objective of the minigame is to prevent viruses from entering the cell membrane. The player controls the crosshair and can destroy the viruses before reaching the entry point, if too many viruses get through they enters the cell.
 3: The objective of the minigame is to complete the platform path before the virus at the top of the screen fully opens and releases its genome. The player controls the character through platforms and spikes, trying to reach the final flag before time runs out; if the timer runs out the genome is released and the level is failed.
 4: The objective of the minigame is to complete a memory game about viral genome replication. The player must match the correct genome component cards while avoiding buffer cards that represent mutations or replication errors. If the player matches two identical buffer cards, the replication becomes unstable and the level is failed.
-5: The objective of the minigame is to contain viral assembly using a fruit-merge style mechanic. The player drops viral components into a containment box: when two identical components touch, they merge into a larger viral structure. By guiding merges and clearing the largest structures, the player helps prevent the virus from completing uncontrolled assembly. If the box overflows above the red danger line after the components settle, containment fails and the level is failed.`,
+5: The objective of the minigame is to contain viral assembly using a fruit-merge style mechanic. The player drops viral components into a containment box: when two identical components touch, they merge into a larger viral structure. By guiding merges and clearing the largest structures, the player helps prevent the virus from completing uncontrolled assembly. If the box overflows above the red danger line after the components settle, containment fails and the level is failed.
+6: The objective of the minigame is to stop the spread of newly formed viruses inside the cell environment. The player controls an antibody-like character in a maze and must capture enough viruses before the timer runs out. Some viruses move toward duplication zones, where they can create more viruses if they are not stopped in time.`,
 
             'MINIGAME_KNOWLEDGES': `1: During the binding phase, viruses use their surface proteins to attach to specific receptors on the host cell. This lock-and-key mechanism is the mandatory first step for the virus to enter the cell and cause an infection.
 2: After binding to the cell receptors, viruses can enter the cell by crossing the membrane. They do this through mechanisms like membrane fusion or endocytosis. Stopping the virus before it enters is essential to prevent the infection from progressing.
 3: After entering the cell, the virus releases its genetic material into the host cell. This step is called genome release or uncoating. Once the viral genome is free inside the cell, it can take control of the host machinery and begin producing new viral components.
 4: After the viral genome has been released inside the host cell, the virus must copy its genetic material. This step is called genome replication. Correct genome components help the virus produce new copies of its genetic instructions, while mutations or replication errors can create unstable copies.
-5: After genome replication, the virus uses copied genetic material and viral proteins to assemble new virus particles. In this level, small viral components combine into larger structures, showing how separate viral parts can organize into complete particles. The player's goal is to keep this assembly under control: if too many components accumulate above the red line, viral assembly becomes uncontrolled and the virus is not defeated.`,
+5: After genome replication, the virus uses copied genetic material and viral proteins to assemble new virus particles. In this level, small viral components combine into larger structures, showing how separate viral parts can organize into complete particles. The player's goal is to keep this assembly under control: if too many components accumulate above the red line, viral assembly becomes uncontrolled and the virus is not defeated.
+6: After new virus particles are assembled, they can spread and infect other cells. The immune system helps control infection by recognizing and neutralizing viruses. Antibodies can bind to viruses and make it harder for them to infect cells. Vaccination helps the immune system recognize a virus faster, so the body can respond more effectively.`,
 
             'QUIZZES': `1: What is the mandatory first step for a virus to enter a cell and cause an infection?
 1a(F): Replicating inside the nucleus
@@ -331,13 +333,39 @@
 5: Which phase comes after viral genome replication?
 5a(F): Binding
 5b(F): Entry through the membrane
-5c(T): Viral assembly`,
+5c(T): Viral assembly
+
+6: What can happen after new virus particles are assembled?
+6a(F): They disappear immediately
+6b(T): They can spread and infect other cells
+6c(F): They turn into healthy cell parts
+6: What is the player's goal in level 6?
+6a(T): Capture enough viruses before time runs out
+6b(F): Help the viruses duplicate
+6c(F): Build more viral particles
+6: What do antibodies help the immune system do?
+6a(F): Make viruses stronger
+6b(T): Recognize and neutralize viruses
+6c(F): Open the cell membrane
+6: Why can vaccination help against viruses?
+6a(F): It makes viruses duplicate faster
+6b(F): It removes all cells from the body
+6c(T): It helps the immune system recognize the virus faster
+6: What happens if too many viruses are not stopped?
+6a(T): The infection can spread further
+6b(F): The cell becomes automatically immune
+6c(F): The virus loses all genetic material
+6: In the level 6 maze, why are duplication zones dangerous?
+6a(F): They heal the player
+6b(T): They allow viruses to create more viruses
+6c(F): They stop the timer`,
 
             'DEFAULT_CHAT_RESPONSES': `1: Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key.
 2: Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane. They do this through mechanisms like membrane fusion or endocytosis. Stopping the virus before it enters is essential to prevent the infection from progressing.
 3: Remember that after entering the cell, the virus releases its genetic material during a process called genome release or uncoating. Once the viral genome is free inside the host cell, it can take control of the cell machinery and start producing new viral components.
 4: Remember that after genome release, the virus must copy its genetic material. In this level, the correct memory cards represent stable genome components, while the buffer cards represent mutations or replication errors.
-5: Remember that after genome replication, viral components can assemble into new virus particles. In this level, your goal is to contain that process: merge matching components, clear the largest structures, and stop the box from overflowing above the red line.`,
+5: Remember that after genome replication, viral components can assemble into new virus particles. In this level, your goal is to contain that process: merge matching components, clear the largest structures, and stop the box from overflowing above the red line.
+6: Remember that after new virus particles are assembled, they can spread and infect other cells. Antibodies and vaccination help the immune system recognize and neutralize viruses faster.`,
 
             'DEFAULT_POSTGAME_INFO': `1a: The virus reached the cell!
 1b: You were not able to stop it in time.
@@ -361,7 +389,12 @@ This represents the fourth step of the infection.
 5b: The box overflowed above the red line.
 Too many viral parts accumulated and assembly became uncontrolled.
 To defeat the virus, keep components contained and prevent overflow.
-This represents the fifth step of infection.`
+This represents the fifth step of infection.
+6a: The viruses spread through the cell environment! You were not able to capture enough viruses in time.
+After new virus particles are assembled, they can spread and infect other cells.
+6b: The immune system can fight viruses using antibodies, which help recognize and neutralize them. 
+Vaccination helps the immune system respond faster and more effectively.
+This represents the final step of infection control.`
         };
 
         window.onload = () => {

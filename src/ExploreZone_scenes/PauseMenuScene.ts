@@ -66,7 +66,6 @@ export default class PauseMenuScene extends Phaser.Scene {
             this.scene.stop();
             
             // Lancia la scena iniziale. 
-            // ATTENZIONE: Sostituisci 'MainMenu' con il nome reale della tua scena iniziale!
             window.location.href = '/menu_page.html'; 
         });
 
@@ -74,6 +73,8 @@ export default class PauseMenuScene extends Phaser.Scene {
         this.input.keyboard!.on('keydown-ESC', () => {
             this.resumeGame();
         });
+
+        this.scene.bringToTop();
     }
 
     private resumeGame() {

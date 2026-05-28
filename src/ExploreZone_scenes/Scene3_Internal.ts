@@ -411,6 +411,8 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.background_deep.tilePositionY += 0.05;
 
         if (this.player && this.player.body) {
+            const body = this.player.body as Phaser.Physics.Arcade.Body;
+
             const WORLD_SIZE = 6000;
             const CENTER = WORLD_SIZE / 2; // 3000
             
@@ -441,8 +443,8 @@ export default class Scene3_Internal extends Phaser.Scene {
 
                 // 4. FISICA: Calcoliamo il Prodotto Scalare (Velocità attuale dot Normale)
                 // Questo ci dice quanto stiamo andando "fuori"
-                const velocityX = this.player.body.velocity.x;
-                const velocityY = this.player.body.velocity.y;
+                const velocityX = body.velocity.x;
+                const velocityY = body.velocity.y;
                 const dotProduct = (velocityX * nx + velocityY * ny);
 
                 // Se stiamo andando verso l'esterno (dotProduct > 0)
@@ -453,7 +455,7 @@ export default class Scene3_Internal extends Phaser.Scene {
                     const newVelocityY = velocityY - (1 + RESTITUTION) * dotProduct * ny;
 
                     // Applichiamo la nuova velocità (riflessa verso dentro)
-                    this.player.body.setVelocity(newVelocityX, newVelocityY);
+                    body.setVelocity(newVelocityX, newVelocityY);
                 }
             }
         }

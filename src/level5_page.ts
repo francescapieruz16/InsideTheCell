@@ -1,66 +1,117 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
 
+type ComponentLevel = {
+    key: string;
+    size: number;
+    mergeValue: number;
+};
+
 class Level5 extends Phaser.Scene {
     private bg!: Phaser.GameObjects.Image;
-
-    private leftFlipper!: Phaser.GameObjects.Image;
-    private rightFlipper!: Phaser.GameObjects.Image;
 
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private keyA!: Phaser.Input.Keyboard.Key;
     private keyD!: Phaser.Input.Keyboard.Key;
+    private keySpace!: Phaser.Input.Keyboard.Key;
 
-    private components!: Phaser.Physics.Arcade.Group;
+    private currentPreview: Phaser.GameObjects.Image | null = null;
+    private currentPreviewLevel = 0;
 
-    private assemblyText!: Phaser.GameObjects.Text;
-    private timerText!: Phaser.GameObjects.Text;
-
-    private assemblyProgress = 0;
-    private timeRemaining = 0;
-    private gameEnded = false;
+    private activeComponents = new Set<Phaser.Physics.Matter.Image>();
 
     private postGameManager!: PostGameManager;
 
-    private isVaccinated: boolean = false;
-    private hasShownQuiz: boolean = false;
+    private isVaccinated = false;
+    private hasShownQuiz = false;
+    private hasStartedPlaying = false;
+    private gameEnded = false;
 
-    private leftRestAngle = 18;
-    private leftActiveAngle = -28;
+    private assemblyProgress = 0;
 
-    private rightRestAngle = -18;
-    private rightActiveAngle = 28;
+    private score = 0;
+    private highestMergedLevel = 0;
 
-    private leftFlipperActive = false;
-    private rightFlipperActive = false;
+    private nextPreviewLevel = 0;
+    private hasNextPreview = false;
 
-    private leftFlipperCooldown = false;
-    private rightFlipperCooldown = false;
+    private containerLeft = 0;
+    private containerRight = 0;
+    private containerTop = 0;
+    private containerBottom = 0;
+    private redLineY = 0;
 
-    private readonly flipperActiveTime = 180;
-    private readonly flipperCooldownTime = 260;
+    private dropX = 0;
+    private dropY = 0;
 
-    private readonly flipperScale = 0.16;
+    private canDrop = true;
 
-    private readonly flipperHitboxWidth = 260;
-    private readonly flipperHitboxHeight = 30;
+    private levelStartTime = 0;
 
-    private readonly leftFlipperHitboxOffsetX = 170;
-    private readonly rightFlipperHitboxOffsetX = -170;
-    private readonly flipperHitboxOffsetY = 0;
+    private readonly wallThickness = 38;
+    private readonly dangerTime = 1200;
 
-    private readonly flipperKnobRadius = 40;
+    private readonly initialComponentCount = 200;
+    private readonly vaccinatedFinalLevel = 4;
 
-    private readonly leftFlipperKnobOffsetX = 0;
-    private readonly rightFlipperKnobOffsetX = 0;
-    private readonly flipperKnobOffsetY = 0;
+    private isSeedingBox = false;
 
-    private componentKeys = [
-        'component_rna',
-        'component_capsid',
-        'component_spike',
-        'component_enzyme',
-        'component_membrane'
+    private readonly mergeChain: ComponentLevel[] = [
+        {
+            key: 'component_1',
+            size: 86,
+            mergeValue: 2
+        },
+        {
+            key: 'component_2',
+            size: 98,
+            mergeValue: 4
+        },
+        {
+            key: 'component_3',
+            size: 112,
+            mergeValue: 6
+        },
+        {
+            key: 'component_4',
+            size: 126,
+            mergeValue: 8
+        },
+        {
+            key: 'component_5',
+            size: 142,
+            mergeValue: 10
+        },
+        {
+            key: 'component_6',
+            size: 162,
+            mergeValue: 14
+        },
+        {
+            key: 'component_7',
+            size: 184,
+            mergeValue: 18
+        },
+        {
+            key: 'component_8',
+            size: 210,
+            mergeValue: 24
+        },
+        {
+            key: 'component_9',
+            size: 240,
+            mergeValue: 32
+        },
+        {
+            key: 'component_10',
+            size: 275,
+            mergeValue: 44
+        },
+        {
+            key: 'component_11',
+            size: 315,
+            mergeValue: 60
+        }
     ];
 
     constructor() {
@@ -71,15 +122,25 @@ class Level5 extends Phaser.Scene {
         this.isVaccinated = !!data.vaccinated;
         this.hasShownQuiz = this.isVaccinated;
 
-        this.assemblyProgress = 0;
+        this.hasStartedPlaying = false;
         this.gameEnded = false;
+        this.canDrop = true;
 
-        this.leftFlipperActive = false;
-        this.rightFlipperActive = false;
-        this.leftFlipperCooldown = false;
-        this.rightFlipperCooldown = false;
+        this.currentPreview = null;
+        this.currentPreviewLevel = 0;
 
-        this.timeRemaining = this.isVaccinated ? 35 : 45;
+        this.activeComponents.clear();
+
+        this.assemblyProgress = 0;
+        this.levelStartTime = 0;
+
+        this.score = 0;
+        this.highestMergedLevel = 0;
+
+        this.nextPreviewLevel = 0;
+        this.hasNextPreview = false;
+
+        this.isSeedingBox = false;
     }
 
     preload() {
@@ -89,38 +150,58 @@ class Level5 extends Phaser.Scene {
         );
 
         this.load.image(
-            'flipper_left',
-            '/assets/level5/flipper_left.png'
+            'component_1',
+            '/assets/level5/component_1.png'
         );
 
         this.load.image(
-            'flipper_right',
-            '/assets/level5/flipper_right.png'
+            'component_2',
+            '/assets/level5/component_2.png'
         );
 
         this.load.image(
-            'component_rna',
-            '/assets/level5/component_rna.png'
+            'component_3',
+            '/assets/level5/component_3.png'
         );
 
         this.load.image(
-            'component_capsid',
-            '/assets/level5/component_capsid.png'
+            'component_4',
+            '/assets/level5/component_4.png'
         );
 
         this.load.image(
-            'component_spike',
-            '/assets/level5/component_spike.png'
+            'component_5',
+            '/assets/level5/component_5.png'
         );
 
         this.load.image(
-            'component_enzyme',
-            '/assets/level5/component_enzyme.png'
+            'component_6',
+            '/assets/level5/component_6.png'
         );
 
         this.load.image(
-            'component_membrane',
-            '/assets/level5/component_membrane.png'
+            'component_7',
+            '/assets/level5/component_7.png'
+        );
+
+        this.load.image(
+            'component_8',
+            '/assets/level5/component_8.png'
+        );
+
+        this.load.image(
+            'component_9',
+            '/assets/level5/component_9.png'
+        );
+
+        this.load.image(
+            'component_10',
+            '/assets/level5/component_10.png'
+        );
+
+        this.load.image(
+            'component_11',
+            '/assets/level5/component_11.png'
         );
 
         this.load.image(
@@ -130,19 +211,20 @@ class Level5 extends Phaser.Scene {
     }
 
     create() {
+        this.matter.world.resume();
+
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
         this.createBackground(width, height);
-        this.createFlippers(width, height);
+        this.createContainer(width, height);
         this.createControls();
-        this.createComponents();
-        this.createUi(width);
-        this.startComponentSpawner(width);
-        this.startTimer();
+        this.createCollisionHandler();
 
         this.postGameManager = new PostGameManager(this);
         this.postGameManager.preparePostGame(5);
+
+        this.seedInitialBox();
     }
 
     private createBackground(width: number, height: number) {
@@ -166,31 +248,98 @@ class Level5 extends Phaser.Scene {
         this.bg.setScale(scale);
     }
 
-    private createFlippers(width: number, height: number) {
-        const centerX = width / 2;
-        const flipperY = height * 0.84;
+    private createContainer(width: number, height: number) {
+        this.containerTop = height * 0.14;
+        this.containerBottom = height * 0.92;
 
-        this.leftFlipper = this.add.image(
-            centerX - 300,
-            flipperY,
-            'flipper_left'
+        if (this.isVaccinated) {
+            this.containerLeft = width * 0.28;
+            this.containerRight = width * 0.72;
+            this.redLineY = height * 0.30;
+        } else {
+            this.containerLeft = width * 0.32;
+            this.containerRight = width * 0.68;
+            this.redLineY = height * 0.50;
+        }
+
+        this.dropX = width / 2;
+        this.dropY = this.containerTop - 55;
+
+        const containerWidth = this.containerRight - this.containerLeft;
+        const containerHeight = this.containerBottom - this.containerTop;
+
+        const graphics = this.add.graphics();
+        graphics.setDepth(5);
+
+        graphics.lineStyle(8, 0x88e6ff, 0.9);
+        graphics.strokeRoundedRect(
+            this.containerLeft,
+            this.containerTop,
+            containerWidth,
+            containerHeight,
+            28
         );
 
-        this.leftFlipper.setOrigin(0.18, 0.5);
-        this.leftFlipper.setDepth(20);
-        this.leftFlipper.setScale(this.flipperScale);
-        this.leftFlipper.setAngle(this.leftRestAngle);
-
-        this.rightFlipper = this.add.image(
-            centerX + 300,
-            flipperY,
-            'flipper_right'
+        graphics.lineStyle(4, 0xffffff, 0.28);
+        graphics.strokeRoundedRect(
+            this.containerLeft + 8,
+            this.containerTop + 8,
+            containerWidth - 16,
+            containerHeight - 16,
+            22
         );
 
-        this.rightFlipper.setOrigin(0.82, 0.5);
-        this.rightFlipper.setDepth(20);
-        this.rightFlipper.setScale(this.flipperScale);
-        this.rightFlipper.setAngle(this.rightRestAngle);
+        const redGlow = this.add.rectangle(
+            width / 2,
+            this.redLineY,
+            containerWidth - 28,
+            22,
+            0xff2244,
+            0.18
+        );
+
+        redGlow.setDepth(7);
+
+        const redLine = this.add.rectangle(
+            width / 2,
+            this.redLineY,
+            containerWidth - 40,
+            8,
+            0xff2244,
+            0.95
+        );
+
+        redLine.setDepth(8);
+
+        const wallOptions = {
+            isStatic: true,
+            friction: 1,
+            restitution: 0.02
+        };
+
+        this.matter.add.rectangle(
+            this.containerLeft - this.wallThickness / 2,
+            this.containerTop + containerHeight / 2,
+            this.wallThickness,
+            containerHeight,
+            wallOptions
+        );
+
+        this.matter.add.rectangle(
+            this.containerRight + this.wallThickness / 2,
+            this.containerTop + containerHeight / 2,
+            this.wallThickness,
+            containerHeight,
+            wallOptions
+        );
+
+        this.matter.add.rectangle(
+            width / 2,
+            this.containerBottom + this.wallThickness / 2,
+            containerWidth + this.wallThickness * 2,
+            this.wallThickness,
+            wallOptions
+        );
     }
 
     private createControls() {
@@ -203,518 +352,720 @@ class Level5 extends Phaser.Scene {
         this.keyD = this.input.keyboard!.addKey(
             Phaser.Input.Keyboard.KeyCodes.D
         );
-    }
 
-    private createComponents() {
-        this.components = this.physics.add.group({
-            allowGravity: false
-        });
-    }
-
-    private createUi(width: number) {
-        const leftBg = this.add.rectangle(
-            185,
-            50,
-            310,
-            60,
-            0x12001f,
-            0.72
+        this.keySpace = this.input.keyboard!.addKey(
+            Phaser.Input.Keyboard.KeyCodes.SPACE
         );
+    }
 
-        leftBg.setDepth(50);
-
-        this.assemblyText = this.add.text(
-            40,
-            25,
-            'ASSEMBLY: 0%',
-            {
-                fontSize: '32px',
-                color: '#ffcc66',
-                stroke: '#000000',
-                strokeThickness: 6,
-                fontFamily: 'monospace'
+    private createCollisionHandler() {
+        this.matter.world.on('collisionstart', (event: any) => {
+            if (this.gameEnded) {
+                return;
             }
-        );
 
-        this.assemblyText.setDepth(51);
+            event.pairs.forEach((pair: any) => {
+                const first = pair.bodyA.gameObject as
+                    | Phaser.Physics.Matter.Image
+                    | undefined;
 
-        const rightBg = this.add.rectangle(
-            width - 150,
-            50,
-            230,
-            60,
-            0x12001f,
-            0.72
-        );
+                const second = pair.bodyB.gameObject as
+                    | Phaser.Physics.Matter.Image
+                    | undefined;
 
-        rightBg.setDepth(50);
-
-        this.timerText = this.add.text(
-            width - 40,
-            25,
-            `TIME: ${this.timeRemaining}`,
-            {
-                fontSize: '32px',
-                color: '#66ffcc',
-                stroke: '#000000',
-                strokeThickness: 6,
-                fontFamily: 'monospace'
-            }
-        );
-
-        this.timerText.setOrigin(1, 0);
-        this.timerText.setDepth(51);
-    }
-
-    private startComponentSpawner(width: number) {
-        const spawnDelay = this.isVaccinated ? 800 : 120;
-
-        this.time.addEvent({
-            delay: spawnDelay,
-            loop: true,
-            callback: () => {
-                if (this.gameEnded) {
+                if (!first || !second) {
                     return;
                 }
 
-                this.spawnComponent(width);
-            }
-        });
-    }
-
-    private startTimer() {
-        this.time.addEvent({
-            delay: 1000,
-            loop: true,
-            callback: () => {
-                if (this.gameEnded) {
+                if (
+                    !this.activeComponents.has(first) ||
+                    !this.activeComponents.has(second)
+                ) {
                     return;
                 }
 
-                this.timeRemaining--;
+                this.tryMerge(first, second);
+            });
+        });
+    }
 
-                this.timerText.setText(`TIME: ${this.timeRemaining}`);
+    private seedInitialBox() {
+        this.isSeedingBox = true;
 
-                if (this.timeRemaining <= 0) {
-                    if (this.isVaccinated) {
-                        this.completeLevel();
+        const totalComponents = this.initialComponentCount;
+
+        const columns = this.isVaccinated ? 12 : 13;
+        const spacingX = this.isVaccinated ? 48 : 44;
+        const spacingY = this.isVaccinated ? 44 : 40;
+
+        const centerX = (this.containerLeft + this.containerRight) / 2;
+        const totalWidth = (columns - 1) * spacingX;
+        const startX = centerX - totalWidth / 2;
+
+        const startY = this.containerBottom - 55;
+
+        let created = 0;
+
+        const createBatch = () => {
+            if (this.gameEnded) {
+                return;
+            }
+
+            const batchSize = 12;
+
+            for (
+                let i = 0;
+                i < batchSize && created < totalComponents;
+                i++
+            ) {
+                const row = Math.floor(created / columns);
+                const col = created % columns;
+
+                const stagger = row % 2 === 0 ? 0 : spacingX / 2;
+
+                let x =
+                    startX +
+                    col * spacingX +
+                    stagger +
+                    Phaser.Math.Between(-2, 2);
+
+                x = Phaser.Math.Clamp(
+                    x,
+                    this.containerLeft + 35,
+                    this.containerRight - 35
+                );
+
+                const y =
+                    startY -
+                    row * spacingY +
+                    Phaser.Math.Between(-2, 2);
+
+                let level = 0;
+
+                const roll = Phaser.Math.Between(1, 100);
+
+                if (this.isVaccinated) {
+                    if (roll <= 45) {
+                        level = 0;
+                    } else if (roll <= 70) {
+                        level = 1;
+                    } else if (roll <= 88) {
+                        level = 2;
+                    } else if (roll <= 97) {
+                        level = 3;
                     } else {
-                        this.loseGame();
+                        level = 4;
+                    }
+                } else {
+                    if (roll <= 82) {
+                        level = 0;
+                    } else if (roll <= 97) {
+                        level = 1;
+                    } else {
+                        level = 2;
                     }
                 }
-            }
-        });
-    }
 
-    private spawnComponent(width: number) {
-        const height = this.cameras.main.height;
-
-        const randomKey = Phaser.Utils.Array.GetRandom(this.componentKeys);
-
-        const targetIsLeft = Phaser.Math.Between(0, 1) === 0;
-
-        const targetFlipper = targetIsLeft
-            ? this.leftFlipper
-            : this.rightFlipper;
-
-        const targetOffsetX = targetIsLeft
-            ? this.leftFlipperHitboxOffsetX
-            : this.rightFlipperHitboxOffsetX;
-
-        const hitboxCenter = this.getHitboxCenter(
-            targetFlipper,
-            targetOffsetX
-        );
-
-        const targetRange = this.isVaccinated ? 70 : 55;
-
-        const targetX = Phaser.Math.Between(
-            hitboxCenter.x - targetRange,
-            hitboxCenter.x + targetRange
-        );
-
-        const targetY = hitboxCenter.y - 10;
-
-        const spawnSide = Phaser.Utils.Array.GetRandom([
-            'top',
-            'left',
-            'right'
-        ]);
-
-        let x = 0;
-        let y = 0;
-
-        if (spawnSide === 'top') {
-            x = Phaser.Math.Clamp(
-                targetX + Phaser.Math.Between(-120, 120),
-                100,
-                width - 100
-            );
-
-            y = -80;
-        }
-
-        if (spawnSide === 'left') {
-            x = -80;
-
-            y = Phaser.Math.Clamp(
-                targetY + Phaser.Math.Between(-260, -80),
-                80,
-                height - 220
-            );
-        }
-
-        if (spawnSide === 'right') {
-            x = width + 80;
-
-            y = Phaser.Math.Clamp(
-                targetY + Phaser.Math.Between(-260, -80),
-                80,
-                height - 220
-            );
-        }
-
-        const component = this.components.create(
-            x,
-            y,
-            randomKey
-        ) as Phaser.Physics.Arcade.Image;
-
-        component.setOrigin(0.5);
-        component.setDepth(15);
-        component.setScale(0.07);
-        component.setData('hit', false);
-        component.setData('missed', false);
-
-        const body = component.body as Phaser.Physics.Arcade.Body;
-
-        body.allowGravity = false;
-        body.setCollideWorldBounds(false);
-
-        body.setSize(
-            component.width * 0.50,
-            component.height * 0.50
-        );
-
-        body.setOffset(
-            component.width * 0.25,
-            component.height * 0.25
-        );
-
-        const speed = this.isVaccinated
-            ? Phaser.Math.Between(170, 220)
-            : Phaser.Math.Between(330, 430);
-
-        const angle = Phaser.Math.Angle.Between(
-            x,
-            y,
-            targetX,
-            targetY
-        );
-
-        component.setVelocity(
-            Math.cos(angle) * speed,
-            Math.sin(angle) * speed
-        );
-
-        component.setAngularVelocity(0);
-    }
-
-    private updateFlippers() {
-        const leftJustPressed =
-            (this.cursors.left &&
-                Phaser.Input.Keyboard.JustDown(this.cursors.left)) ||
-            Phaser.Input.Keyboard.JustDown(this.keyA);
-
-        const rightJustPressed =
-            (this.cursors.right &&
-                Phaser.Input.Keyboard.JustDown(this.cursors.right)) ||
-            Phaser.Input.Keyboard.JustDown(this.keyD);
-
-        if (leftJustPressed && !this.leftFlipperCooldown) {
-            this.activateLeftFlipper();
-        }
-
-        if (rightJustPressed && !this.rightFlipperCooldown) {
-            this.activateRightFlipper();
-        }
-
-        const rotateSpeed = 0.35;
-
-        const targetLeftAngle = this.leftFlipperActive
-            ? this.leftActiveAngle
-            : this.leftRestAngle;
-
-        const targetRightAngle = this.rightFlipperActive
-            ? this.rightActiveAngle
-            : this.rightRestAngle;
-
-        this.leftFlipper.angle = Phaser.Math.Linear(
-            this.leftFlipper.angle,
-            targetLeftAngle,
-            rotateSpeed
-        );
-
-        this.rightFlipper.angle = Phaser.Math.Linear(
-            this.rightFlipper.angle,
-            targetRightAngle,
-            rotateSpeed
-        );
-    }
-
-    private activateLeftFlipper() {
-        this.leftFlipperActive = true;
-        this.leftFlipperCooldown = true;
-
-        this.time.delayedCall(this.flipperActiveTime, () => {
-            this.leftFlipperActive = false;
-        });
-
-        this.time.delayedCall(this.flipperCooldownTime, () => {
-            this.leftFlipperCooldown = false;
-        });
-    }
-
-    private activateRightFlipper() {
-        this.rightFlipperActive = true;
-        this.rightFlipperCooldown = true;
-
-        this.time.delayedCall(this.flipperActiveTime, () => {
-            this.rightFlipperActive = false;
-        });
-
-        this.time.delayedCall(this.flipperCooldownTime, () => {
-            this.rightFlipperCooldown = false;
-        });
-    }
-
-    private checkComponentsAgainstFlippers() {
-        const leftPressed = this.leftFlipperActive;
-        const rightPressed = this.rightFlipperActive;
-
-        const children = this.components.getChildren();
-
-        children.forEach((child) => {
-            const component = child as Phaser.Physics.Arcade.Image;
-
-            if (!component.active) {
-                return;
-            }
-
-            if (component.getData('hit')) {
-                return;
-            }
-
-            const hitsLeftFlipper =
-                this.isPointInsideRotatedRectangle(
-                    component.x,
-                    component.y,
-                    this.leftFlipper,
-                    this.leftFlipperHitboxOffsetX
-                ) ||
-                this.isPointInsideFlipperKnob(
-                    component.x,
-                    component.y,
-                    this.leftFlipper,
-                    this.leftFlipperKnobOffsetX
+                const component = this.createPhysicsComponent(
+                    x,
+                    y,
+                    level
                 );
 
-            const hitsRightFlipper =
-                this.isPointInsideRotatedRectangle(
-                    component.x,
-                    component.y,
-                    this.rightFlipper,
-                    this.rightFlipperHitboxOffsetX
-                ) ||
-                this.isPointInsideFlipperKnob(
-                    component.x,
-                    component.y,
-                    this.rightFlipper,
-                    this.rightFlipperKnobOffsetX
+                component.setVelocity(
+                    Phaser.Math.FloatBetween(-0.02, 0.02),
+                    Phaser.Math.FloatBetween(-0.015, 0.015)
                 );
 
-            if (leftPressed && hitsLeftFlipper) {
-                this.bounceComponent(component, 'left');
+                component.setAngularVelocity(
+                    Phaser.Math.FloatBetween(-0.0015, 0.0015)
+                );
+
+                created++;
+            }
+
+            if (created < totalComponents) {
+                this.time.delayedCall(35, createBatch);
                 return;
             }
 
-            if (rightPressed && hitsRightFlipper) {
-                this.bounceComponent(component, 'right');
-                return;
-            }
-        });
-    }
+            this.isSeedingBox = false;
+            this.hasStartedPlaying = true;
 
-    private getHitboxCenter(
-        flipper: Phaser.GameObjects.Image,
-        offsetX: number
-    ) {
-        const angleRad = Phaser.Math.DegToRad(flipper.angle);
-
-        const centerX =
-            flipper.x +
-            Math.cos(angleRad) * offsetX -
-            Math.sin(angleRad) * this.flipperHitboxOffsetY;
-
-        const centerY =
-            flipper.y +
-            Math.sin(angleRad) * offsetX +
-            Math.cos(angleRad) * this.flipperHitboxOffsetY;
-
-        return new Phaser.Math.Vector2(centerX, centerY);
-    }
-
-    private isPointInsideRotatedRectangle(
-        pointX: number,
-        pointY: number,
-        flipper: Phaser.GameObjects.Image,
-        offsetX: number
-    ) {
-        const angleRad = Phaser.Math.DegToRad(flipper.angle);
-        const center = this.getHitboxCenter(flipper, offsetX);
-
-        const dx = pointX - center.x;
-        const dy = pointY - center.y;
-
-        const localX =
-            Math.cos(-angleRad) * dx -
-            Math.sin(-angleRad) * dy;
-
-        const localY =
-            Math.sin(-angleRad) * dx +
-            Math.cos(-angleRad) * dy;
-
-        return (
-            Math.abs(localX) <= this.flipperHitboxWidth / 2 &&
-            Math.abs(localY) <= this.flipperHitboxHeight / 2
-        );
-    }
-
-    private isPointInsideFlipperKnob(
-        pointX: number,
-        pointY: number,
-        flipper: Phaser.GameObjects.Image,
-        offsetX: number
-    ) {
-        const angleRad = Phaser.Math.DegToRad(flipper.angle);
-
-        const knobX =
-            flipper.x +
-            Math.cos(angleRad) * offsetX -
-            Math.sin(angleRad) * this.flipperKnobOffsetY;
-
-        const knobY =
-            flipper.y +
-            Math.sin(angleRad) * offsetX +
-            Math.cos(angleRad) * this.flipperKnobOffsetY;
-
-        const distance = Phaser.Math.Distance.Between(
-            pointX,
-            pointY,
-            knobX,
-            knobY
-        );
-
-        return distance <= this.flipperKnobRadius;
-    }
-
-    private bounceComponent(
-        component: Phaser.Physics.Arcade.Image,
-        side: 'left' | 'right'
-    ) {
-        if (!component.active) {
-            return;
-        }
-
-        if (component.getData('hit')) {
-            return;
-        }
-
-        component.setData('hit', true);
-
-        const body = component.body as Phaser.Physics.Arcade.Body;
-
-        body.enable = false;
-
-        const flyDirection = side === 'left' ? 1 : -1;
-
-        const targetX = component.x + flyDirection * 900;
-        const targetY = component.y - 700;
-
-        component.setAngularVelocity(0);
-
-        this.tweens.add({
-            targets: component,
-            x: targetX,
-            y: targetY,
-            angle: component.angle + flyDirection * 520,
-            scaleX: component.scaleX * 1.15,
-            scaleY: component.scaleY * 1.15,
-            duration: 900,
-            ease: 'Power2',
-            onComplete: () => {
-                if (component.active) {
-                    component.destroy();
+            this.time.delayedCall(300, () => {
+                if (!this.gameEnded) {
+                    this.spawnNextPreview();
+                    this.levelStartTime = this.time.now;
                 }
-            }
-        });
+            });
+        };
+
+        createBatch();
     }
 
-    private increaseAssembly() {
+    private spawnNextPreview() {
         if (this.gameEnded) {
             return;
         }
 
-        const damage = this.isVaccinated ? 15 : 35;
-
-        this.assemblyProgress += damage;
-
-        if (this.assemblyProgress > 100) {
-            this.assemblyProgress = 100;
+        if (this.currentPreview) {
+            this.currentPreview.destroy();
+            this.currentPreview = null;
         }
 
-        this.assemblyText.setText(`ASSEMBLY: ${this.assemblyProgress}%`);
+        this.canDrop = true;
 
-        this.cameras.main.shake(180, 0.006);
-
-        if (this.assemblyProgress >= 100) {
-            this.loseGame();
+        if (!this.hasNextPreview) {
+            this.nextPreviewLevel = this.pickRandomPreviewLevel();
+            this.hasNextPreview = true;
         }
+
+        this.currentPreviewLevel = this.nextPreviewLevel;
+        this.nextPreviewLevel = this.pickRandomPreviewLevel();
+
+        const data = this.mergeChain[this.currentPreviewLevel];
+
+        this.currentPreview = this.add.image(
+            this.dropX,
+            this.dropY,
+            data.key
+        );
+
+        this.currentPreview.setDepth(25);
+        this.currentPreview.setDisplaySize(data.size, data.size);
+        this.currentPreview.setAlpha(0.92);
     }
 
-    private cleanComponents() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
+    private pickRandomPreviewLevel() {
+        if (this.isVaccinated) {
+            return this.pickVaccinatedPreviewLevel();
+        }
 
-        const children = this.components.getChildren();
+        const roll = Phaser.Math.Between(1, 100);
 
-        children.forEach((child) => {
-            const component = child as Phaser.Physics.Arcade.Image;
+        if (roll <= 28) {
+            return 0;
+        }
 
+        if (roll <= 58) {
+            return 1;
+        }
+
+        if (roll <= 82) {
+            return 2;
+        }
+
+        if (roll <= 96) {
+            return 3;
+        }
+
+        return 4;
+    }
+
+    private pickVaccinatedPreviewLevel() {
+        const availableLevels = this.getVaccinatedSpawnLevels();
+
+        if (availableLevels.length === 0) {
+            return this.vaccinatedFinalLevel;
+        }
+
+        return Phaser.Utils.Array.GetRandom(availableLevels);
+    }
+
+    private getVaccinatedSpawnLevels() {
+        const levels: number[] = [];
+
+        for (let level = 0; level <= this.vaccinatedFinalLevel; level++) {
+            if (this.hasComponentLevelInBox(level)) {
+                levels.push(level);
+            }
+        }
+
+        if (levels.length === 0) {
+            levels.push(this.vaccinatedFinalLevel);
+        }
+
+        return levels;
+    }
+
+    private hasComponentLevelInBox(level: number) {
+        let found = false;
+
+        this.activeComponents.forEach((component) => {
             if (!component.active) {
                 return;
             }
 
-            if (
-                !component.getData('hit') &&
-                !component.getData('missed') &&
-                component.y > height + 40
-            ) {
-                component.setData('missed', true);
-                this.increaseAssembly();
-                component.destroy();
+            const componentLevel = component.getData('level') as number;
+
+            if (componentLevel === level) {
+                found = true;
+            }
+        });
+
+        return found;
+    }
+
+    private updatePreviewMovement() {
+        if (!this.currentPreview || !this.canDrop) {
+            return;
+        }
+
+        const moveSpeed = 9;
+
+        const movingLeft =
+            this.keyA.isDown ||
+            !!this.cursors.left?.isDown;
+
+        const movingRight =
+            this.keyD.isDown ||
+            !!this.cursors.right?.isDown;
+
+        if (movingLeft) {
+            this.dropX -= moveSpeed;
+        }
+
+        if (movingRight) {
+            this.dropX += moveSpeed;
+        }
+
+        this.dropX = Phaser.Math.Clamp(
+            this.dropX,
+            this.containerLeft + 50,
+            this.containerRight - 50
+        );
+
+        this.currentPreview.x = this.dropX;
+
+        const shouldDrop =
+            Phaser.Input.Keyboard.JustDown(this.keySpace) ||
+            !!(
+                this.cursors.down &&
+                Phaser.Input.Keyboard.JustDown(this.cursors.down)
+            );
+
+        if (shouldDrop) {
+            this.dropCurrentComponent();
+        }
+    }
+
+    private dropCurrentComponent() {
+        if (!this.currentPreview || !this.canDrop) {
+            return;
+        }
+
+        this.canDrop = false;
+        this.hasStartedPlaying = true;
+
+        const level = this.currentPreviewLevel;
+        const x = this.currentPreview.x;
+        const y = this.containerTop + 80;
+
+        this.currentPreview.destroy();
+        this.currentPreview = null;
+
+        const component = this.createPhysicsComponent(x, y, level);
+
+        component.setVelocity(
+            Phaser.Math.FloatBetween(-0.03, 0.03),
+            0
+        );
+
+        component.setAngularVelocity(
+            Phaser.Math.FloatBetween(-0.002, 0.002)
+        );
+
+        this.time.delayedCall(this.isVaccinated ? 680 : 580, () => {
+            if (!this.gameEnded) {
+                this.spawnNextPreview();
+            }
+        });
+    }
+
+    private createPhysicsComponent(
+        x: number,
+        y: number,
+        level: number
+    ) {
+        const data = this.mergeChain[level];
+
+        const component = this.matter.add.image(
+            x,
+            y,
+            data.key
+        ) as Phaser.Physics.Matter.Image;
+
+        component.setDepth(20 + level);
+        component.setDisplaySize(data.size, data.size);
+
+        const radius = data.size * 0.44;
+
+        component.setCircle(radius);
+        component.setBounce(0.01);
+        component.setFriction(1);
+        component.setFrictionStatic(1);
+        component.setFrictionAir(0.0003);
+
+        component.setData('level', level);
+        component.setData('merging', false);
+        component.setData('dangerSince', 0);
+
+        component.setAngularVelocity(
+            Phaser.Math.FloatBetween(-0.004, 0.004)
+        );
+
+        this.activeComponents.add(component);
+
+        return component;
+    }
+
+    private tryMerge(
+        first: Phaser.Physics.Matter.Image,
+        second: Phaser.Physics.Matter.Image
+    ) {
+        if (this.gameEnded) {
+            return;
+        }
+
+        if (!first.active || !second.active) {
+            return;
+        }
+
+        if (first.getData('merging') || second.getData('merging')) {
+            return;
+        }
+
+        const firstLevel = first.getData('level') as number;
+        const secondLevel = second.getData('level') as number;
+
+        if (firstLevel !== secondLevel) {
+            return;
+        }
+
+        first.setData('merging', true);
+        second.setData('merging', true);
+
+        this.time.delayedCall(20, () => {
+            this.mergeComponents(first, second, firstLevel);
+        });
+    }
+
+    private mergeComponents(
+        first: Phaser.Physics.Matter.Image,
+        second: Phaser.Physics.Matter.Image,
+        level: number
+    ) {
+        if (this.gameEnded) {
+            return;
+        }
+
+        if (!first.active || !second.active) {
+            return;
+        }
+
+        const mergeX = (first.x + second.x) / 2;
+        const mergeY = (first.y + second.y) / 2;
+
+        this.activeComponents.delete(first);
+        this.activeComponents.delete(second);
+
+        if (first.body) {
+            this.matter.world.remove(first.body);
+        }
+
+        if (second.body) {
+            this.matter.world.remove(second.body);
+        }
+
+        first.destroy(true);
+        second.destroy(true);
+
+        if (this.isVaccinated && level === this.vaccinatedFinalLevel) {
+            this.createVanishEffect(mergeX, mergeY);
+            this.score += this.mergeChain[level].mergeValue;
+            this.decreaseAssembly(20);
+
+            this.time.delayedCall(120, () => {
+                this.checkVaccinatedWinCondition();
+            });
+
+            return;
+        }
+
+        const lastLevel = this.mergeChain.length - 1;
+
+        if (!this.isVaccinated && level === lastLevel) {
+            this.createVanishEffect(mergeX, mergeY);
+            this.score += this.mergeChain[level].mergeValue;
+            this.decreaseAssembly(25);
+
+            return;
+        }
+
+        const newLevel = level + 1;
+
+        if (this.isVaccinated && newLevel > this.vaccinatedFinalLevel) {
+            return;
+        }
+
+        const safeMergeY = Phaser.Math.Clamp(
+            mergeY - 6,
+            this.containerTop + 80,
+            this.containerBottom - 70
+        );
+
+        const newComponent = this.createPhysicsComponent(
+            mergeX,
+            safeMergeY,
+            newLevel
+        );
+
+        this.onFruitMerge(newLevel);
+
+        newComponent.setVelocity(
+            Phaser.Math.FloatBetween(-0.12, 0.12),
+            -0.2
+        );
+
+        newComponent.setAngularVelocity(
+            Phaser.Math.FloatBetween(-0.003, 0.003)
+        );
+
+        this.createMergeEffect(mergeX, mergeY);
+        this.increaseAssembly(this.mergeChain[newLevel].mergeValue);
+
+        if (this.isVaccinated) {
+            this.time.delayedCall(120, () => {
+                this.checkVaccinatedWinCondition();
+            });
+        }
+    }
+
+    private onFruitMerge(newLevel: number) {
+        this.highestMergedLevel = Math.max(
+            this.highestMergedLevel,
+            newLevel
+        );
+
+        this.score += this.mergeChain[newLevel].mergeValue;
+    }
+
+    private checkVaccinatedWinCondition() {
+        if (this.gameEnded) {
+            return;
+        }
+
+        if (!this.isVaccinated) {
+            return;
+        }
+
+        if (this.activeComponents.size > 0) {
+            return;
+        }
+
+        this.completeLevel();
+    }
+
+    private stabilizeComponents() {
+        this.activeComponents.forEach((component) => {
+            if (!component.active || !component.body) {
                 return;
             }
 
-            if (
-                component.x < -250 ||
-                component.x > width + 250 ||
-                component.y < -250 ||
-                component.y > height + 250
-            ) {
-                component.destroy();
+            const body = component.body as MatterJS.BodyType;
+
+            const maxVelocity = 5;
+
+            const vx = Phaser.Math.Clamp(
+                body.velocity.x,
+                -maxVelocity,
+                maxVelocity
+            );
+
+            const vy = Phaser.Math.Clamp(
+                body.velocity.y,
+                -maxVelocity,
+                maxVelocity
+            );
+
+            component.setVelocity(vx, vy);
+
+            const maxAngularVelocity = 0.08;
+
+            const angularVelocity = Phaser.Math.Clamp(
+                body.angularVelocity,
+                -maxAngularVelocity,
+                maxAngularVelocity
+            );
+
+            component.setAngularVelocity(angularVelocity);
+        });
+    }
+
+    private areComponentsSettled() {
+        let hasMovingComponent = false;
+
+        this.activeComponents.forEach((component) => {
+            if (!component.active || !component.body) {
+                return;
+            }
+
+            const body = component.body as MatterJS.BodyType;
+
+            const isMoving =
+                Math.abs(body.velocity.x) > 0.08 ||
+                Math.abs(body.velocity.y) > 0.12 ||
+                Math.abs(body.angularVelocity) > 0.015;
+
+            if (isMoving) {
+                hasMovingComponent = true;
             }
         });
+
+        return !hasMovingComponent;
+    }
+
+    private createMergeEffect(x: number, y: number) {
+        const flash = this.add.circle(
+            x,
+            y,
+            30,
+            0x66ffcc,
+            0.65
+        );
+
+        flash.setDepth(40);
+
+        this.tweens.add({
+            targets: flash,
+            scale: 2.2,
+            alpha: 0,
+            duration: 260,
+            ease: 'Power2',
+            onComplete: () => {
+                flash.destroy();
+            }
+        });
+    }
+
+    private createVanishEffect(x: number, y: number) {
+        const flash = this.add.circle(
+            x,
+            y,
+            48,
+            0xffcc66,
+            0.85
+        );
+
+        flash.setDepth(45);
+
+        this.tweens.add({
+            targets: flash,
+            scale: 3,
+            alpha: 0,
+            duration: 420,
+            ease: 'Power2',
+            onComplete: () => {
+                flash.destroy();
+            }
+        });
+
+        this.cameras.main.flash(
+            180,
+            255,
+            220,
+            120
+        );
+    }
+
+    private checkDangerLine() {
+        if (this.gameEnded) {
+            return;
+        }
+
+        if (this.isSeedingBox) {
+            return;
+        }
+
+        if (this.time.now - this.levelStartTime < 3000) {
+            return;
+        }
+
+        if (!this.areComponentsSettled()) {
+            this.activeComponents.forEach((component) => {
+                component.setData('dangerSince', 0);
+            });
+
+            return;
+        }
+
+        this.activeComponents.forEach((component) => {
+            if (!component.active || !component.body) {
+                return;
+            }
+
+            const level = component.getData('level') as number;
+            const radius = this.mergeChain[level].size * 0.44;
+
+            const isClearlyAboveLine =
+                component.y - radius < this.redLineY - 8;
+
+            if (!isClearlyAboveLine) {
+                component.setData('dangerSince', 0);
+                return;
+            }
+
+            const dangerSince = component.getData('dangerSince') as number;
+
+            if (!dangerSince) {
+                component.setData('dangerSince', this.time.now);
+                return;
+            }
+
+            const dangerLimit = this.isVaccinated
+                ? 2200
+                : 1600;
+
+            if (this.time.now - dangerSince >= dangerLimit) {
+                this.loseGame();
+            }
+        });
+    }
+
+    private increaseAssembly(amount: number) {
+        if (this.gameEnded) {
+            return;
+        }
+
+        this.assemblyProgress += amount;
+
+        if (this.assemblyProgress > 100) {
+            this.assemblyProgress = 100;
+        }
+    }
+
+    private decreaseAssembly(amount: number) {
+        if (this.gameEnded) {
+            return;
+        }
+
+        this.assemblyProgress -= amount;
+
+        if (this.assemblyProgress < 0) {
+            this.assemblyProgress = 0;
+        }
+    }
+
+    private clearComponents() {
+        this.activeComponents.forEach((component) => {
+            if (component.body) {
+                this.matter.world.remove(component.body);
+            }
+
+            component.destroy(true);
+        });
+
+        this.activeComponents.clear();
     }
 
     private completeLevel() {
@@ -724,7 +1075,12 @@ class Level5 extends Phaser.Scene {
 
         this.gameEnded = true;
 
-        this.components.clear(true, true);
+        if (this.currentPreview) {
+            this.currentPreview.destroy();
+            this.currentPreview = null;
+        }
+
+        this.clearComponents();
 
         this.postGameManager.showWinScreen();
     }
@@ -736,7 +1092,12 @@ class Level5 extends Phaser.Scene {
 
         this.gameEnded = true;
 
-        this.components.clear(true, true);
+        if (this.currentPreview) {
+            this.currentPreview.destroy();
+            this.currentPreview = null;
+        }
+
+        this.matter.world.pause();
 
         this.time.delayedCall(400, () => {
             if (this.isVaccinated) {
@@ -753,9 +1114,9 @@ class Level5 extends Phaser.Scene {
             return;
         }
 
-        this.updateFlippers();
-        this.checkComponentsAgainstFlippers();
-        this.cleanComponents();
+        this.updatePreviewMovement();
+        this.stabilizeComponents();
+        this.checkDangerLine();
     }
 }
 
@@ -766,16 +1127,17 @@ const config: Phaser.Types.Core.GameConfig = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 1920,
-        height: 1080,
+        height: 1080
     },
+
     parent: 'game-container',
 
     physics: {
-        default: 'arcade',
-        arcade: {
+        default: 'matter',
+        matter: {
             gravity: {
                 x: 0,
-                y: 0
+                y: 6
             },
             debug: false
         }

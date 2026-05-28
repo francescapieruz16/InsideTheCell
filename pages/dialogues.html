@@ -1,0 +1,742 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Dialogues Manager - InsideTheCell</title>
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #2c3e50;
+                color: #333;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }
+
+            .dashboard-card {
+                background: #ffffff;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                width: 100%;
+                max-width: 900px; 
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            h1 {
+                text-align: center;
+                color: #ff5a0a;
+                margin-top: 0;
+            }
+
+            .nav-link {
+                text-align: center;
+                display: block;
+                margin-bottom: 25px;
+                color: #3d5381;
+                text-decoration: none;
+                font-weight: bold;
+            }
+
+            .nav-link:hover {
+                text-decoration: underline;
+            }
+
+            /* Collapsible Sections Styling */
+            details {
+                margin-bottom: 15px;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                background-color: #f9f9f9;
+                overflow: hidden;
+            }
+
+            summary {
+                padding: 15px;
+                font-weight: bold;
+                color: #ffffff;
+                background-color: #3d5381;
+                cursor: pointer;
+                list-style: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 16px;
+                text-transform: uppercase;
+            }
+
+            summary::-webkit-details-marker {
+                display: none;
+            }
+
+            summary::after {
+                content: '⏷';
+                font-size: 20px;
+                color: #ff5a0a;
+                font-weight: bold;
+            }
+
+            details[open] summary::after {
+                content: '⏶';
+            }
+
+            .section-content {
+                padding: 20px;
+                background-color: #ffffff;
+                border-top: 2px solid #ddd;
+            }
+
+            /* Main Dividers */
+            .main-divider {
+                display: flex;
+                align-items: center;
+                text-align: center;
+                color: #ff5a0a;
+                font-size: 18px;
+                font-weight: bold;
+                text-transform: uppercase;
+                margin: 30px 0 20px 0;
+            }
+
+            .main-divider::before,
+            .main-divider::after {
+                content: '';
+                flex: 1;
+                border-bottom: 3px solid #ff5a0a;
+            }
+
+            .main-divider::before { margin-right: 15px; }
+            .main-divider::after { margin-left: 15px; }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .form-group:last-child {
+                margin-bottom: 0;
+            }
+
+            label {
+                display: block;
+                font-weight: bold;
+                margin-bottom: 8px;
+                color: #3d5381;
+            }
+
+            textarea {
+                width: 100%;
+                padding: 10px;
+                border: 2px solid #ddd;
+                border-radius: 6px;
+                box-sizing: border-box;
+                font-family: inherit;
+                resize: vertical;
+                height: 80px;
+            }
+
+            textarea.json-area {
+                height: 300px;
+                font-family: monospace;
+                font-size: 13px;
+                background-color: #f4f6f7;
+            }
+
+            textarea:focus {
+                border-color: #ff5a0a;
+                outline: none;
+            }
+
+            .button-group {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 30px;
+                gap: 10px;
+            }
+
+            button {
+                padding: 12px 20px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 16px;
+                transition: background-color 0.2s;
+            }
+
+            .btn-reset {
+                background-color: #e74c3c;
+                color: white;
+            }
+
+            .btn-reset:hover {
+                background-color: #c0392b;
+            }
+
+            .btn-save {
+                background-color: #3d5381;
+                color: white;
+            }
+
+            .btn-save:hover {
+                background-color: #2c3e50;
+            }
+
+            /* Toast Notification Styling */
+            #toast-notification {
+                visibility: hidden;
+                min-width: 250px;
+                text-align: center;
+                border-radius: 8px;
+                padding: 16px;
+                position: fixed;
+                z-index: 1000;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+                font-weight: bold;
+                opacity: 0;
+                transition: opacity 0.3s, bottom 0.3s;
+            }
+
+            #toast-notification.show {
+                visibility: visible;
+                opacity: 1;
+                bottom: 50px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="dashboard-card">
+            <h1>Dialogues Manager</h1>
+
+            <div style="text-align: center; margin-bottom: 25px;">
+                <a href="/pages/admin_dashboard.html" style="color: #3d5381; font-weight: bold; text-decoration: none; border: 2px solid #3d5381; padding: 8px 15px; border-radius: 6px; display: inline-block; transition: all 0.2s;">
+                    &larr; Return to Admin Dashboard
+                </a>
+            </div>
+
+            <div class="main-divider">Tutorials</div>
+
+            <details>
+                <summary>Tutorial 1: External</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-1">Dialogue 1</label>
+                        <textarea id="dialogue-tut-1-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-2">Dialogue 2</label>
+                        <textarea id="dialogue-tut-1-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-3">Dialogue 3</label>
+                        <textarea id="dialogue-tut-1-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-4">Dialogue 4</label>
+                        <textarea id="dialogue-tut-1-4" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-5">Dialogue 5</label>
+                        <textarea id="dialogue-tut-1-5" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-6">Dialogue 6</label>
+                        <textarea id="dialogue-tut-1-6" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-7">Dialogue 7</label>
+                        <textarea id="dialogue-tut-1-7" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-8">Dialogue 8</label>
+                        <textarea id="dialogue-tut-1-8" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-9">Dialogue 9</label>
+                        <textarea id="dialogue-tut-1-9" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-10">Dialogue 10</label>
+                        <textarea id="dialogue-tut-1-10" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-11">Dialogue 11</label>
+                        <textarea id="dialogue-tut-1-11" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-12">Dialogue 12</label>
+                        <textarea id="dialogue-tut-1-12" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-13">Dialogue 13</label>
+                        <textarea id="dialogue-tut-1-13" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-14">Dialogue 14</label>
+                        <textarea id="dialogue-tut-1-14" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-15">Dialogue 15</label>
+                        <textarea id="dialogue-tut-1-15" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-16">Dialogue 16</label>
+                        <textarea id="dialogue-tut-1-16" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-17">Dialogue 17</label>
+                        <textarea id="dialogue-tut-1-17" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <details>
+                <summary>Tutorial 2: Membrane</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-1">Dialogue 1</label>
+                        <textarea id="dialogue-tut-2-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-2_1">Dialogue 2_1</label>
+                        <textarea id="dialogue-tut-2-2_1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-2_2">Dialogue 2_2</label>
+                        <textarea id="dialogue-tut-2-2_2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-2_3">Dialogue 2_3</label>
+                        <textarea id="dialogue-tut-2-2_3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-3_1">Dialogue 3_1</label>
+                        <textarea id="dialogue-tut-2-3_1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-3_2">Dialogue 3_2</label>
+                        <textarea id="dialogue-tut-2-3_2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-4">Dialogue 4</label>
+                        <textarea id="dialogue-tut-2-4" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <details>
+                <summary>Tutorial 3: Internal</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-tut-3-1">Dialogue 1</label>
+                        <textarea id="dialogue-tut-3-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-3-2">Dialogue 2</label>
+                        <textarea id="dialogue-tut-3-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <div class="main-divider">Minigames</div>
+
+            <details>
+                <summary>Minigame 1: Binding</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-mg-1-1">Dialogue 1</label>
+                        <textarea id="dialogue-mg-1-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-1-2">Dialogue 2</label>
+                        <textarea id="dialogue-mg-1-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-1-3">Dialogue 3</label>
+                        <textarea id="dialogue-mg-1-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <details>
+                <summary>Minigame 2: Entry</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-mg-2-1">Dialogue 1</label>
+                        <textarea id="dialogue-mg-2-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-2-2">Dialogue 2</label>
+                        <textarea id="dialogue-mg-2-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-2-3">Dialogue 3</label>
+                        <textarea id="dialogue-mg-2-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <details>
+                <summary>Minigame 3: Uncoating</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-mg-3-1">Dialogue 1</label>
+                        <textarea id="dialogue-mg-3-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-3-2">Dialogue 2</label>
+                        <textarea id="dialogue-mg-3-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-3-3">Dialogue 3</label>
+                        <textarea id="dialogue-mg-3-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <details>
+                <summary>Minigame 4: Replication</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-mg-4-1">Dialogue 1</label>
+                        <textarea id="dialogue-mg-4-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-4-2">Dialogue 2</label>
+                        <textarea id="dialogue-mg-4-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-4-3">Dialogue 3</label>
+                        <textarea id="dialogue-mg-4-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <details>
+                <summary>Minigame 5: Assembly</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-mg-5-1">Dialogue 1</label>
+                        <textarea id="dialogue-mg-5-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-5-2">Dialogue 2</label>
+                        <textarea id="dialogue-mg-5-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-5-3">Dialogue 3</label>
+                        <textarea id="dialogue-mg-5-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <details>
+                <summary>Minigame 6: Release</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-mg-6-1">Dialogue 1</label>
+                        <textarea id="dialogue-mg-6-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-6-2">Dialogue 2</label>
+                        <textarea id="dialogue-mg-6-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-mg-6-3">Dialogue 3</label>
+                        <textarea id="dialogue-mg-6-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <div class="main-divider">Post Minigames</div>
+
+            <details>
+                <summary>Info, Chat and Quiz</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-pg-1-1">Dialogue 1</label>
+                        <textarea id="dialogue-pg-1-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-pg-1-2">Dialogue 2</label>
+                        <textarea id="dialogue-pg-1-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-pg-1-3">Dialogue 3</label>
+                        <textarea id="dialogue-pg-1-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-pg-1-4">Dialogue 4</label>
+                        <textarea id="dialogue-pg-1-4" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-pg-1-5">Dialogue 5</label>
+                        <textarea id="dialogue-pg-1-5" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
+            <div class="main-divider">Advanced: Raw JSON</div>
+            
+            <details>
+                <summary>Edit JSON</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="raw-json">Paste your JSON here and click Import JSON to save the dialogues.</label>
+                        <textarea id="raw-json" class="json-area"></textarea>
+                    </div>
+                    <div class="button-group" style="margin-top: 10px;">
+                        <button class="btn-import" onclick="importJSON()">Import JSON</button>
+                    </div>
+                </div>
+            </details>
+
+            <div class="button-group">
+                <button class="btn-reset" onclick="resetDialogues()">Reset</button>
+                <button class="btn-save" onclick="saveDialogues()">Save</button>
+            </div>
+
+            </div> <div id="toast-notification"></div>
+        </div>
+
+        <script>
+            let DEFAULT_DIALOGUES_JSON = {};
+
+            // Load data on window startup
+            window.onload = async () => {
+                try {
+                    const response = await fetch('../assets/default_dialogues.json'); 
+                    DEFAULT_DIALOGUES_JSON = await response.json();
+                } catch (error) {
+                    console.error("Failed to load default_dialogues.json:", error);
+                    showStatusMessage('Errore loading default dialogues JSON file', '#e74c3c', '#fdedec');
+                    DEFAULT_DIALOGUES_JSON = { tutorials: {}, minigames: {}, post_minigames: {} };
+                }
+
+                const savedData = localStorage.getItem('DIALOGUES_JSON');
+                let dialogueData;
+
+                if (savedData) {
+                    try {
+                        dialogueData = JSON.parse(savedData);
+                    } catch (e) {
+                        console.error("Failed to parse saved JSON, falling back to defaults.", e);
+                        dialogueData = DEFAULT_DIALOGUES_JSON;
+                    }
+                } else {
+                    dialogueData = DEFAULT_DIALOGUES_JSON;
+                }
+
+                populateUIFromJSON(dialogueData);
+            };
+
+            // Populates all HTML textareas based on the JSON object
+            function populateUIFromJSON(data) {
+                try {
+                    // Tutorials
+                    document.getElementById('dialogue-tut-1-1').value = data.tutorials.tutorial_1.dialogue_1 || "";
+                    document.getElementById('dialogue-tut-1-2').value = data.tutorials.tutorial_1.dialogue_2 || "";
+                    document.getElementById('dialogue-tut-1-3').value = data.tutorials.tutorial_1.dialogue_3 || "";
+                    document.getElementById('dialogue-tut-1-4').value = data.tutorials.tutorial_1.dialogue_4 || "";
+                    document.getElementById('dialogue-tut-1-5').value = data.tutorials.tutorial_1.dialogue_5 || "";
+                    document.getElementById('dialogue-tut-1-6').value = data.tutorials.tutorial_1.dialogue_6 || "";
+                    document.getElementById('dialogue-tut-1-7').value = data.tutorials.tutorial_1.dialogue_7 || "";
+                    document.getElementById('dialogue-tut-1-8').value = data.tutorials.tutorial_1.dialogue_8 || "";
+                    document.getElementById('dialogue-tut-1-9').value = data.tutorials.tutorial_1.dialogue_9 || "";
+                    document.getElementById('dialogue-tut-1-10').value = data.tutorials.tutorial_1.dialogue_10 || "";
+                    document.getElementById('dialogue-tut-1-11').value = data.tutorials.tutorial_1.dialogue_11 || "";
+                    document.getElementById('dialogue-tut-1-12').value = data.tutorials.tutorial_1.dialogue_12 || "";
+                    document.getElementById('dialogue-tut-1-13').value = data.tutorials.tutorial_1.dialogue_13 || "";
+                    document.getElementById('dialogue-tut-1-14').value = data.tutorials.tutorial_1.dialogue_14 || "";
+                    document.getElementById('dialogue-tut-1-15').value = data.tutorials.tutorial_1.dialogue_15 || "";
+                    document.getElementById('dialogue-tut-1-16').value = data.tutorials.tutorial_1.dialogue_16 || "";
+                    document.getElementById('dialogue-tut-1-17').value = data.tutorials.tutorial_1.dialogue_17 || "";
+                    document.getElementById('dialogue-tut-2-1').value = data.tutorials.tutorial_2.dialogue_1 || "";
+                    document.getElementById('dialogue-tut-2-2_1').value = data.tutorials.tutorial_2.dialogue_2_1 || "";
+                    document.getElementById('dialogue-tut-2-2_2').value = data.tutorials.tutorial_2.dialogue_2_2 || "";
+                    document.getElementById('dialogue-tut-2-2_3').value = data.tutorials.tutorial_2.dialogue_2_3 || "";
+                    document.getElementById('dialogue-tut-2-3_1').value = data.tutorials.tutorial_2.dialogue_3_1 || "";
+                    document.getElementById('dialogue-tut-2-3_2').value = data.tutorials.tutorial_2.dialogue_3_2 || "";
+                    document.getElementById('dialogue-tut-2-4').value = data.tutorials.tutorial_2.dialogue_4 || "";
+                    document.getElementById('dialogue-tut-3-1').value = data.tutorials.tutorial_3.dialogue_1 || "";
+
+                    // Minigames
+                    document.getElementById('dialogue-mg-1-1').value = data.minigames.minigame_1.dialogue_1 || "";
+                    document.getElementById('dialogue-mg-1-2').value = data.minigames.minigame_1.dialogue_2 || "";
+                    document.getElementById('dialogue-mg-1-3').value = data.minigames.minigame_1.dialogue_3 || "";
+                    document.getElementById('dialogue-mg-2-1').value = data.minigames.minigame_2.dialogue_1 || "";
+                    document.getElementById('dialogue-mg-2-2').value = data.minigames.minigame_2.dialogue_2 || "";
+                    document.getElementById('dialogue-mg-2-3').value = data.minigames.minigame_2.dialogue_3 || "";
+                    document.getElementById('dialogue-mg-3-1').value = data.minigames.minigame_3.dialogue_1 || "";
+                    document.getElementById('dialogue-mg-3-2').value = data.minigames.minigame_3.dialogue_2 || "";
+                    document.getElementById('dialogue-mg-3-3').value = data.minigames.minigame_3.dialogue_3 || "";
+                    document.getElementById('dialogue-mg-4-1').value = data.minigames.minigame_4.dialogue_1 || "";
+                    document.getElementById('dialogue-mg-4-2').value = data.minigames.minigame_4.dialogue_2 || "";
+                    document.getElementById('dialogue-mg-4-3').value = data.minigames.minigame_4.dialogue_3 || "";
+                    document.getElementById('dialogue-mg-5-1').value = data.minigames.minigame_5.dialogue_1 || "";
+                    document.getElementById('dialogue-mg-5-2').value = data.minigames.minigame_5.dialogue_2 || "";
+                    document.getElementById('dialogue-mg-5-3').value = data.minigames.minigame_5.dialogue_3 || "";
+                    document.getElementById('dialogue-mg-6-1').value = data.minigames.minigame_6.dialogue_1 || "";
+                    document.getElementById('dialogue-mg-6-2').value = data.minigames.minigame_6.dialogue_2 || "";
+
+                    // Post Minigames
+                    document.getElementById('dialogue-pg-1-1').value = data.post_minigames.dialogue_1 || "";
+                    document.getElementById('dialogue-pg-1-2').value = data.post_minigames.dialogue_2 || "";
+                    document.getElementById('dialogue-pg-1-3').value = data.post_minigames.dialogue_3 || "";
+                    document.getElementById('dialogue-pg-1-4').value = data.post_minigames.dialogue_4 || "";
+                    document.getElementById('dialogue-pg-1-5').value = data.post_minigames.dialogue_5 || "";
+
+                    // Update Raw JSON textarea
+                    document.getElementById('raw-json').value = JSON.stringify(data, null, 4);
+                } catch (e) {
+                    console.error("Error populating UI. JSON structure might be invalid.", e);
+                    showStatusMessage('Error loading data. Check console.', '#e74c3c', '#fdedec');
+                }
+            }
+
+            // Reads all HTML textareas and builds a JSON object
+            function buildJSONFromUI() {
+                return {
+                    "tutorials": {
+                        "tutorial_1": {
+                            "dialogue_1": document.getElementById('dialogue-tut-1-1').value,
+                            "dialogue_2": document.getElementById('dialogue-tut-1-2').value,
+                            "dialogue_3": document.getElementById('dialogue-tut-1-3').value,
+                            "dialogue_4": document.getElementById('dialogue-tut-1-4').value,
+                            "dialogue_5": document.getElementById('dialogue-tut-1-5').value,
+                            "dialogue_6": document.getElementById('dialogue-tut-1-6').value,
+                            "dialogue_7": document.getElementById('dialogue-tut-1-7').value,
+                            "dialogue_8": document.getElementById('dialogue-tut-1-8').value,
+                            "dialogue_9": document.getElementById('dialogue-tut-1-9').value,
+                            "dialogue_10": document.getElementById('dialogue-tut-1-10').value,
+                            "dialogue_11": document.getElementById('dialogue-tut-1-11').value,
+                            "dialogue_12": document.getElementById('dialogue-tut-1-12').value,
+                            "dialogue_13": document.getElementById('dialogue-tut-1-13').value,
+                            "dialogue_14": document.getElementById('dialogue-tut-1-14').value,
+                            "dialogue_15": document.getElementById('dialogue-tut-1-15').value,
+                            "dialogue_16": document.getElementById('dialogue-tut-1-16').value,
+                            "dialogue_17": document.getElementById('dialogue-tut-1-17').value,
+                        },
+                        "tutorial_2": {
+                            "dialogue_1": document.getElementById('dialogue-tut-2-1').value,
+                            "dialogue_2_1": document.getElementById('dialogue-tut-2-2_1').value,
+                            "dialogue_2_2": document.getElementById('dialogue-tut-2-2_2').value,
+                            "dialogue_2_3": document.getElementById('dialogue-tut-2-2_3').value,
+                            "dialogue_3_1": document.getElementById('dialogue-tut-2-3_1').value,
+                            "dialogue_3_2": document.getElementById('dialogue-tut-2-3_2').value,
+                            "dialogue_4": document.getElementById('dialogue-tut-2-4').value
+                        },
+                        "tutorial_3": {
+                            "dialogue_1": document.getElementById('dialogue-tut-3-1').value,
+                            "dialogue_2": document.getElementById('dialogue-tut-3-2').value
+                        }
+                    },
+                    "minigames": {
+                        "minigame_1": {
+                            "dialogue_1": document.getElementById('dialogue-mg-1-1').value,
+                            "dialogue_2": document.getElementById('dialogue-mg-1-2').value,
+                            "dialogue_3": document.getElementById('dialogue-mg-1-3').value
+                        },
+                        "minigame_2": {
+                            "dialogue_1": document.getElementById('dialogue-mg-2-1').value,
+                            "dialogue_2": document.getElementById('dialogue-mg-2-2').value,
+                            "dialogue_3": document.getElementById('dialogue-mg-2-3').value
+                        },
+                        "minigame_3": {
+                            "dialogue_1": document.getElementById('dialogue-mg-3-1').value,
+                            "dialogue_2": document.getElementById('dialogue-mg-3-2').value,
+                            "dialogue_3": document.getElementById('dialogue-mg-3-3').value
+                        },
+                        "minigame_4": {
+                            "dialogue_1": document.getElementById('dialogue-mg-4-1').value,
+                            "dialogue_2": document.getElementById('dialogue-mg-4-2').value,
+                            "dialogue_3": document.getElementById('dialogue-mg-4-3').value
+                        },
+                        "minigame_5": {
+                            "dialogue_1": document.getElementById('dialogue-mg-5-1').value,
+                            "dialogue_2": document.getElementById('dialogue-mg-5-2').value,
+                            "dialogue_3": document.getElementById('dialogue-mg-5-3').value
+                        },
+                        "minigame_6": {
+                            "dialogue_1": document.getElementById('dialogue-mg-6-1').value,
+                            "dialogue_2": document.getElementById('dialogue-mg-6-2').value,
+                            "dialogue_3": document.getElementById('dialogue-mg-6-3').value
+                        }
+                    },
+                    "post_minigames": {
+                        "dialogue_1": document.getElementById('dialogue-pg-1-1').value,
+                        "dialogue_2": document.getElementById('dialogue-pg-1-2').value,
+                        "dialogue_3": document.getElementById('dialogue-pg-1-3').value,
+                        "dialogue_4": document.getElementById('dialogue-pg-1-4').value,
+                        "dialogue_5": document.getElementById('dialogue-pg-1-5').value
+                    }
+                };
+            }
+
+           
+            // Save data to localStorage
+            function saveDialogues() {
+                const dataObj = buildJSONFromUI();
+                const jsonString = JSON.stringify(dataObj, null, 4);
+                
+                localStorage.setItem('DIALOGUES_JSON', jsonString);
+                document.getElementById('raw-json').value = jsonString; // Sync the raw text area
+
+                showStatusMessage('Dialogues saved successfully! Redirecting...', '#27ae60', '#e8f8f5');
+
+                setTimeout(() => {
+                    window.location.href = '/index.html';
+                }, 1000);
+            }
+
+            // Import data from the raw JSON textarea
+            function importJSON() {
+                const rawText = document.getElementById('raw-json').value;
+                try {
+                    const parsedData = JSON.parse(rawText);
+                    populateUIFromJSON(parsedData);
+                    localStorage.setItem('DIALOGUES_JSON', JSON.stringify(parsedData));
+                    showStatusMessage('JSON imported and saved successfully!', '#27ae60', '#e8f8f5');
+                } catch (e) {
+                    console.error("Invalid JSON format", e);
+                    showStatusMessage('Error: Invalid JSON format!', '#e74c3c', '#fdedec');
+                }
+            }
+
+            // Reset data to default values
+            function resetDialogues() {
+                if(!confirm("Are you sure you want to reset all dialogues to default?")) return;
+
+                localStorage.removeItem('DIALOGUES_JSON');
+                populateUIFromJSON(DEFAULT_DIALOGUES_JSON);
+
+                showStatusMessage('Dialogues reset to default values.', '#e74c3c', '#fdedec');
+            }
+
+            // Displays a floating toast notification
+            function showStatusMessage(text, textColor, backgroundColor) {
+                const toast = document.getElementById('toast-notification');
+                
+                toast.textContent = text;
+                toast.style.color = textColor;
+                toast.style.backgroundColor = backgroundColor;
+                
+                // Add the "show" class to trigger the CSS transition
+                toast.className = "show";
+                
+                // Remove the class after 3 seconds
+                setTimeout(() => {
+                    toast.className = toast.className.replace("show", "");
+                }, 3000);
+            }
+        </script>
+    </body>
+    </html>

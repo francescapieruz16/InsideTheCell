@@ -4,6 +4,8 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import ABI from '../classes/abi';
+import defaultDialogues from '../../assets/default_dialogues.json';
+import defaultAdminSettings from '../../assets/default_context_and_quizzes.json';
 
 export class PostGameManager {
     private scene: Phaser.Scene;
@@ -29,10 +31,18 @@ export class PostGameManager {
     private minigame_description: string = "";
     private knowledge: string = "";
     private defaultResponse: string = "";
-    private defaultInfos: string = "";
+    private defaultDialogues: string[] = [];
     private dialogues: string[] = [];
     private currentLevel: number = 0;
     private nextLevel: number = 0;
+    private postGameTexts: any = {
+        questionLost: "",
+        proceedPrompt: "",
+        proceedQuiz: "",
+        correctAnswer: "",
+        wrongAnswer: ""
+    };
+    private quizzes: any = {};
 
     private isWaitingForLLM: boolean = false;
 
@@ -132,66 +142,78 @@ export class PostGameManager {
     public preparePostGame(level: number) {
         this.currentLevel = level;
         this.nextLevel = this.currentLevel + 1;
+        const levelKey = `minigame_${this.currentLevel}`;
 
-        this.prompt = localStorage.getItem('GAME_PROMPT') || "";
-        this.minigame_description = this.extractTextForLevel(this.currentLevel, localStorage.getItem('MINIGAME_DESCRIPTIONS') || "");
-        this.knowledge = this.extractTextForLevel(this.currentLevel, localStorage.getItem('MINIGAME_KNOWLEDGES') || "");
-        this.defaultResponse = this.extractTextForLevel(this.currentLevel, localStorage.getItem('DEFAULT_CHAT_RESPONSES') || "");
-        this.defaultInfos = localStorage.getItem('DEFAULT_POSTGAME_INFO') || "";
-        this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
+        const savedAdminSettings = localStorage.getItem('ADMIN_SETTINGS_JSON');
+        let adminSettings = null;
+
+        if (savedAdminSettings) {
+            try {
+                adminSettings = JSON.parse(savedAdminSettings);
+            } catch (e) {
+                console.warn("Error reading saved admin settings. Using defaults.", e);
+                adminSettings = defaultAdminSettings;
+            }
+        } else {
+            adminSettings = defaultAdminSettings;
+        }
+
+        const defaultSettings = defaultAdminSettings as any;
+
+        const defaultLevelData = defaultSettings.minigames ? defaultSettings.minigames[levelKey] : {};
+        const levelAdminData = adminSettings.minigames[levelKey];
+
+        this.prompt = adminSettings.game_prompt || defaultSettings.game_prompt;
+        this.minigame_description = levelAdminData.description || defaultLevelData.description;
+        this.knowledge = levelAdminData.knowledge || defaultLevelData.knowledge;
+
+        this.quizzes = (levelAdminData.quizzes && levelAdminData.quizzes.length > 0) 
+            ? levelAdminData.quizzes 
+            : (defaultLevelData.quizzes || []);
+        
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+        let allDialogues = null;    
+        
+        if (savedDialogues) {
+            try {
+                allDialogues = JSON.parse(savedDialogues);
+            } catch (e) {
+                console.warn("Error reading saved dialogues. Using defaults.", e);
+                allDialogues = defaultDialogues;
+            }
+        } else {
+            allDialogues = defaultDialogues;
+        }
+
+        this.defaultDialogues = [];
+        this.defaultResponse = ""; 
+
+        if (allDialogues) {
+            if (allDialogues.minigames && allDialogues.minigames[levelKey]) {
+                const levelData = allDialogues.minigames[levelKey];
+                
+                if (levelData.dialogue_1) this.defaultDialogues.push(levelData.dialogue_1);
+                if (levelData.dialogue_2) this.defaultDialogues.push(levelData.dialogue_2);
+                if (levelData.dialogue_3) this.defaultResponse = levelData.dialogue_3; 
+            }
+
+            if (allDialogues.post_minigames) {
+                this.postGameTexts.questionLost = allDialogues.post_minigames.dialogue_1 || this.postGameTexts.questionLost;
+                this.postGameTexts.proceedPrompt = allDialogues.post_minigames.dialogue_2 || this.postGameTexts.proceedPrompt;
+                this.postGameTexts.proceedQuiz = allDialogues.post_minigames.dialogue_3 || this.postGameTexts.proceedQuiz;
+                this.postGameTexts.correctAnswer = allDialogues.post_minigames.dialogue_4 || this.postGameTexts.correctAnswer;
+                this.postGameTexts.wrongAnswer = allDialogues.post_minigames.dialogue_5 || this.postGameTexts.wrongAnswer;
+            }
+        }
+
+        this.dialogues = [...this.defaultDialogues];
 
         this.buildChat();
         this.loadRandomQuiz();
     }
 
-    private async createDialogues() {
-        if (!this.llm) {
-            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
-            return;
-        }
-
-        try {
-            const prompt = this.prompt +
-                `You will be provided with a description of the specific minigame phase and a "knowledge context". The player has just lost the level.
-                Your task is to create a brief post-game feedback to inform the player of their failure and explain the biological mechanic of the specific infection phase.
-
-                Follow these strict rules to formulate your response:
-                1. EXCLUSIVELY use the provided "knowledge context" or minigame description. Do not introduce outside scientific facts.
-                2. Your response must follow this exact 3-part narrative structure:
-                - Part 1: A short, dramatic exclamation announcing the virus's success (max 6-8 words).
-                - Part 2: A direct gentle statement of the player's failure (e.g., "You were not able to stop it in time.").
-                - Part 3: A brief, 1-2 sentence explanation of the biological event that just occurred, using the context.
-                3. You MUST format the output exactly like the example below, line by line. Notice that the explanation lines DO NOT have letter prefixes (like 'c:'):
-
-                ${this.currentLevel}a: [Part 1 - Short exclamation!]
-                ${this.currentLevel}b: [Part 2 - Failure acknowledgment.]
-                    [Part 3 - First sentence of the explanation.]
-                    [Part 3 - Second sentence of the explanation (optional).]
-
-                4. Your response MUST be extremely brief—strictly a maximum of 2 to 3 short sentences. This is mandatory so the text fits inside a small UI container.`;
-
-            const chatPromptTemplate = ChatPromptTemplate.fromMessages([
-                ["system", prompt],
-                ["user", "Minigame description: {minigame_description}\n\nKnowledge context: {knowledge}"]
-            ]);
-
-            const chain = chatPromptTemplate.pipe(this.llm).pipe(new StringOutputParser());
-
-            const feedback = await chain.invoke({
-                minigame_description: this.minigame_description,
-                knowledge: this.knowledge,
-            });
-
-            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, feedback);
-
-        } catch (e) {
-            console.log("LLM error: " + e);
-            this.dialogues = this.extractDefaultInfoForLevel(this.currentLevel, this.defaultInfos);
-        }
-    }
-
     private loadRandomQuiz() {
-        const availableQuizzes = this.extractQuizzesForLevel(this.currentLevel, localStorage.getItem('QUIZZES') || "");
+        const availableQuizzes = this.extractQuizzesFromList(this.quizzes);
 
         if (!availableQuizzes || availableQuizzes.length === 0) {
             console.warn(`No quiz found for level ${this.currentLevel}. Check the admin dashboard data.`);
@@ -259,7 +281,7 @@ export class PostGameManager {
 
             const feedbackPages = [
                 feedback,
-                "Do you have any other questions?\nIf not, proceed to the quiz."
+                this.postGameTexts.proceedPrompt
             ];
 
             this.isWaitingForLLM = false;
@@ -277,7 +299,7 @@ export class PostGameManager {
                         if (inputElement) inputElement.focus();
                     }
                 }, 50);
-            });
+            }, false, true);
 
         } catch (e) {
             console.log("LLM error: " + e);
@@ -289,7 +311,7 @@ export class PostGameManager {
     }
 
     private proceedToQuiz() {
-        this.abi.showDialogue("ABI", "Let's proceed to the quiz!", () => {
+        this.abi.showDialogue("ABI", this.postGameTexts.proceedQuiz, () => {
             this.showQuizQuestion();
         });
     }
@@ -319,10 +341,7 @@ export class PostGameManager {
     }
 
     public async showLearningPhase() {
-        this.abi.showDialogue("ABI", "Analyzing the infection...", undefined, true, true);
-        await this.createDialogues();
-
-        const dialoguePages = [...this.dialogues, "Why do you think you lost?"];
+        const dialoguePages = [...this.dialogues, this.postGameTexts.questionLost];
 
         this.abi.showDialogue("ABI", dialoguePages, () => {
             this.continueToQuizBtn.setVisible(false);
@@ -505,13 +524,13 @@ export class PostGameManager {
 
         if (isCorrect) {
             this.abi.MoveDialogueY(0);
-            this.abi.showDialogue("ABI", "Correct! You are now vaccinated!", () => {
+            this.abi.showDialogue("ABI", this.postGameTexts.correctAnswer, () => {
                 this.chatManager.hide();
                 this.scene.scene.restart({ vaccinated: true });
             });
         } else {
             this.abi.MoveDialogueY(0);
-            this.abi.showDialogue("ABI", "Wrong answer. Try again!", () => {
+            this.abi.showDialogue("ABI", this.postGameTexts.wrongAnswer, () => {
                 this.showQuizQuestion();
             });
         }
@@ -574,40 +593,36 @@ export class PostGameManager {
         return container;
     }
 
-    private extractTextForLevel(level: number, text: string): string {
-        const lines = text.split('\n');
-        for (const line of lines) {
-            if (line.trim().startsWith(`${level}:`)) return line.substring(line.indexOf(':') + 1).trim();
+    private extractQuizzesFromList(quizzesList: string[] | undefined) {
+        if (!quizzesList || !Array.isArray(quizzesList) || quizzesList.length === 0) {
+            return [];
         }
-        return "Description not found.";
-    }
 
-    private extractQuizzesForLevel(level: number, quizzesText: string) {
-        const lines = quizzesText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const quizzes: any[] = [];
-        let currentQuestion = "";
-        let currentAnswers: any[] = [];
 
-        for (const line of lines) {
-            if (line.startsWith(`${level}:`)) {
-                if (currentQuestion !== "") quizzes.push({ question: currentQuestion, answers: currentAnswers });
-                currentQuestion = line.substring(line.indexOf(':') + 1).trim();
-                currentAnswers = [];
-            } else if (currentQuestion !== "") {
-                const answerRegex = new RegExp(`^${level}[a-z]\\((T|F)\\):(.*)`);
-                const match = line.match(answerRegex);
+        for (const quizBlock of quizzesList) {
+            const lines = quizBlock.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
+            if (lines.length < 2) continue;
 
+            const question = lines[0];
+            const answers: any[] = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const match = lines[i].match(/^[a-z]\((T|F)\):(.*)/);
                 if (match) {
-                    const isCorrect = match[1] === 'T';
-                    const text = match[2].trim();
-                    currentAnswers.push({ text, isCorrect });
-                } else if (line.match(/^\d+:/)) {
-                    break;
+                    answers.push({
+                        text: match[2].trim(),
+                        isCorrect: match[1] === 'T'
+                    });
                 }
+            }
+
+            if (answers.length > 0) {
+                quizzes.push({ question: question, answers: answers });
             }
         }
 
-        if (currentQuestion !== "") quizzes.push({ question: currentQuestion, answers: currentAnswers });
         return quizzes;
     }
 

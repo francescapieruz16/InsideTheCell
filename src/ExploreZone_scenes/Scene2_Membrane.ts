@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 import ABI from '../classes/abi';
 import Spaceship from '../classes/spaceship'; // Assicurati che il percorso sia corretto
+import defaultDialogues from '../../assets/default_dialogues.json';
 
 export default class Scene2_Membrane extends Phaser.Scene {
     private player!: Spaceship;
@@ -20,6 +21,13 @@ export default class Scene2_Membrane extends Phaser.Scene {
     private background_scene!: Phaser.GameObjects.TileSprite;
 
     private isTransitioning: boolean = false;
+
+    private dialogue2: any = [];
+    private dialogue3: any = [];
+
+
+    private dialogue1: string = "";
+    private dialogue4: string = ""; 
 
     preload() {
      
@@ -46,6 +54,31 @@ export default class Scene2_Membrane extends Phaser.Scene {
     }
 
     create() {
+
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+        let allDialogues = null;    
+        if (savedDialogues) {
+            try {
+                allDialogues = JSON.parse(savedDialogues);
+            } catch (e) {
+                console.warn("Error reading saved dialogues. Using defaults.", e);
+                allDialogues = defaultDialogues;
+            }
+        } else {
+            allDialogues = defaultDialogues;
+        }
+
+        this.dialogue1 = allDialogues.tutorials.tutorial_2.dialogue_1;
+
+        this.dialogue2.push(allDialogues.tutorials.tutorial_2.dialogue_2_1);
+        this.dialogue2.push(allDialogues.tutorials.tutorial_2.dialogue_2_2);
+        this.dialogue2.push(allDialogues.tutorials.tutorial_2.dialogue_2_3);
+
+        this.dialogue3.push(allDialogues.tutorials.tutorial_2.dialogue_3_1);
+        this.dialogue3.push(allDialogues.tutorials.tutorial_2.dialogue_3_2);
+
+        this.dialogue4 = allDialogues.tutorials.tutorial_2.dialogue_4;
+    
 
         this.isTransitioning = false;
 
@@ -233,7 +266,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
         this.abi.showDialogue(
             "A.B.I.",
-            "We're inside the cytoplasm! It's a maze of cytoskeletal filaments. We must navigate carefully to reach the nuclear pore, our next destination."
+            this.dialogue1,
         );
 
         // L'Overlap fa scattare l'evento appena la navicella tocca lo sprite dell'oggetto
@@ -252,15 +285,12 @@ export default class Scene2_Membrane extends Phaser.Scene {
                 // 3. Mostra il dialogo corrispondente
                 if (loreItem.getData('itemName') === 'ViralWreck') {
                     this.abi.showDialogue("A.B.I.", [
-                        "Warning. I am detecting the hardened remains of an unknown pathogen.",
-                        "A previous viral incursion that failed to breach the cortical matrix and got entombed in the membrane.",
-                        "A grim reminder of our mission's stakes. We must find the correct path."
+                        this.dialogue2
                     ]);
                 } 
                 else if (loreItem.getData('itemName') === 'CholesterolIceberg') {
                     this.abi.showDialogue("A.B.I.", [
-                        "Path blocked. Scanners show a massive accumulation of crystallized cholesterol molecules.",
-                        "It seems the host organism has built up rigid 'lipid icebergs' within its fluid membrane."
+                        this.dialogue3
                     ]);
                 }
             }
@@ -273,6 +303,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
             // Ferma eventuali musiche o robe in sospeso
             this.scene.start('Scene3_Internal', { incomingTexture: this.player.texture.key });
         });
+
     }
 
     update() {

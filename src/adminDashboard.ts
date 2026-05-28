@@ -145,7 +145,7 @@ export class AdminDashboard {
                 const tutorialsPrompt = `${dataObj.game_prompt}\n
                 You are rewriting the introductory tutorials for the game.
                 I will provide the "Current Dialogues JSON" template for the tutorials.
-                Tutorial 1 is the Introduction. Tutorial 2 explains Basic Mechanics. Tutorial 3 explains the Objectives.
+                Tutorial 1 is the external part of the cell. Tutorial 2 explains the membrane. Tutorial 3 explains the internal part of the cell.
                 
                 Follow these strict rules:
                 1. Keep the EXACT same JSON keys as the template. Only change the string values.

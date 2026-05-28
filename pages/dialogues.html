@@ -306,8 +306,28 @@
                         <textarea id="dialogue-tut-2-1" placeholder="Insert dialogue..."></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="dialogue-tut-2-2">Dialogue 2</label>
-                        <textarea id="dialogue-tut-2-2" placeholder="Insert dialogue..."></textarea>
+                        <label for="dialogue-tut-2-2_1">Dialogue 2_1</label>
+                        <textarea id="dialogue-tut-2-2_1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-2_2">Dialogue 2_2</label>
+                        <textarea id="dialogue-tut-2-2_2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-2_3">Dialogue 2_3</label>
+                        <textarea id="dialogue-tut-2-2_3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-3_1">Dialogue 3_1</label>
+                        <textarea id="dialogue-tut-2-3_1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-3_2">Dialogue 3_2</label>
+                        <textarea id="dialogue-tut-2-3_2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-2-4">Dialogue 4</label>
+                        <textarea id="dialogue-tut-2-4" placeholder="Insert dialogue..."></textarea>
                     </div>
                 </div>
             </details>
@@ -540,9 +560,13 @@
                     document.getElementById('dialogue-tut-1-16').value = data.tutorials.tutorial_1.dialogue_16 || "";
                     document.getElementById('dialogue-tut-1-17').value = data.tutorials.tutorial_1.dialogue_17 || "";
                     document.getElementById('dialogue-tut-2-1').value = data.tutorials.tutorial_2.dialogue_1 || "";
-                    document.getElementById('dialogue-tut-2-2').value = data.tutorials.tutorial_2.dialogue_2 || "";
+                    document.getElementById('dialogue-tut-2-2_1').value = data.tutorials.tutorial_2.dialogue_2_1 || "";
+                    document.getElementById('dialogue-tut-2-2_2').value = data.tutorials.tutorial_2.dialogue_2_2 || "";
+                    document.getElementById('dialogue-tut-2-2_3').value = data.tutorials.tutorial_2.dialogue_2_3 || "";
+                    document.getElementById('dialogue-tut-2-3_1').value = data.tutorials.tutorial_2.dialogue_3_1 || "";
+                    document.getElementById('dialogue-tut-2-3_2').value = data.tutorials.tutorial_2.dialogue_3_2 || "";
+                    document.getElementById('dialogue-tut-2-4').value = data.tutorials.tutorial_2.dialogue_4 || "";
                     document.getElementById('dialogue-tut-3-1').value = data.tutorials.tutorial_3.dialogue_1 || "";
-                    document.getElementById('dialogue-tut-3-2').value = data.tutorials.tutorial_3.dialogue_2 || "";
 
                     // Minigames
                     document.getElementById('dialogue-mg-1-1').value = data.minigames.minigame_1.dialogue_1 || "";
@@ -603,7 +627,12 @@
                         },
                         "tutorial_2": {
                             "dialogue_1": document.getElementById('dialogue-tut-2-1').value,
-                            "dialogue_2": document.getElementById('dialogue-tut-2-2').value
+                            "dialogue_2_1": document.getElementById('dialogue-tut-2-2_1').value,
+                            "dialogue_2_2": document.getElementById('dialogue-tut-2-2_2').value,
+                            "dialogue_2_3": document.getElementById('dialogue-tut-2-2_3').value,
+                            "dialogue_3_1": document.getElementById('dialogue-tut-2-3_1').value,
+                            "dialogue_3_2": document.getElementById('dialogue-tut-2-3_2').value,
+                            "dialogue_4": document.getElementById('dialogue-tut-2-4').value
                         },
                         "tutorial_3": {
                             "dialogue_1": document.getElementById('dialogue-tut-3-1').value,

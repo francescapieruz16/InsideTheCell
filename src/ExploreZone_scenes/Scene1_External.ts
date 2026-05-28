@@ -503,7 +503,6 @@ export default class Scene1_External extends Phaser.Scene {
                 );
             }
             else if (this.spikePartsCollected == 2) {
-                // 4. Corretto: this.abi.showDialogue
                 this.abi.showDialogue(
                     "A.B.I.",
                     this.dialogue8
@@ -512,14 +511,14 @@ export default class Scene1_External extends Phaser.Scene {
                 this.hasSpikeModule = true;
                 this.spikeCounterText.setColor('#4caf50');
                 
-                // 4. Corretto: this.abi.showDialogue
+                
                 this.abi.showDialogue(
                     "A.B.I.",
                     this.dialogue9
                 );
             }
         } else {
-            // 4. Corretto: this.abi.showDialogue
+            
             this.abi.showDialogue(
                 "A.B.I.",
                 this.dialogue10

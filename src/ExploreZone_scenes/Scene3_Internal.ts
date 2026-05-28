@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 import ABI from '../classes/abi';
 import Spaceship from '../classes/spaceship';
+import defaultDialogues from '../../assets/default_dialogues.json';
 
 export default class Scene3_Internal extends Phaser.Scene {
 
@@ -20,6 +21,31 @@ export default class Scene3_Internal extends Phaser.Scene {
 
     private relWallsGroup!: Phaser.Physics.Arcade.StaticGroup;
     private rerWallsGroup!: Phaser.Physics.Arcade.StaticGroup;
+
+    private relTriggerGroup!: Phaser.Physics.Arcade.StaticGroup;
+    private rerTriggerGroup!: Phaser.Physics.Arcade.StaticGroup;
+
+    //dialoghi
+    private dialogue1: string = "";
+    
+    private dialogue2: any = [];
+    private dialogue3: any = [];
+    private dialogue4: any = [];
+    private dialogue5: any = [];
+    private dialogue6: any = [];
+    private dialogue7: any = [];
+
+    // --- VARIABILI COOLDOWN E FLAG DIALOGHI ---
+    private lastMitoDialogueTime: number = 0; 
+    private lastLysoDialogueTime: number = 0;
+    private lastGolgiDialogueTime: number = 0;
+    private lastNucleusDialogueTime: number = 0; // Per il Nucleo
+    private readonly DIALOGUE_COOLDOWN: number = 1000;
+
+    private hasTriggeredSER: boolean = false; // Trigger unico
+    private hasTriggeredRER: boolean = false; // Trigger unico
+
+
 
     preload() {
         // Carichiamo l'immagine che useremo per lo sfondo scorrevole
@@ -47,6 +73,41 @@ export default class Scene3_Internal extends Phaser.Scene {
     }
 
     create() {
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+                let allDialogues = null;    
+                if (savedDialogues) {
+                    try {
+                        allDialogues = JSON.parse(savedDialogues);
+                    } catch (e) {
+                        console.warn("Error reading saved dialogues. Using defaults.", e);
+                        allDialogues = defaultDialogues;
+                    }
+                } else {
+                    allDialogues = defaultDialogues;
+                }
+        
+        this.dialogue1 = allDialogues.tutorials.tutorial_3.dialogue_1;
+
+        this.dialogue2.push(allDialogues.tutorials.tutorial_3.dialogue_2_1);
+        this.dialogue2.push(allDialogues.tutorials.tutorial_3.dialogue_2_2);
+
+        this.dialogue3.push(allDialogues.tutorials.tutorial_3.dialogue_3_1);
+        this.dialogue3.push(allDialogues.tutorials.tutorial_3.dialogue_3_2);
+
+        this.dialogue4.push(allDialogues.tutorials.tutorial_3.dialogue_4_1);
+        this.dialogue4.push(allDialogues.tutorials.tutorial_3.dialogue_4_2);
+
+        this.dialogue5.push(allDialogues.tutorials.tutorial_3.dialogue_5_1);
+        this.dialogue5.push(allDialogues.tutorials.tutorial_3.dialogue_5_2);
+
+        this.dialogue6.push(allDialogues.tutorials.tutorial_3.dialogue_6_1);
+        this.dialogue6.push(allDialogues.tutorials.tutorial_3.dialogue_6_2);
+
+        this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_1);
+        this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_2);
+
+
+
         // 1. Definiamo una dimensione molto grande per il nostro mondo di gioco
         const WORLD_SIZE = 6000;
         const CENTER_X = WORLD_SIZE / 2;
@@ -184,34 +245,7 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.player = new Spaceship(this, CENTER_X, WORLD_SIZE - 300, this.startingTexture);        this.player.setScale(0.3); // Impostiamo una scala per la navicella
         (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
 
-        // // Punto di partenza del Golgi nel mondo
-        // const GOLGI_START_X = 100;
-        // const GOLGI_START_Y = 1000;
-        
-        // // Dimensione del singolo blocco (non troppo grande, per permettere manovre)
-        // const G_TILE = 128; 
-
-// =========================================================
-        // // --- APPARATO DI GOLGI (Macro-Sprite Statico) ---
-        // // =========================================================
-        // const GOLGI_X = 700;
-        // const GOLGI_Y = 2900; 
-        // const GOLGI_WIDTH = 1200;
-        // const GOLGI_HEIGHT = 600;
-
-        // // 1. Creiamo l'immagine statica con fisica
-        // const golgi = this.physics.add.staticImage(GOLGI_X, GOLGI_Y, 'organelle_golgi');
-        
-        // // 2. Impostiamo la dimensione visiva desiderata
-        // golgi.setDisplaySize(GOLGI_WIDTH, GOLGI_HEIGHT);
-        
-        // // 3. FONDAMENTALE: Sincronizziamo la hitbox con le nuove dimensioni visive.
-        // // Questo evita qualsiasi disallineamento o sfasamento geometrico.
-        // golgi.refreshBody();
-        
-        // this.physics.add.collider(this.player, golgi);
-
-        // =========================================================
+        //  =================================================
         // --- CONFIGURAZIONE APPARATO DI GOLGI (DISACCOPPIATO) ---
         // =========================================================
 
@@ -251,7 +285,9 @@ export default class Scene3_Internal extends Phaser.Scene {
         const nucleus = this.physics.add.staticImage(NUCLEUS_X, NUCLEUS_Y, 'nucleo');
         nucleus.setDisplaySize(NUCLEUS_SIZE, NUCLEUS_SIZE);
         nucleus.refreshBody();
-        this.physics.add.collider(this.player, nucleus);
+        this.physics.add.collider(this.player, nucleus, () => {
+            this.handleNucleusCollision();
+        });
 
         // =========================================================
         // --- RETICOLO ENDOPLASMATICO (Matrice Unificata REL + RER) ---
@@ -260,6 +296,11 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.relWallsGroup = this.physics.add.staticGroup();
         this.rerWallsGroup = this.physics.add.staticGroup();
 
+        this.relTriggerGroup = this.physics.add.staticGroup();
+        this.rerTriggerGroup = this.physics.add.staticGroup();
+
+        
+
         const ER_TILE_W = 128; // Esempio: largo il doppio
         const ER_TILE_H = 128;  // Altezza invariata
         
@@ -267,73 +308,95 @@ export default class Scene3_Internal extends Phaser.Scene {
         const ER_START_X = 1350; 
         const ER_START_Y = 1464; 
 
-        // 0 = Lume (Vuoto), 1 = REL (Liscio), 2 = RER (Ruvido con Ribosomi)
+        // 0 = Lume, 1 = REL, 2 = RER, 3 = Trigger Dialogo REL, 4 = Trigger Dialogo RER
         const erGrid = [
             [1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0],
-            [0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,0,0], // <-- Ingresso Nord
+            [0,1,1,1,1,1,1,1,1,1,1,3,3,1,1,1,1,1,1,1,1,1,0,0], // <-- 3: Ingressi REL Nord
             [0,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0],
             [0,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0],
-            [0,1,1,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,0,0,1,0,0], // Muro REL intermedio
+            [0,1,1,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,0,0,1,0,0], 
             [0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0],
-            [1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0],
-            [1,0,1,0,0,1,0,0,2,2,2,0,0,2,2,2,2,2,1,0,0,1,0,0], // <-- Ingresso interno Nord RER
+            [1,0,1,0,0,1,0,0,0,0,0,4,4,0,0,0,0,0,1,0,0,1,0,0], // <-- 4: Ingressi RER Nord
+            [1,0,1,0,0,1,0,0,2,2,2,0,0,2,2,2,2,2,1,0,0,1,0,0], 
             [1,0,1,0,0,1,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,1,0,1],
-            [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,1,0,1], // <-- Ingresso Ovest REL
-            [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,0,0,1], // (Il nucleo va al centro dei 0)
-            [0,0,1,0,0,1,1,1,2,2,0,0,0,0,0,0,2,2,0,0,0,0,0,1], // <-- Ingresso Est REL
+            [1,3,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,3,0,1], // <-- 3: Ingressi REL Laterali
+            [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,0,0,1], 
+            [0,0,1,0,0,1,1,1,2,2,0,0,0,0,0,0,2,2,0,0,0,0,0,1], 
             [0,0,1,0,0,1,1,0,2,2,0,0,0,0,0,0,2,2,0,0,0,1,1,1],
             [0,0,1,0,0,1,0,0,2,2,0,0,0,0,0,0,2,2,1,1,1,1,0,0],
-            [1,0,1,0,0,1,0,0,2,2,2,2,2,2,2,0,0,2,1,1,0,1,0,0], // <-- Ingresso interno Sud-Est RER
-            [1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+            [1,0,1,0,0,1,0,0,2,2,2,2,2,2,2,0,0,2,1,1,0,1,0,0], 
+            [1,0,0,0,0,1,1,0,0,0,0,4,4,0,0,0,0,0,0,0,0,1,0,0], // <-- 4: Ingressi RER Sud
             [1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
-            [0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0], // Muro REL intermedio
+            [0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0], 
             [0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
             [0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1],
-            [0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,0,1], // <-- Ingresso Sud
+            [0,0,1,1,1,1,1,1,1,1,3,3,1,1,1,1,1,1,1,1,1,1,0,1], // <-- 3: Ingressi REL Sud
             [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
             [0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0]
         ];
 
-        // Generazione procedurale dell'intero labirinto ER
-        // Generazione procedurale del labirinto ER rettangolare
+        // Generazione procedurale dell'intero labirinto 
         for (let row = 0; row < erGrid.length; row++) {
             for (let col = 0; col < erGrid[row].length; col++) {
                 
                 const cellValue = erGrid[row][col];
                 
                 if (cellValue !== 0) {
-                    // Calcolo di posX usando la LARGHEZZA
                     const posX = ER_START_X + (col * ER_TILE_W) + (ER_TILE_W / 2);
-                    // Calcolo di posY usando l'ALTEZZA
                     const posY = ER_START_Y + (row * ER_TILE_H) + (ER_TILE_H / 2);
                     
-                    let wall;
+                    // --- MURI SOLIDI ---
+                    if (cellValue === 1 || cellValue === 2) {
+                        let wall;
+                        if (cellValue === 1) {
+                            wall = this.relWallsGroup.create(posX, posY, 'organelle_rel_tile');
+                        } else if (cellValue === 2) {
+                            wall = this.rerWallsGroup.create(posX, posY, 'organelle_rer_tile');
+                        }
 
-                    if (cellValue === 1) {
-                        wall = this.relWallsGroup.create(posX, posY, 'organelle_rel_tile');
-                    } else if (cellValue === 2) {
-                        wall = this.rerWallsGroup.create(posX, posY, 'organelle_rer_tile');
+                        if (wall) {
+                            wall.setDisplaySize(ER_TILE_W, ER_TILE_H);
+                            wall.refreshBody(); 
+                        }
+                    } 
+                    // --- TRIGGER INVISIBILI (3 e 4) ---
+                    else if (cellValue === 3) {
+                        const trigger = this.add.zone(posX, posY, ER_TILE_W, ER_TILE_H);
+                        this.physics.add.existing(trigger, true); // true = corpo statico
+                        this.relTriggerGroup.add(trigger);
                     }
-
-                    if (wall) {
-                        // Applica la nuova forma rettangolare e allinea l'hitbox
-                        wall.setDisplaySize(ER_TILE_W, ER_TILE_H);
-                        wall.refreshBody(); 
+                    else if (cellValue === 4) {
+                        const trigger = this.add.zone(posX, posY, ER_TILE_W, ER_TILE_H);
+                        this.physics.add.existing(trigger, true); // true = corpo statico
+                        this.rerTriggerGroup.add(trigger);
                     }
                 }
             }
         }
 
-        //Collisioni tra giocatore e organuli
-        this.physics.add.collider(this.player, this.lysosomesGroup);
-        this.physics.add.collider(this.player, this.mitochondriaGroup);
+        this.physics.add.collider(this.player, this.mitochondriaGroup, () => {
+            this.handleMitoCollision();
+        });
+        
+        this.physics.add.collider(this.player, this.lysosomesGroup, () => {
+            this.handleLysoCollision();
+        });
+        
+        this.physics.add.collider(this.player, golgiHitZone, () => {
+            this.handleGolgiCollision();
+        });
 
         this.physics.add.collider(this.player, this.relWallsGroup);
         this.physics.add.collider(this.player, this.rerWallsGroup);
 
-        // Collisione tra il giocatore e la hitbox invisibile del Golgi
-        this.physics.add.collider(this.player, golgiHitZone);
+        this.physics.add.overlap(this.player, this.relTriggerGroup, () => {
+                    this.handleSEROverlap();
+                });
+
+        this.physics.add.overlap(this.player, this.rerTriggerGroup, () => {
+            this.handleREROverlap();
+        });
 
         // 5. La telecamera segue il giocatore
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -359,7 +422,7 @@ export default class Scene3_Internal extends Phaser.Scene {
         // Messaggio di benvenuto da A.B.I.
         this.abi.showDialogue(
             "A.B.I.",
-            "We have successfully entered the cytoplasm. The environment is vast and teeming with organelles. Our next objective is to locate the Endoplasmic Reticulum."
+            this.dialogue1,
         );
 
         // DEBUG: Clicca col mouse per ottenere le coordinate esatte
@@ -459,5 +522,62 @@ export default class Scene3_Internal extends Phaser.Scene {
                 }
             }
         }
+    }
+   // =========================================================
+    // --- CALLBACK DELLE COLLISIONI (TRIGGER DIALOGHI) ---
+    // =========================================================
+
+    private handleMitoCollision(): void {
+        // Se ABI sta già parlando, non fare nulla (come nella Scena 1)
+        if (this.abi.isTalking) return;
+
+        // Controlla se il tempo trascorso è maggiore del cooldown
+        if (this.time.now > this.lastMitoDialogueTime + this.DIALOGUE_COOLDOWN) {
+            this.lastMitoDialogueTime = this.time.now;
+            this.abi.showDialogue("A.B.I.", this.dialogue2);
+        }
+    }
+
+    private handleLysoCollision(): void {
+        if (this.abi.isTalking) return;
+
+        if (this.time.now > this.lastLysoDialogueTime + this.DIALOGUE_COOLDOWN) {
+            this.lastLysoDialogueTime = this.time.now;
+            this.abi.showDialogue("A.B.I.", this.dialogue3);
+        }
+    }
+
+    private handleGolgiCollision(): void {
+        if (this.abi.isTalking) return;
+
+        if (this.time.now > this.lastGolgiDialogueTime + this.DIALOGUE_COOLDOWN) {
+            this.lastGolgiDialogueTime = this.time.now;
+            this.abi.showDialogue("A.B.I.", this.dialogue4);
+        }
+    }
+
+    private handleNucleusCollision(): void {
+        if (this.abi.isTalking) return;
+
+        // Comportamento a cooldown come gli altri organuli fisici
+        if (this.time.now > this.lastNucleusDialogueTime + this.DIALOGUE_COOLDOWN) {
+            this.lastNucleusDialogueTime = this.time.now;
+            this.abi.showDialogue("A.B.I.", this.dialogue7);
+        }
+    }
+
+    private handleSEROverlap(): void {
+        // Se ABI sta già parlando o se il dialogo è già scattato in precedenza, ignora
+        if (this.abi.isTalking || this.hasTriggeredSER) return;
+        
+        this.hasTriggeredSER = true; // Blocca future attivazioni
+        this.abi.showDialogue("A.B.I.", this.dialogue5);
+    }
+
+    private handleREROverlap(): void {
+        if (this.abi.isTalking || this.hasTriggeredRER) return;
+        
+        this.hasTriggeredRER = true;
+        this.abi.showDialogue("A.B.I.", this.dialogue6);
     }
 }

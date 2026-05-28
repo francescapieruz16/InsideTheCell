@@ -11,8 +11,13 @@
             "dialogue_8": "Great job! You've retrieved a Spike Protein Module. Our external surface now perfectly mimics the envelope of SARS-CoV-2. We can trick the ACE2 receptor. Let's return to the docking point."
         },
         "tutorial_2": {
-            "dialogue_1": "Use the directional arrows to move your character.",
-            "dialogue_2": "Press the Spacebar to interact with objects and structures."
+            "dialogue_1": "We're inside the cytoplasm! It's a maze of cytoskeletal filaments. We must navigate carefully to reach the nuclear pore, our next destination.",
+            "dialogue_2_1": "Warning. I am detecting the hardened remains of an unknown pathogen.",
+            "dialogue_2_2": "A previous viral incursion that failed to breach the cortical matrix and got entombed in the membrane.",
+            "dialogue_2_3": "A grim reminder of our mission's stakes. We must find the correct path.",
+            "dialogue_3_1": "Path blocked. Scanners show a massive accumulation of crystallized cholesterol molecules.",
+            "dialogue_3_2": "It seems the host organism has built up rigid 'lipid icebergs' within its fluid membrane.",
+            "dialogue_4": "Nuclear pore complex breached. We are proceeding into the cytoplasm. Brace for environmental shift."
         },
         "tutorial_3": {
             "dialogue_1": "Your primary objective is to defend the cell at all costs.",

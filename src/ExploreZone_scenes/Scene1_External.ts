@@ -41,6 +41,15 @@ export default class Scene1_External extends Phaser.Scene {
 
     private initialDialogues: any = [];
     private dialogue2: string = "";
+    private dialogue3: string = "";
+    private dialogue4: string = "";
+    private dialogue5: string = "";
+    private dialogue6: string = "";
+    private dialogue7: string = "";
+    private dialogue8: string = "";
+    private dialogue9: string = "";
+    private dialogue10: string = "";
+    private dialogue11: string = "";
 
     constructor() {
         super('ExternalScene'); 
@@ -238,7 +247,16 @@ export default class Scene1_External extends Phaser.Scene {
         this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_6);
         this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_7);
 
-        this.dialogue2 = allDialogues.tutorials.tutorial_1.dialogue_8
+        this.dialogue2 = allDialogues.tutorials.tutorial_1.dialogue_8;
+        this.dialogue3 = allDialogues.tutorials.tutorial_1.dialogue_9;
+        this.dialogue4 = allDialogues.tutorials.tutorial_1.dialogue_10;
+        this.dialogue5 = allDialogues.tutorials.tutorial_1.dialogue_11;
+        this.dialogue6 = allDialogues.tutorials.tutorial_1.dialogue_12;
+        this.dialogue7 = allDialogues.tutorials.tutorial_1.dialogue_13;
+        this.dialogue8 = allDialogues.tutorials.tutorial_1.dialogue_14;
+        this.dialogue9 = allDialogues.tutorials.tutorial_1.dialogue_15;
+        this.dialogue10 = allDialogues.tutorials.tutorial_1.dialogue_16;
+        this.dialogue11 = allDialogues.tutorials.tutorial_1.dialogue_17;
 
     }
 
@@ -411,7 +429,7 @@ export default class Scene1_External extends Phaser.Scene {
             
             this.abi.showDialogue(
                 "A.B.I.",
-                "Excellent! Target identified: the Angiotensin-Converting Enzyme 2 (ACE2) receptor. This is our gateway. However, we cannot trigger endocytosis without the correct molecular key. Search the viral debris scattered nearby for Spike protein fragments!"
+                this.dialogue3
             );
             return; // Usciamo dalla funzione
         }
@@ -422,7 +440,7 @@ export default class Scene1_External extends Phaser.Scene {
                 
                 this.abi.showDialogue(
                     "A.B.I.",
-                    "This is the correct ACE2 receptor, but access is denied. Our biochemical affinity is currently insufficient. We need to fully assemble the Spike Module first. Let's search the area for usable viral debris to extract the missing components."
+                    this.dialogue4
                 );
 
                 this.time.delayedCall(3000, () => {
@@ -435,8 +453,8 @@ export default class Scene1_External extends Phaser.Scene {
 
             this.abi.showDialogue(
                 "A.B.I.",
-                "Molecular recognition confirmed. Docking sequence initiated. Hold on tight, the membrane is forming an invagination to pull us inside!"
-            , () => {
+                this.dialogue5, 
+                () => {
                     this.startTransitionToInside();
                 }
             );
@@ -457,7 +475,7 @@ export default class Scene1_External extends Phaser.Scene {
 
                 this.abi.showDialogue(
                     "A.B.I.",
-                    "Wait! Don't extract random materials yet. We must locate our specific target, the ACE2 receptor, before we know exactly which viral components we need to synthesize the key."
+                    this.dialogue6
                 );
 
                 // Ripristiniamo l'avviso dopo 3 secondi
@@ -479,13 +497,16 @@ export default class Scene1_External extends Phaser.Scene {
             // Se è il primissimo pezzo che troviamo, rendiamo visibile il contatore
             if (this.spikePartsCollected === 1) {
                 this.spikeCounterText.setVisible(true);
+                this.abi.showDialogue(
+                    "A.B.I.",
+                    this.dialogue7
+                );
             }
-            
-            if (this.spikePartsCollected < 3) {
+            else if (this.spikePartsCollected == 2) {
                 // 4. Corretto: this.abi.showDialogue
                 this.abi.showDialogue(
                     "A.B.I.",
-                    `Usable protein fragment extracted! We currently have ${this.spikePartsCollected} out of 3 necessary components. Let's keep searching the area for more viable debris.`
+                    this.dialogue8
                 );
             } else {
                 this.hasSpikeModule = true;
@@ -494,14 +515,14 @@ export default class Scene1_External extends Phaser.Scene {
                 // 4. Corretto: this.abi.showDialogue
                 this.abi.showDialogue(
                     "A.B.I.",
-                    "Third fragment acquired! The Spike Module is fully assembled. Our hull now mimics the viral envelope perfectly. Let's locate the specific ACE2 receptor and initiate docking."
+                    this.dialogue9
                 );
             }
         } else {
             // 4. Corretto: this.abi.showDialogue
             this.abi.showDialogue(
                 "A.B.I.",
-                "Scanning... Negative. This viral particle is too degraded. The glycoproteins have completely denatured. There is nothing useful to extract here."
+                this.dialogue10
             );
         }
     }
@@ -515,7 +536,7 @@ export default class Scene1_External extends Phaser.Scene {
             
             this.abi.showDialogue(
                 "A.B.I.",
-                "Negative. This is not the target receptor. The molecular structure does not match our parameters. We need to find the specific Angiotensin-Converting Enzyme 2 (ACE2) to gain entry."
+                this.dialogue11
             );
 
             this.time.delayedCall(3000, () => {

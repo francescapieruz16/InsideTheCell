@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 import ABI from '../classes/abi';
 import Spaceship from '../classes/spaceship';
+import defaultDialogues from '../../assets/default_dialogues.json';
 
 export default class Scene1_External extends Phaser.Scene {
     private static hasShownControls = false;
@@ -37,6 +38,9 @@ export default class Scene1_External extends Phaser.Scene {
 
     private player!: Spaceship;
     private abi!: ABI;;
+
+    private initialDialogues: any = [];
+    private dialogue2: string = "";
 
     constructor() {
         super('ExternalScene'); 
@@ -212,6 +216,30 @@ export default class Scene1_External extends Phaser.Scene {
             this.scene.pause(this.scene.key);
             this.scene.launch('ControlsScene', { parentScene: this.scene.key });
         }
+
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+        let allDialogues = null;    
+        if (savedDialogues) {
+            try {
+                allDialogues = JSON.parse(savedDialogues);
+            } catch (e) {
+                console.warn("Error reading saved dialogues. Using defaults.", e);
+                allDialogues = defaultDialogues;
+            }
+        } else {
+            allDialogues = defaultDialogues;
+        }
+
+        this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_1);
+        this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_2);
+        this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_3);
+        this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_4);
+        this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_5);
+        this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_6);
+        this.initialDialogues.push(allDialogues.tutorials.tutorial_1.dialogue_7);
+
+        this.dialogue2 = allDialogues.tutorials.tutorial_1.dialogue_8
+
     }
 
     update() {
@@ -222,13 +250,8 @@ export default class Scene1_External extends Phaser.Scene {
             this.hasSeenIntro = true;
             this.abi.showDialogue(
                 "A.B.I.",
-                ["Hey! I am A.B.I.: Advanced Biometric Informer! I will be your assistant during this exploration!", 
-                "We are in the extracellular space. Below us is the plasma membrane. To enter, we will mimic the infection strategy of the Coronavirus.", 
-                "The virus uses a specific 'molecular handshake': its Spike protein must bind to a human receptor called ACE2 to unlock the cell.",
-                "Step 1: Locate the target gateway. You must search the membrane and find the ACE2 receptor first, just like a real virus would.",
-                "Step 2: Once scanned, our systems will calculate the exact shape of the Spike protein fragments we need to synthesize the key.",
-                "Step 3: Only then can we scavenge those floating viral remnants to extract the necessary protein components.",
-                "Let's move! Explore the area and locate the ACE2 receptor first!" ]            );
+                this.initialDialogues          
+            );
             return;
         }
 
@@ -372,7 +395,8 @@ export default class Scene1_External extends Phaser.Scene {
 
         this.abi.showDialogue(
             "A.B.I.",
-            "Great job! You've retrieved a Spike Protein Module. Our external surface now perfectly mimics the envelope of SARS-CoV-2. We can trick the ACE2 receptor. Let's return to the docking point."        );
+            this.dialogue2
+        );
     }
 
     // Funzione chiamata quando sbatti contro il rettangolo verde

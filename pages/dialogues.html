@@ -225,7 +225,7 @@
             <div class="main-divider">Tutorials</div>
 
             <details>
-                <summary>Tutorial 1: Introduction</summary>
+                <summary>Tutorial 1: External</summary>
                 <div class="section-content">
                     <div class="form-group">
                         <label for="dialogue-tut-1-1">Dialogue 1</label>
@@ -235,11 +235,35 @@
                         <label for="dialogue-tut-1-2">Dialogue 2</label>
                         <textarea id="dialogue-tut-1-2" placeholder="Insert dialogue..."></textarea>
                     </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-3">Dialogue 3</label>
+                        <textarea id="dialogue-tut-1-3" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-4">Dialogue 4</label>
+                        <textarea id="dialogue-tut-1-4" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-5">Dialogue 5</label>
+                        <textarea id="dialogue-tut-1-5" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-6">Dialogue 6</label>
+                        <textarea id="dialogue-tut-1-6" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-7">Dialogue 7</label>
+                        <textarea id="dialogue-tut-1-7" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-tut-1-8">Dialogue 8</label>
+                        <textarea id="dialogue-tut-1-8" placeholder="Insert dialogue..."></textarea>
+                    </div>
                 </div>
             </details>
 
             <details>
-                <summary>Tutorial 2: Basic Mechanics</summary>
+                <summary>Tutorial 2: Membrane</summary>
                 <div class="section-content">
                     <div class="form-group">
                         <label for="dialogue-tut-2-1">Dialogue 1</label>
@@ -253,7 +277,7 @@
             </details>
 
             <details>
-                <summary>Tutorial 3: Objectives</summary>
+                <summary>Tutorial 3: Internal</summary>
                 <div class="section-content">
                     <div class="form-group">
                         <label for="dialogue-tut-3-1">Dialogue 1</label>
@@ -464,6 +488,12 @@
                     // Tutorials
                     document.getElementById('dialogue-tut-1-1').value = data.tutorials.tutorial_1.dialogue_1 || "";
                     document.getElementById('dialogue-tut-1-2').value = data.tutorials.tutorial_1.dialogue_2 || "";
+                    document.getElementById('dialogue-tut-1-3').value = data.tutorials.tutorial_1.dialogue_3 || "";
+                    document.getElementById('dialogue-tut-1-4').value = data.tutorials.tutorial_1.dialogue_4 || "";
+                    document.getElementById('dialogue-tut-1-5').value = data.tutorials.tutorial_1.dialogue_5 || "";
+                    document.getElementById('dialogue-tut-1-6').value = data.tutorials.tutorial_1.dialogue_6 || "";
+                    document.getElementById('dialogue-tut-1-7').value = data.tutorials.tutorial_1.dialogue_7 || "";
+                    document.getElementById('dialogue-tut-1-8').value = data.tutorials.tutorial_1.dialogue_8 || "";
                     document.getElementById('dialogue-tut-2-1').value = data.tutorials.tutorial_2.dialogue_1 || "";
                     document.getElementById('dialogue-tut-2-2').value = data.tutorials.tutorial_2.dialogue_2 || "";
                     document.getElementById('dialogue-tut-3-1').value = data.tutorials.tutorial_3.dialogue_1 || "";
@@ -509,7 +539,13 @@
                     "tutorials": {
                         "tutorial_1": {
                             "dialogue_1": document.getElementById('dialogue-tut-1-1').value,
-                            "dialogue_2": document.getElementById('dialogue-tut-1-2').value
+                            "dialogue_2": document.getElementById('dialogue-tut-1-2').value,
+                            "dialogue_3": document.getElementById('dialogue-tut-1-3').value,
+                            "dialogue_4": document.getElementById('dialogue-tut-1-4').value,
+                            "dialogue_5": document.getElementById('dialogue-tut-1-5').value,
+                            "dialogue_6": document.getElementById('dialogue-tut-1-6').value,
+                            "dialogue_7": document.getElementById('dialogue-tut-1-7').value,
+                            "dialogue_8": document.getElementById('dialogue-tut-1-8').value,
                         },
                         "tutorial_2": {
                             "dialogue_1": document.getElementById('dialogue-tut-2-1').value,

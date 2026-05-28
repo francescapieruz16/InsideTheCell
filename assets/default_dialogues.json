@@ -1,8 +1,14 @@
 {
     "tutorials": {
         "tutorial_1": {
-            "dialogue_1": "Welcome to InsideTheCell! Today we will learn how the human body fights infections.",
-            "dialogue_2": "You will act as the commander of the cell defenses. Get ready!"
+            "dialogue_1": "Hey! I am A.B.I.: Advanced Biometric Informer! I will be your assistant during this exploration!", 
+            "dialogue_2": "We are in the extracellular space. Below us is the plasma membrane. To enter, we will mimic the infection strategy of the Coronavirus.", 
+            "dialogue_3": "The virus uses a specific 'molecular handshake': its Spike protein must bind to a human receptor called ACE2 to unlock the cell.",
+            "dialogue_4": "Step 1: Locate the target gateway. You must search the membrane and find the ACE2 receptor first, just like a real virus would.",
+            "dialogue_5": "Step 2: Once scanned, our systems will calculate the exact shape of the Spike protein fragments we need to synthesize the key.",
+            "dialogue_6": "Step 3: Only then can we scavenge those floating viral remnants to extract the necessary protein components.",
+            "dialogue_7": "Let's move! Explore the area and locate the ACE2 receptor first!",
+            "dialogue_8": "Great job! You've retrieved a Spike Protein Module. Our external surface now perfectly mimics the envelope of SARS-CoV-2. We can trick the ACE2 receptor. Let's return to the docking point."
         },
         "tutorial_2": {
             "dialogue_1": "Use the directional arrows to move your character.",

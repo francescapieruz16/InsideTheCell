@@ -11,6 +11,12 @@ type Direction = {
     y: number;
 };
 
+type DuplicationZone = {
+    x: number;
+    y: number;
+    visual: Phaser.GameObjects.Arc;
+};
+
 class Level6 extends Phaser.Scene {
     private bg!: Phaser.GameObjects.Image;
 
@@ -32,6 +38,7 @@ class Level6 extends Phaser.Scene {
     private gameEnded = false;
 
     private capturedViruses = 0;
+    private totalVirusesCreated = 0;
     private captureGoal = 0;
     private levelStartTime = 0;
     private remainingTimeMs = 0;
@@ -45,7 +52,7 @@ class Level6 extends Phaser.Scene {
 
     private playerSpawn: Point = { x: 0, y: 0 };
     private virusSpawnPoints: Point[] = [];
-    private duplicationZones: Point[] = [];
+    private duplicationZones: DuplicationZone[] = [];
 
     private readonly playerSpeed = 360;
     private readonly normalCaptureGoal = 10;
@@ -53,14 +60,22 @@ class Level6 extends Phaser.Scene {
     private readonly timeLimitMs = 30000;
 
     private readonly playerScale = 0.75;
-    private readonly virusScale = 0.70;
+    private readonly virusScale = 0.55;
 
     private readonly playerCollisionScale = 0.92;
-    private readonly virusCollisionScale = 0.65;
+    private readonly virusCollisionScale = 0.75;
 
     private readonly virusSpeed = 130;
-    private readonly maxViruses = 16;
-    private readonly duplicateCooldown = 3500;
+
+    private readonly maxViruses = 256;
+    private readonly initialVirusCount = 5;
+    private readonly outbreakLoseVirusCount = 40;
+    private readonly dynamicCaptureFraction = 0.5;
+
+    private readonly duplicateCooldown = 600;
+
+    private readonly duplicationRadiusMultiplier = 0.95;
+    private readonly duplicationZoneMoveInterval = 4000;
 
     private readonly directions: Direction[] = [
         { x: 1, y: 0 },
@@ -77,11 +92,11 @@ class Level6 extends Phaser.Scene {
         [1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,0,1],
         [1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1],
         [1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1],
-        [1,4,0,0,0,0,0,0,1,0,1,0,3,0,0,0,0,1,0,0,0,0,0,0,0,4,0,1],
+        [1,4,0,0,0,0,0,0,1,0,1,0,0,3,0,0,0,1,0,0,0,0,0,0,0,4,0,1],
         [1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1],
         [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1,0,0,0,0,0,0,4,1],
         [1,0,1,0,1,1,1,1,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,1,0,1,1],
-        [1,0,0,0,1,4,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+        [1,0,0,0,1,4,0,0,3,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
         [1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1,1,1,0,1],
         [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,3,0,0,0,0,4,0,1],
         [1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1],
@@ -100,9 +115,9 @@ class Level6 extends Phaser.Scene {
         this.gameEnded = false;
 
         this.capturedViruses = 0;
-        this.captureGoal = this.isVaccinated
-            ? this.vaccinatedCaptureGoal
-            : this.normalCaptureGoal;
+        this.totalVirusesCreated = 0;
+
+        this.captureGoal = 0;
 
         this.levelStartTime = 0;
         this.remainingTimeMs = this.timeLimitMs;
@@ -113,30 +128,11 @@ class Level6 extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image(
-            'background_level6',
-            '/assets/level6/background_level_6.png'
-        );
-
-        this.load.image(
-            'wall_level6',
-            '/assets/level6/wall.png'
-        );
-
-        this.load.image(
-            'player_level6',
-            '/assets/level6/player.png'
-        );
-
-        this.load.image(
-            'virus_level6',
-            '/assets/level6/virus.png'
-        );
-
-        this.load.image(
-            'ABI_standard',
-            '/assets/tutorial/ABI/ABI_standard.png'
-        );
+        this.load.image('background_level6', '/assets/level6/background_level_6.png');
+        this.load.image('wall_level6', '/assets/level6/wall.png');
+        this.load.image('player_level6', '/assets/level6/player.png');
+        this.load.image('virus_level6', '/assets/level6/virus.png');
+        this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
     }
 
     create() {
@@ -145,17 +141,9 @@ class Level6 extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        this.textures.get('player_level6').setFilter(
-            Phaser.Textures.FilterMode.NEAREST
-        );
-
-        this.textures.get('virus_level6').setFilter(
-            Phaser.Textures.FilterMode.NEAREST
-        );
-
-        this.textures.get('wall_level6').setFilter(
-            Phaser.Textures.FilterMode.NEAREST
-        );
+        this.textures.get('player_level6').setFilter(Phaser.Textures.FilterMode.NEAREST);
+        this.textures.get('virus_level6').setFilter(Phaser.Textures.FilterMode.NEAREST);
+        this.textures.get('wall_level6').setFilter(Phaser.Textures.FilterMode.NEAREST);
 
         this.createBackground(width, height);
         this.createMaze(width, height);
@@ -164,6 +152,7 @@ class Level6 extends Phaser.Scene {
         this.createControls();
         this.createCollisionHandler();
         this.createHud(width, height);
+        this.startMovingDuplicationZones();
 
         this.postGameManager = new PostGameManager(this);
         this.postGameManager.preparePostGame(6);
@@ -174,34 +163,19 @@ class Level6 extends Phaser.Scene {
     }
 
     private createBackground(width: number, height: number) {
-        this.bg = this.add.image(
-            width / 2,
-            height / 2,
-            'background_level6'
-        );
-
+        this.bg = this.add.image(width / 2, height / 2, 'background_level6');
         this.bg.setOrigin(0.5);
         this.bg.setDepth(0);
         this.bg.setAlpha(0.9);
 
-        const texture = this.textures
-            .get('background_level6')
-            .getSourceImage() as HTMLImageElement;
-
+        const texture = this.textures.get('background_level6').getSourceImage() as HTMLImageElement;
         const scaleX = width / texture.width;
         const scaleY = height / texture.height;
         const scale = Math.max(scaleX, scaleY);
 
         this.bg.setScale(scale);
 
-        this.add.rectangle(
-            width / 2,
-            height / 2,
-            width,
-            height,
-            0x001020,
-            0.48
-        ).setDepth(1);
+        this.add.rectangle(width / 2, height / 2, width, height, 0x001020, 0.48).setDepth(1);
     }
 
     private createMaze(width: number, height: number) {
@@ -235,7 +209,6 @@ class Level6 extends Phaser.Scene {
             0x001b1d,
             0.55
         );
-
         frame.setDepth(3);
         frame.setStrokeStyle(8, 0x88e6ff, 0.75);
 
@@ -245,12 +218,7 @@ class Level6 extends Phaser.Scene {
                 const center = this.getCellCenter(row, col);
 
                 if (value === 1) {
-                    const wall = this.walls.create(
-                        center.x,
-                        center.y,
-                        'wall_level6'
-                    ) as Phaser.Physics.Arcade.Image;
-
+                    const wall = this.walls.create(center.x, center.y, 'wall_level6') as Phaser.Physics.Arcade.Image;
                     wall.setDisplaySize(this.tileSize, this.tileSize);
                     wall.setDepth(5);
                     wall.setAlpha(0.94);
@@ -262,8 +230,9 @@ class Level6 extends Phaser.Scene {
                 }
 
                 if (value === 3) {
-                    this.duplicationZones.push(center);
-                    this.createDuplicationZone(center.x, center.y);
+                    if (!this.isVaccinated || this.duplicationZones.length === 0) {
+                        this.createDuplicationZone(center.x, center.y);
+                    }
                 }
 
                 if (value === 4) {
@@ -274,221 +243,402 @@ class Level6 extends Phaser.Scene {
     }
 
     private createDuplicationZone(x: number, y: number) {
-        const zone = this.add.circle(
-            x,
-            y,
-            this.tileSize * 0.28,
-            0xff3bd4,
-            0.35
-        );
-
-        zone.setDepth(8);
-        zone.setStrokeStyle(4, 0xff9beb, 0.9);
+        const visual = this.add.circle(x, y, this.tileSize * 0.42, 0xff3bd4, 0.55);
+        visual.setDepth(8);
+        visual.setStrokeStyle(6, 0xff9beb, 1);
 
         this.tweens.add({
-            targets: zone,
-            scale: 1.35,
-            alpha: 0.12,
-            duration: 850,
+            targets: visual,
+            scale: 1.75,
+            alpha: 0.18,
+            duration: 600,
             yoyo: true,
             repeat: -1
         });
+
+        this.duplicationZones.push({
+            x,
+            y,
+            visual
+        });
+    }
+
+    private startMovingDuplicationZones() {
+        this.time.addEvent({
+            delay: this.duplicationZoneMoveInterval,
+            loop: true,
+            callback: () => {
+                if (this.gameEnded) return;
+                this.moveDuplicationZonesRandomly();
+            }
+        });
+    }
+
+    private moveDuplicationZonesRandomly() {
+        this.duplicationZones.forEach((zone) => {
+            const newPoint = this.findRandomDuplicationZonePoint(zone);
+
+            if (!newPoint) return;
+
+            zone.x = newPoint.x;
+            zone.y = newPoint.y;
+
+            this.tweens.add({
+                targets: zone.visual,
+                x: newPoint.x,
+                y: newPoint.y,
+                duration: 450,
+                ease: 'Power2'
+            });
+        });
+    }
+
+    private findRandomDuplicationZonePoint(currentZone: DuplicationZone): Point | null {
+        const validCells: Point[] = [];
+
+        for (let row = 0; row < this.mazeGrid.length; row++) {
+            for (let col = 0; col < this.mazeGrid[row].length; col++) {
+                const cellValue = this.mazeGrid[row][col];
+
+                if (cellValue !== 0 && cellValue !== 3) continue;
+
+                const center = this.getCellCenter(row, col);
+
+                const tooCloseToAnotherZone = this.duplicationZones.some((otherZone) => {
+                    if (otherZone === currentZone) return false;
+
+                    const distance = Phaser.Math.Distance.Between(
+                        center.x,
+                        center.y,
+                        otherZone.x,
+                        otherZone.y
+                    );
+
+                    return distance < this.tileSize * 4;
+                });
+
+                if (tooCloseToAnotherZone) continue;
+
+                const tooCloseToPlayer = this.player && this.player.active
+                    ? Phaser.Math.Distance.Between(center.x, center.y, this.player.x, this.player.y) < this.tileSize * 2
+                    : false;
+
+                if (tooCloseToPlayer) continue;
+
+                validCells.push(center);
+            }
+        }
+
+        if (validCells.length === 0) return null;
+
+        return Phaser.Utils.Array.GetRandom(validCells);
     }
 
     private createPlayer() {
-        this.player = this.physics.add.image(
-            this.playerSpawn.x,
-            this.playerSpawn.y,
-            'player_level6'
-        );
-
+        this.player = this.physics.add.image(this.playerSpawn.x, this.playerSpawn.y, 'player_level6');
         this.player.setDepth(20);
-        this.player.setDisplaySize(
-            this.tileSize * this.playerScale,
-            this.tileSize * this.playerScale
-        );
+        this.player.setDisplaySize(this.tileSize * this.playerScale, this.tileSize * this.playerScale);
         this.player.setCollideWorldBounds(false);
 
         const body = this.player.body as Phaser.Physics.Arcade.Body;
-
         body.setAllowGravity(false);
         body.setImmovable(false);
         body.setDrag(0, 0);
         body.setAcceleration(0, 0);
         body.setMaxVelocity(this.playerSpeed, this.playerSpeed);
-
-        body.setSize(
-            this.player.width * this.playerCollisionScale,
-            this.player.height * this.playerCollisionScale,
-            true
-        );
-
+        body.setSize(this.player.width * this.playerCollisionScale, this.player.height * this.playerCollisionScale, true);
         body.updateFromGameObject();
     }
 
     private createViruses() {
         this.viruses = this.physics.add.group();
 
-        const spawnPoints = Phaser.Utils.Array.Shuffle([
-            ...this.virusSpawnPoints
-        ]).slice(0, this.captureGoal);
+        const spawnPoints = Phaser.Utils.Array
+            .Shuffle(this.getRandomInitialVirusSpawnPoints())
+            .slice(0, this.initialVirusCount);
 
         spawnPoints.forEach((point) => {
-            this.spawnVirus(point.x, point.y);
+            this.spawnVirus(point.x, point.y, true);
         });
     }
 
+    private getRandomInitialVirusSpawnPoints(): Point[] {
+        const validCells: Point[] = [];
+
+        for (let row = 0; row < this.mazeGrid.length; row++) {
+            for (let col = 0; col < this.mazeGrid[row].length; col++) {
+                const cellValue = this.mazeGrid[row][col];
+
+                if (cellValue !== 0 && cellValue !== 4) continue;
+
+                const center = this.getCellCenter(row, col);
+
+                const distanceFromPlayerSpawn = Phaser.Math.Distance.Between(
+                    center.x,
+                    center.y,
+                    this.playerSpawn.x,
+                    this.playerSpawn.y
+                );
+
+                if (distanceFromPlayerSpawn < this.tileSize * 4) continue;
+
+                const tooCloseToDuplicationZone = this.duplicationZones.some((zone) => {
+                    const distance = Phaser.Math.Distance.Between(
+                        center.x,
+                        center.y,
+                        zone.x,
+                        zone.y
+                    );
+
+                    return distance < this.tileSize * 2.5;
+                });
+
+                if (tooCloseToDuplicationZone) continue;
+
+                validCells.push(center);
+            }
+        }
+
+        const shuffledCells = Phaser.Utils.Array.Shuffle(validCells);
+        const selectedPoints: Point[] = [];
+
+        for (const point of shuffledCells) {
+            const tooCloseToAnotherSelected = selectedPoints.some((selected) => {
+                const distance = Phaser.Math.Distance.Between(
+                    point.x,
+                    point.y,
+                    selected.x,
+                    selected.y
+                );
+
+                return distance < this.tileSize * 3;
+            });
+
+            if (tooCloseToAnotherSelected) continue;
+
+            selectedPoints.push(point);
+
+            if (selectedPoints.length >= this.initialVirusCount) {
+                break;
+            }
+        }
+
+        return selectedPoints;
+    }
+
     private spawnVirus(x: number, y: number, startWithCooldown = false) {
-        if (this.gameEnded) {
-            return false;
-        }
+        if (this.gameEnded) return false;
 
-        if (this.viruses && this.viruses.countActive(true) >= this.maxViruses) {
-            return false;
-        }
+        if (this.viruses && this.viruses.getChildren().length >= this.maxViruses) return false;
 
-        const virus = this.physics.add.image(
-            x,
-            y,
-            'virus_level6'
-        );
+        const virus = this.physics.add.image(x, y, 'virus_level6');
 
-        virus.setDepth(18);
+        virus.setActive(true);
+        virus.setVisible(true);
+        virus.setTexture('virus_level6');
+        virus.setDepth(100);
+        virus.setAlpha(1);
+        virus.clearTint();
 
-        virus.setDisplaySize(
-            this.tileSize * this.virusScale,
-            this.tileSize * this.virusScale
-        );
+        virus.setDisplaySize(this.tileSize * this.virusScale, this.tileSize * this.virusScale);
 
         virus.setData('captured', false);
         virus.setData('direction', null);
-        virus.setData('duplicatingSince', 0);
+        virus.setData('wasInsideDuplicationZone', false);
+
         virus.setData(
             'duplicateCooldownUntil',
-            startWithCooldown
-                ? this.time.now + this.duplicateCooldown
-                : 0
+            startWithCooldown ? this.time.now + this.duplicateCooldown : 0
         );
 
         const body = virus.body as Phaser.Physics.Arcade.Body;
-
+        body.enable = true;
         body.setAllowGravity(false);
         body.setBounce(0);
         body.setDrag(0, 0);
         body.setAcceleration(0, 0);
         body.setMaxVelocity(this.virusSpeed, this.virusSpeed);
-
-        body.setSize(
-            virus.width * this.virusCollisionScale,
-            virus.height * this.virusCollisionScale,
-            true
-        );
-
+        body.setSize(virus.width * this.virusCollisionScale, virus.height * this.virusCollisionScale, true);
         body.updateFromGameObject();
 
         this.viruses.add(virus);
-        this.chooseRandomVirusDirection(virus);
+
+        this.totalVirusesCreated++;
+        this.checkGameResult();
+
+        this.time.delayedCall(0, () => {
+            if (virus.active && !this.gameEnded) {
+                this.chooseRandomVirusDirection(virus);
+            }
+        });
 
         return true;
     }
 
     private createControls() {
         this.cursors = this.input.keyboard!.createCursorKeys();
-
-        this.keyW = this.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.W
-        );
-
-        this.keyA = this.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.A
-        );
-
-        this.keyS = this.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.S
-        );
-
-        this.keyD = this.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.D
-        );
+        this.keyW = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+        this.keyA = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+        this.keyS = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+        this.keyD = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D);
     }
 
     private createCollisionHandler() {
         this.physics.add.collider(this.player, this.walls);
 
-        this.physics.add.collider(
-            this.viruses,
-            this.walls,
-            (virusObject) => {
-                const virus = virusObject as Phaser.Physics.Arcade.Image;
+        this.physics.add.collider(this.viruses, this.walls, (virusObject) => {
+            const virus = virusObject as Phaser.Physics.Arcade.Image;
+            this.centerObjectOnCurrentCell(virus);
+            this.chooseRandomVirusDirection(virus);
+        });
 
-                this.centerObjectOnCurrentCell(virus);
-                this.chooseRandomVirusDirection(virus);
-            }
-        );
-
-        this.physics.add.overlap(
-            this.player,
-            this.viruses,
-            (_, virusObject) => {
-                this.captureVirus(
-                    virusObject as Phaser.Physics.Arcade.Image
-                );
-            }
-        );
+        this.physics.add.overlap(this.player, this.viruses, (_, virusObject) => {
+            this.captureVirus(virusObject as Phaser.Physics.Arcade.Image);
+        });
     }
-    
+
+    private triggerDuplication(virus: Phaser.Physics.Arcade.Image, zone: DuplicationZone) {
+        if (!virus.active || !virus.body || this.gameEnded) return;
+
+        const currentVirusCount = this.viruses.getChildren().length;
+
+        if (currentVirusCount >= this.maxViruses) {
+            return;
+        }
+
+        const cooldownUntil = (virus.getData('duplicateCooldownUntil') as number) || 0;
+
+        if (this.time.now < cooldownUntil) {
+            return;
+        }
+
+        virus.setData('duplicateCooldownUntil', this.time.now + this.duplicateCooldown);
+
+        this.duplicateVirusNow(virus, zone);
+    }
+
+    private duplicateVirusNow(virus: Phaser.Physics.Arcade.Image, zone: DuplicationZone) {
+        if (!virus.active || !virus.body || this.gameEnded) return;
+        if (this.viruses.getChildren().length >= this.maxViruses) return;
+
+        const spawnPoint: Point = {
+            x: zone.x,
+            y: zone.y
+        };
+
+        const duplicated = this.spawnVirus(spawnPoint.x, spawnPoint.y, true);
+
+        if (!duplicated) {
+            return;
+        }
+
+        const children = this.viruses.getChildren();
+        const newVirus = children[children.length - 1] as Phaser.Physics.Arcade.Image;
+
+        if (newVirus && newVirus.active) {
+            newVirus.setVisible(true);
+            newVirus.setActive(true);
+            newVirus.setTexture('virus_level6');
+            newVirus.setDepth(999);
+            newVirus.setAlpha(1);
+            newVirus.setTint(0xff00ff);
+
+            const body = newVirus.body as Phaser.Physics.Arcade.Body;
+            body.reset(spawnPoint.x, spawnPoint.y);
+            body.setVelocity(0, 0);
+
+            newVirus.setData('wasInsideDuplicationZone', true);
+
+            this.chooseRandomVirusDirection(newVirus);
+
+            this.tweens.add({
+                targets: newVirus,
+                scaleX: newVirus.scaleX * 2,
+                scaleY: newVirus.scaleY * 2,
+                duration: 220,
+                yoyo: true,
+                ease: 'Power2',
+                onComplete: () => {
+                    if (newVirus.active) {
+                        newVirus.clearTint();
+                        newVirus.setDepth(100);
+                    }
+                }
+            });
+        }
+
+        this.createDuplicationEffect(spawnPoint.x, spawnPoint.y);
+    }
+
+    private checkDuplicationZonesForVirus(virus: Phaser.Physics.Arcade.Image) {
+        if (!virus.active || !virus.body || this.gameEnded) return;
+
+        const radius = this.tileSize * this.duplicationRadiusMultiplier;
+
+        let isInsideAnyDuplicationZone = false;
+        let touchedZone: DuplicationZone | null = null;
+
+        for (const zone of this.duplicationZones) {
+            const distance = Phaser.Math.Distance.Between(
+                virus.x,
+                virus.y,
+                zone.x,
+                zone.y
+            );
+
+            if (distance <= radius) {
+                isInsideAnyDuplicationZone = true;
+                touchedZone = zone;
+                break;
+            }
+        }
+
+        const wasInside = (virus.getData('wasInsideDuplicationZone') as boolean) || false;
+
+        if (!isInsideAnyDuplicationZone) {
+            virus.setData('wasInsideDuplicationZone', false);
+            return;
+        }
+
+        if (wasInside) {
+            return;
+        }
+
+        virus.setData('wasInsideDuplicationZone', true);
+        this.triggerDuplication(virus, touchedZone!);
+    }
 
     private createHud(width: number, height: number) {
-        const panelWidth = width * 0.62;
+        const panelWidth = width * 0.68;
         const panelX = width / 2;
         const panelY = 55;
 
         const panelLeft = panelX - panelWidth / 2;
         const panelRight = panelX + panelWidth / 2;
 
-        const panel = this.add.rectangle(
-            panelX,
-            panelY,
-            panelWidth,
-            78,
-            0x001b1d,
-            0.72
-        );
-
+        const panel = this.add.rectangle(panelX, panelY, panelWidth, 78, 0x001b1d, 0.72);
         panel.setDepth(50);
         panel.setStrokeStyle(4, 0x88e6ff, 0.55);
 
-        this.capturedText = this.add.text(
-            panelLeft + 25,
-            37,
-            '',
-            {
-                fontFamily: 'monospace',
-                fontSize: '28px',
-                color: '#39ff7a',
-                stroke: '#003b18',
-                strokeThickness: 5,
-                resolution: 2
-            }
-        );
-
+        this.capturedText = this.add.text(panelLeft + 25, 37, '', {
+            fontFamily: 'monospace',
+            fontSize: '25px',
+            color: '#39ff7a',
+            stroke: '#003b18',
+            strokeThickness: 5,
+            resolution: 2
+        });
         this.capturedText.setDepth(60);
         this.capturedText.setOrigin(0, 0);
 
-        this.timerText = this.add.text(
-            panelRight - 25,
-            37,
-            '',
-            {
-                fontFamily: 'monospace',
-                fontSize: '28px',
-                color: '#ffffff',
-                stroke: '#001020',
-                strokeThickness: 5,
-                resolution: 2
-            }
-        );
-
+        this.timerText = this.add.text(panelRight - 25, 37, '', {
+            fontFamily: 'monospace',
+            fontSize: '28px',
+            color: '#ffffff',
+            stroke: '#001020',
+            strokeThickness: 5,
+            resolution: 2
+        });
         this.timerText.setDepth(60);
         this.timerText.setOrigin(1, 0);
     }
@@ -508,15 +658,7 @@ class Level6 extends Phaser.Scene {
     }
 
     private isWalkableCell(row: number, col: number) {
-        if (
-            row < 0 ||
-            row >= this.mazeGrid.length ||
-            col < 0 ||
-            col >= this.mazeGrid[0].length
-        ) {
-            return false;
-        }
-
+        if (row < 0 || row >= this.mazeGrid.length || col < 0 || col >= this.mazeGrid[0].length) return false;
         return this.mazeGrid[row][col] !== 1;
     }
 
@@ -526,20 +668,15 @@ class Level6 extends Phaser.Scene {
         return this.directions.filter((direction) => {
             const nextRow = row + direction.y;
             const nextCol = col + direction.x;
-
             return this.isWalkableCell(nextRow, nextCol);
         });
     }
 
     private centerObjectOnCurrentCell(sprite: Phaser.Physics.Arcade.Image) {
         const { row, col } = this.getGridPositionFromWorld(sprite.x, sprite.y);
-
-        if (!this.isWalkableCell(row, col)) {
-            return;
-        }
+        if (!this.isWalkableCell(row, col)) return;
 
         const center = this.getCellCenter(row, col);
-
         const body = sprite.body as Phaser.Physics.Arcade.Body;
 
         body.reset(center.x, center.y);
@@ -547,14 +684,9 @@ class Level6 extends Phaser.Scene {
     }
 
     private chooseRandomVirusDirection(virus: Phaser.Physics.Arcade.Image) {
-        if (!virus.active || !virus.body) {
-            return;
-        }
+        if (!virus.active || !virus.body) return;
 
-        const availableDirections = this.getAvailableDirectionsFromPosition(
-            virus.x,
-            virus.y
-        );
+        const availableDirections = this.getAvailableDirectionsFromPosition(virus.x, virus.y);
 
         if (availableDirections.length === 0) {
             virus.setVelocity(0, 0);
@@ -563,141 +695,24 @@ class Level6 extends Phaser.Scene {
         }
 
         const direction = Phaser.Utils.Array.GetRandom(availableDirections);
-
         virus.setData('direction', direction);
 
         const body = virus.body as Phaser.Physics.Arcade.Body;
-
         body.setAcceleration(0, 0);
         body.setVelocity(0, 0);
         body.setMaxVelocity(this.virusSpeed, this.virusSpeed);
-
-        body.setVelocity(
-            direction.x * this.virusSpeed,
-            direction.y * this.virusSpeed
-        );
-    }
-
-    private getDuplicationZoneAt(x: number, y: number) {
-        return this.duplicationZones.find((zone) => {
-            const distance = Phaser.Math.Distance.Between(
-                x,
-                y,
-                zone.x,
-                zone.y
-            );
-
-            return distance < this.tileSize * 0.48;
-        });
-    }
-
-    private getZoneKey(zone: Point) {
-        const { row, col } = this.getGridPositionFromWorld(zone.x, zone.y);
-
-        return `${row},${col}`;
-    }
-
-    private updateVirusDuplication(virus: Phaser.Physics.Arcade.Image) {
-        if (!virus.active || !virus.body || this.gameEnded) {
-            return;
-        }
-
-        if (this.viruses.countActive(true) >= this.maxViruses) {
-            return;
-        }
-
-        const zone = this.getDuplicationZoneAt(virus.x, virus.y);
-
-        if (!zone) {
-            virus.setData('lastDuplicationZoneKey', null);
-            return;
-        }
-
-        const zoneKey = this.getZoneKey(zone);
-        const lastZoneKey = virus.getData('lastDuplicationZoneKey') as string | null;
-        const cooldownUntil = virus.getData('duplicateCooldownUntil') as number;
-
-        if (lastZoneKey === zoneKey) {
-            return;
-        }
-
-        if (this.time.now < cooldownUntil) {
-            return;
-        }
-
-        virus.setData('lastDuplicationZoneKey', zoneKey);
-        virus.setData(
-            'duplicateCooldownUntil',
-            this.time.now + this.duplicateCooldown
-        );
-
-        const spawnPoint = this.getSafeDuplicateSpawnPoint(zone);
-
-        const duplicated = this.spawnVirus(spawnPoint.x, spawnPoint.y, true);
-
-        if (duplicated) {
-            this.createDuplicationEffect(zone.x, zone.y);
-        }
-    }
-
-    private getSafeDuplicateSpawnPoint(zone: Point) {
-        const { row, col } = this.getGridPositionFromWorld(zone.x, zone.y);
-
-        const shuffledDirections = Phaser.Utils.Array.Shuffle([
-            ...this.directions
-        ]);
-
-        for (const direction of shuffledDirections) {
-            const nextRow = row + direction.y;
-            const nextCol = col + direction.x;
-
-            if (!this.isWalkableCell(nextRow, nextCol)) {
-                continue;
-            }
-
-            const center = this.getCellCenter(nextRow, nextCol);
-
-            const isOccupied = this.viruses.children.getArray().some((child) => {
-                const virus = child as Phaser.Physics.Arcade.Image;
-
-                if (!virus.active) {
-                    return false;
-                }
-
-                const distance = Phaser.Math.Distance.Between(
-                    virus.x,
-                    virus.y,
-                    center.x,
-                    center.y
-                );
-
-                return distance < this.tileSize * 0.35;
-            });
-
-            if (!isOccupied) {
-                return center;
-            }
-        }
-
-        return zone;
+        body.setVelocity(direction.x * this.virusSpeed, direction.y * this.virusSpeed);
     }
 
     private createDuplicationEffect(x: number, y: number) {
-        const flash = this.add.circle(
-            x,
-            y,
-            this.tileSize * 0.36,
-            0xff9beb,
-            0.85
-        );
-
-        flash.setDepth(45);
+        const flash = this.add.circle(x, y, this.tileSize * 0.52, 0xff9beb, 0.95);
+        flash.setDepth(998);
 
         this.tweens.add({
             targets: flash,
-            scale: 2.2,
+            scale: 2.5,
             alpha: 0,
-            duration: 360,
+            duration: 320,
             ease: 'Power2',
             onComplete: () => {
                 flash.destroy();
@@ -706,46 +721,34 @@ class Level6 extends Phaser.Scene {
     }
 
     private updateVirusesMovement() {
-        if (!this.viruses) {
-            return;
-        }
+        if (!this.viruses) return;
 
-        this.viruses.children.iterate((child) => {
-            const virus = child as Phaser.Physics.Arcade.Image;
+        const virusChildren = [...this.viruses.getChildren()] as Phaser.Physics.Arcade.Image[];
 
-            if (!virus || !virus.active || !virus.body) {
-                return true;
-            }
+        virusChildren.forEach((virus) => {
+            if (!virus || !virus.active || !virus.body) return;
 
-            this.updateVirusDuplication(virus);
+            this.checkDuplicationZonesForVirus(virus);
 
             const direction = virus.getData('direction') as Direction | null;
 
             if (!direction) {
                 this.chooseRandomVirusDirection(virus);
-                return true;
+                return;
             }
 
-            const { row, col } = this.getGridPositionFromWorld(
-                virus.x,
-                virus.y
-            );
+            const { row, col } = this.getGridPositionFromWorld(virus.x, virus.y);
 
             if (!this.isWalkableCell(row, col)) {
                 this.centerObjectOnCurrentCell(virus);
                 this.chooseRandomVirusDirection(virus);
-                return true;
+                return;
             }
 
             const center = this.getCellCenter(row, col);
 
-            if (direction.x !== 0) {
-                virus.setY(center.y);
-            }
-
-            if (direction.y !== 0) {
-                virus.setX(center.x);
-            }
+            if (direction.x !== 0) virus.setY(center.y);
+            if (direction.y !== 0) virus.setX(center.x);
 
             const distanceFromCenter = Phaser.Math.Distance.Between(
                 virus.x,
@@ -757,32 +760,20 @@ class Level6 extends Phaser.Scene {
             const nextRow = row + direction.y;
             const nextCol = col + direction.x;
 
-            if (
-                distanceFromCenter < 8 &&
-                !this.isWalkableCell(nextRow, nextCol)
-            ) {
+            if (distanceFromCenter < 8 && !this.isWalkableCell(nextRow, nextCol)) {
                 this.chooseRandomVirusDirection(virus);
-                return true;
+                return;
             }
 
             const body = virus.body as Phaser.Physics.Arcade.Body;
-
             body.setAcceleration(0, 0);
             body.setMaxVelocity(this.virusSpeed, this.virusSpeed);
-
-            body.setVelocity(
-                direction.x * this.virusSpeed,
-                direction.y * this.virusSpeed
-            );
-
-            return true;
+            body.setVelocity(direction.x * this.virusSpeed, direction.y * this.virusSpeed);
         });
     }
 
     private updatePlayerMovement() {
-        if (!this.player || !this.player.body) {
-            return;
-        }
+        if (!this.player || !this.player.body) return;
 
         let velocityX = 0;
         let velocityY = 0;
@@ -792,71 +783,92 @@ class Level6 extends Phaser.Scene {
         const movingUp = this.keyW.isDown || !!this.cursors.up?.isDown;
         const movingDown = this.keyS.isDown || !!this.cursors.down?.isDown;
 
-        if (movingLeft) {
-            velocityX -= this.playerSpeed;
-        }
-
-        if (movingRight) {
-            velocityX += this.playerSpeed;
-        }
-
-        if (movingUp) {
-            velocityY -= this.playerSpeed;
-        }
-
-        if (movingDown) {
-            velocityY += this.playerSpeed;
-        }
+        if (movingLeft) velocityX -= this.playerSpeed;
+        if (movingRight) velocityX += this.playerSpeed;
+        if (movingUp) velocityY -= this.playerSpeed;
+        if (movingDown) velocityY += this.playerSpeed;
 
         if (velocityX !== 0 && velocityY !== 0) {
             const diagonalSpeed = this.playerSpeed / Math.SQRT2;
-
             velocityX = velocityX > 0 ? diagonalSpeed : -diagonalSpeed;
             velocityY = velocityY > 0 ? diagonalSpeed : -diagonalSpeed;
         }
 
         const body = this.player.body as Phaser.Physics.Arcade.Body;
-
         body.setAcceleration(0, 0);
         body.setMaxVelocity(this.playerSpeed, this.playerSpeed);
         body.setVelocity(0, 0);
         body.setVelocity(velocityX, velocityY);
     }
 
-    private updateTimer() {
-        if (!this.hasStartedPlaying || this.gameEnded) {
+    private getActiveVirusCount() {
+        if (!this.viruses) return 0;
+
+        return this.viruses.getChildren().filter((child) => {
+            const virus = child as Phaser.Physics.Arcade.Image;
+            return virus.active;
+        }).length;
+    }
+
+    private getDynamicCaptureGoal() {
+        return Math.ceil(this.totalVirusesCreated * this.dynamicCaptureFraction);
+    }
+
+    private checkGameResult() {
+        if (this.gameEnded || !this.hasStartedPlaying) return;
+
+        const activeVirusCount = this.getActiveVirusCount();
+        const dynamicGoal = this.getDynamicCaptureGoal();
+
+        if (!this.isVaccinated) {
+            if (activeVirusCount >= this.outbreakLoseVirusCount) {
+                this.loseGame();
+            }
+
             return;
         }
 
-        const elapsed = this.time.now - this.levelStartTime;
+        if (activeVirusCount >= this.outbreakLoseVirusCount) {
+            this.loseGame();
+            return;
+        }
 
+        if (this.totalVirusesCreated > 0 && this.capturedViruses >= dynamicGoal) {
+            this.completeLevel();
+        }
+    }
+
+    private updateTimer() {
+        if (!this.hasStartedPlaying || this.gameEnded) return;
+
+        const elapsed = this.time.now - this.levelStartTime;
         this.remainingTimeMs = Math.max(0, this.timeLimitMs - elapsed);
 
         if (this.remainingTimeMs <= 0) {
-            this.loseGame();
+            if (this.isVaccinated && this.capturedViruses >= this.getDynamicCaptureGoal()) {
+                this.completeLevel();
+            } else {
+                this.loseGame();
+            }
         }
     }
 
     private updateHud() {
-        if (!this.capturedText || !this.timerText) {
-            return;
-        }
+        if (!this.capturedText || !this.timerText) return;
 
         const remainingSeconds = Math.ceil(this.remainingTimeMs / 1000);
+        const dynamicGoal = this.getDynamicCaptureGoal();
+        const activeVirusCount = this.getActiveVirusCount();
 
         this.capturedText.setText(
-            `VIRUSES: ${this.capturedViruses}/${this.captureGoal}`
+            `VIRUSES: ${this.capturedViruses}/${dynamicGoal} | ACTIVE: ${activeVirusCount}/${this.outbreakLoseVirusCount}`
         );
 
-        this.timerText.setText(
-            `TIME: ${remainingSeconds}`
-        );
+        this.timerText.setText(`TIME: ${remainingSeconds}`);
     }
 
     private captureVirus(virus: Phaser.Physics.Arcade.Image) {
-        if (this.gameEnded || virus.getData('captured')) {
-            return;
-        }
+        if (this.gameEnded || virus.getData('captured')) return;
 
         virus.setData('captured', true);
         this.capturedViruses++;
@@ -865,22 +877,12 @@ class Level6 extends Phaser.Scene {
         this.viruses.remove(virus, true, true);
 
         this.updateHud();
-
-        if (this.capturedViruses >= this.captureGoal) {
-            this.completeLevel();
-        }
+        this.checkGameResult();
     }
 
     private createCaptureEffect(x: number, y: number) {
-        const flash = this.add.circle(
-            x,
-            y,
-            this.tileSize * 0.28,
-            0x66ffcc,
-            0.82
-        );
-
-        flash.setDepth(45);
+        const flash = this.add.circle(x, y, this.tileSize * 0.28, 0x66ffcc, 0.82);
+        flash.setDepth(998);
 
         this.tweens.add({
             targets: flash,
@@ -895,23 +897,13 @@ class Level6 extends Phaser.Scene {
     }
 
     private clearLevelObjects() {
-        if (this.player && this.player.body) {
-            this.player.setVelocity(0, 0);
-        }
-
-        if (this.viruses) {
-            this.viruses.clear(true, true);
-        }
-
-        if (this.player && this.player.active) {
-            this.player.destroy();
-        }
+        if (this.player && this.player.body) this.player.setVelocity(0, 0);
+        if (this.viruses) this.viruses.clear(true, true);
+        if (this.player && this.player.active) this.player.destroy();
     }
 
     private completeLevel() {
-        if (this.gameEnded) {
-            return;
-        }
+        if (this.gameEnded) return;
 
         this.gameEnded = true;
         this.physics.pause();
@@ -921,9 +913,7 @@ class Level6 extends Phaser.Scene {
     }
 
     private loseGame() {
-        if (this.gameEnded) {
-            return;
-        }
+        if (this.gameEnded) return;
 
         this.gameEnded = true;
         this.physics.pause();
@@ -940,29 +930,25 @@ class Level6 extends Phaser.Scene {
     }
 
     update() {
-        if (this.gameEnded) {
-            return;
-        }
+        if (this.gameEnded) return;
 
         this.updatePlayerMovement();
         this.updateVirusesMovement();
         this.updateTimer();
+        this.checkGameResult();
         this.updateHud();
     }
 }
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 1920,
         height: 1080
     },
-
     parent: 'game-container',
-
     physics: {
         default: 'arcade',
         arcade: {
@@ -973,11 +959,9 @@ const config: Phaser.Types.Core.GameConfig = {
             }
         }
     },
-
     render: {
-        roundPixels: true,
+        roundPixels: true
     },
-
     scene: [Level6]
 };
 

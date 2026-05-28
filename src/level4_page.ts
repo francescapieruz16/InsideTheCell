@@ -1,20 +1,23 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
 
+type CardType = 'true' | 'false' | 'gold';
+
 type CardData = {
     id: number;
     key: string;
     value: string;
-    type: 'true' | 'false';
+    type: CardType;
     isFlipped: boolean;
     isMatched: boolean;
+    isStaticGold: boolean;
     image: Phaser.GameObjects.Image;
 };
 
 type CardInfo = {
     key: string;
     value: string;
-    type: 'true' | 'false';
+    type: CardType;
 };
 
 class Level4 extends Phaser.Scene {
@@ -118,6 +121,9 @@ class Level4 extends Phaser.Scene {
 
         this.createBackground(width, height);
         this.createUi();
+
+        this.createGoldCardTexture();
+
         this.createCards(width, height);
 
         this.postGameManager = new PostGameManager(this);
@@ -173,6 +179,54 @@ class Level4 extends Phaser.Scene {
         this.movesText.setDepth(20);
     }
 
+    private createGoldCardTexture() {
+        if (this.textures.exists('card_gold_star')) {
+            return;
+        }
+
+        const width = this.cardWidth;
+        const height = this.cardHeight;
+
+        const graphics = this.add.graphics();
+
+        graphics.fillStyle(0xd8a928, 1);
+        graphics.fillRoundedRect(0, 0, width, height, 18);
+
+        graphics.lineStyle(6, 0xfff0a8, 1);
+        graphics.strokeRoundedRect(4, 4, width - 8, height - 8, 16);
+
+        graphics.lineStyle(3, 0x7a4f00, 0.75);
+        graphics.strokeRoundedRect(14, 14, width - 28, height - 28, 12);
+
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        const starPoints: Phaser.Geom.Point[] = [];
+        const outerRadius = 40;
+        const innerRadius = 18;
+
+        for (let i = 0; i < 10; i++) {
+            const angle = Phaser.Math.DegToRad(-90 + i * 36);
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+
+            starPoints.push(
+                new Phaser.Geom.Point(
+                    centerX + Math.cos(angle) * radius,
+                    centerY + Math.sin(angle) * radius
+                )
+            );
+        }
+
+        graphics.fillStyle(0xffffff, 1);
+        graphics.fillPoints(starPoints, true);
+
+        graphics.lineStyle(4, 0xfff4b8, 1);
+        graphics.strokePoints(starPoints, true, true);
+
+        graphics.generateTexture('card_gold_star', width, height);
+        graphics.destroy();
+    }
+
     private createCards(width: number, height: number) {
         const deck = this.createDeck();
 
@@ -201,26 +255,39 @@ class Level4 extends Phaser.Scene {
             const x = startX + col * (this.cardWidth + gapX);
             const y = startY + row * (this.cardHeight + gapY);
 
-            const image = this.add.image(x, y, 'card_back');
+            const isStaticGold = this.isVaccinated && cardInfo.type === 'gold';
+
+            const image = this.add.image(
+                x,
+                y,
+                isStaticGold ? cardInfo.key : 'card_back'
+            );
 
             image.setOrigin(0.5);
             image.setDepth(10);
             image.setDisplaySize(this.cardWidth, this.cardHeight);
-            image.setInteractive({ useHandCursor: true });
 
             const card: CardData = {
                 id: index,
                 key: cardInfo.key,
                 value: cardInfo.value,
                 type: cardInfo.type,
-                isFlipped: false,
-                isMatched: false,
+                isFlipped: isStaticGold,
+                isMatched: isStaticGold,
+                isStaticGold,
                 image
             };
 
-            image.on('pointerdown', () => {
-                this.handleCardClick(card);
-            });
+            if (!isStaticGold) {
+                image.setInteractive({ useHandCursor: true });
+
+                image.on('pointerdown', () => {
+                    this.handleCardClick(card);
+                });
+            } else {
+                image.disableInteractive();
+                image.setAlpha(0.92);
+            }
 
             this.cards.push(card);
         });
@@ -255,22 +322,43 @@ class Level4 extends Phaser.Scene {
             }
         ];
 
-        /**
-         * Se sei vaccinato, il genoma è stabilizzato:
-         * restano solo le 5 coppie vere.
-         */
         if (this.isVaccinated) {
+            const goldCards: CardInfo[] = [
+                {
+                    key: 'card_gold_star',
+                    value: 'gold_conquered_1',
+                    type: 'gold'
+                },
+                {
+                    key: 'card_gold_star',
+                    value: 'gold_conquered_2',
+                    type: 'gold'
+                },
+                {
+                    key: 'card_gold_star',
+                    value: 'gold_conquered_3',
+                    type: 'gold'
+                },
+                {
+                    key: 'card_gold_star',
+                    value: 'gold_conquered_4',
+                    type: 'gold'
+                },
+                {
+                    key: 'card_gold_star',
+                    value: 'gold_conquered_5',
+                    type: 'gold'
+                }
+            ];
+
             return this.shuffleDeck([
                 ...trueCards,
-                ...trueCards
+                ...trueCards,
+                ...goldCards,
+                ...goldCards
             ]);
         }
 
-        /**
-         * Se NON sei vaccinato, ci sono anche le coppie buffer.
-         * Se il player trova una coppia buffer uguale, fallisce
-         * e parte la learning phase/chat.
-         */
         const falseCards: CardInfo[] = [
             {
                 key: 'card_buffer_1',
@@ -323,6 +411,10 @@ class Level4 extends Phaser.Scene {
 
     private handleCardClick(card: CardData) {
         if (!this.canClick || this.gameEnded) {
+            return;
+        }
+
+        if (card.isStaticGold) {
             return;
         }
 

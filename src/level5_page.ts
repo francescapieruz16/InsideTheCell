@@ -48,11 +48,16 @@ class Level5 extends Phaser.Scene {
 
     private levelStartTime = 0;
 
+    private lastVaccinatedMergeAssistCheck = 0;
+
     private readonly wallThickness = 38;
     private readonly dangerTime = 1200;
 
     private readonly initialComponentCount = 200;
     private readonly vaccinatedFinalLevel = 4;
+
+    private readonly vaccinatedMergeAssistMargin = 28;
+    private readonly vaccinatedMergeAssistCheckInterval = 120;
 
     private isSeedingBox = false;
 
@@ -133,6 +138,7 @@ class Level5 extends Phaser.Scene {
 
         this.assemblyProgress = 0;
         this.levelStartTime = 0;
+        this.lastVaccinatedMergeAssistCheck = 0;
 
         this.score = 0;
         this.highestMergedLevel = 0;
@@ -750,6 +756,71 @@ class Level5 extends Phaser.Scene {
         });
     }
 
+    private checkVaccinatedNearbyMerges() {
+        if (!this.isVaccinated) {
+            return;
+        }
+
+        if (this.gameEnded || this.isSeedingBox || !this.hasStartedPlaying) {
+            return;
+        }
+
+        if (
+            this.time.now - this.lastVaccinatedMergeAssistCheck <
+            this.vaccinatedMergeAssistCheckInterval
+        ) {
+            return;
+        }
+
+        this.lastVaccinatedMergeAssistCheck = this.time.now;
+
+        const components = Array.from(this.activeComponents).filter((component) => {
+            return (
+                component.active &&
+                component.body &&
+                !component.getData('merging')
+            );
+        });
+
+        for (let i = 0; i < components.length; i++) {
+            const first = components[i];
+            const firstLevel = first.getData('level') as number;
+
+            for (let j = i + 1; j < components.length; j++) {
+                const second = components[j];
+                const secondLevel = second.getData('level') as number;
+
+                if (firstLevel !== secondLevel) {
+                    continue;
+                }
+
+                if (first.getData('merging') || second.getData('merging')) {
+                    continue;
+                }
+
+                const firstRadius = this.mergeChain[firstLevel].size * 0.44;
+                const secondRadius = this.mergeChain[secondLevel].size * 0.44;
+
+                const distance = Phaser.Math.Distance.Between(
+                    first.x,
+                    first.y,
+                    second.x,
+                    second.y
+                );
+
+                const assistedMergeDistance =
+                    firstRadius +
+                    secondRadius +
+                    this.vaccinatedMergeAssistMargin;
+
+                if (distance <= assistedMergeDistance) {
+                    this.tryMerge(first, second);
+                    return;
+                }
+            }
+        }
+    }
+
     private mergeComponents(
         first: Phaser.Physics.Matter.Image,
         second: Phaser.Physics.Matter.Image,
@@ -1116,6 +1187,11 @@ class Level5 extends Phaser.Scene {
 
         this.updatePreviewMovement();
         this.stabilizeComponents();
+
+        // Solo in modalità vaccinata:
+        // aiuta componenti uguali e vicini a fondersi anche se non si toccano perfettamente.
+        this.checkVaccinatedNearbyMerges();
+
         this.checkDangerLine();
     }
 }

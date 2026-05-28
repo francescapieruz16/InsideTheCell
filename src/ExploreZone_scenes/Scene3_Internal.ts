@@ -21,8 +21,6 @@ export default class Scene3_Internal extends Phaser.Scene {
     private relWallsGroup!: Phaser.Physics.Arcade.StaticGroup;
     private rerWallsGroup!: Phaser.Physics.Arcade.StaticGroup;
 
-    private golgiWallsGroup!: Phaser.Physics.Arcade.StaticGroup;
-
     preload() {
         // Carichiamo l'immagine che useremo per lo sfondo scorrevole
         this.load.image('background_scene3', '/assets/tutorial/sfondi/scene3_background4.png'); 
@@ -31,9 +29,10 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.load.image('organelle_golgi', '/assets/tutorial/obstacles/golgi3.png');
         this.load.image('golgi_wall', '/assets/tutorial/obstacles/golgi_wall.png');
         this.load.image('nucleo', '/assets/tutorial/obstacles/nucleo.png');
-        this.load.image('organelle_rel_tile', '/assets/tutorial/obstacles/REL.png');
-        this.load.image('organelle_rer_tile', '/assets/tutorial/obstacles/RER.png');
+        this.load.image('organelle_rel_tile', '/assets/tutorial/obstacles/REL3.png');
+        this.load.image('organelle_rer_tile', '/assets/tutorial/obstacles/RER3.png');
         this.load.image('background_deep', '/assets/tutorial/sfondi/scene3_background_deep.png');
+        this.load.image('circle', '/assets/tutorial/sfondi/circle.png');
     }
 
     constructor() {
@@ -52,6 +51,15 @@ export default class Scene3_Internal extends Phaser.Scene {
         const WORLD_SIZE = 6000;
         const CENTER_X = WORLD_SIZE / 2;
         const CENTER_Y = WORLD_SIZE / 2;
+
+        const membrane = this.add.image(CENTER_X, CENTER_Y, 'circle');
+        
+        // Stira l'immagine 3k per coprire i 6k del mondo fisico
+        membrane.setDisplaySize(WORLD_SIZE, WORLD_SIZE);
+        
+        // Depth 100 garantisce che la maschera nera copra tutto ciò che c'è sotto, 
+        // inclusi gli organuli che potresti aver inavvertitamente piazzato negli angoli
+        membrane.setDepth(100);
 
         // 2. Impostiamo i limiti della fisica e della telecamera a questa dimensione
         this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
@@ -84,20 +92,28 @@ export default class Scene3_Internal extends Phaser.Scene {
         // hitX, hitY, hitW, hitH: Le coordinate ASSOLUTE NEL MONDO e le dimensioni del muro invisibile
         const mitochondriaPositions = [
             { 
-                visX: 4443, visY: 4815, angle: 0, 
-                hitX: 4443, hitY: 4815, hitW: 480, hitH: 280 
+                visX: 2022, visY: 5352, angle: 0, 
+                hitX: 2022, hitY: 5352, hitW: 480, hitH: 280 
             },
             { 
-                visX: 1560, visY: 5457, angle: 15, 
-                hitX: 1560, hitY: 5457, hitW: 480, hitH: 300 
+                visX: 1630, visY: 947, angle: 15, 
+                hitX: 1630, hitY: 947, hitW: 480, hitH: 300 
             },
             { 
                 visX: 742, visY: 4452, angle: 45, 
                 hitX: 742, hitY: 4452, hitW: 400, hitH: 450 
             },
             { 
-                visX: 4842, visY: 3670, angle: 315, 
-                hitX: 4842, hitY: 3670, hitW: 400, hitH: 450 
+                visX: 4646, visY: 4857, angle: 315, 
+                hitX: 4646, hitY: 4857, hitW: 400, hitH: 450 
+            },
+            { 
+                visX: 4576, visY: 1115, angle: 215, 
+                hitX: 4576, hitY: 1115, hitW: 400, hitH: 450 
+            },
+            { 
+                visX: 5300, visY: 2800, angle: 270, 
+                hitX: 5300, hitY: 2800, hitW: 400, hitH: 450 
             }
         ];
 
@@ -142,13 +158,17 @@ export default class Scene3_Internal extends Phaser.Scene {
 
         // Fai la stessa identica cosa per i Lisosomi
         const lysosomesPositions = [
-          { x: 4124, y: 5387 },
-            { x: 1129, y: 4931 },
-            { x: 2276, y: 4745 },
-            { x: 3685, y: 4401 },
-            { x: 4096, y: 3218 },
-            { x: 5691, y: 4196 },
-            { x: 1670, y: 3349 },
+          { x: 2345, y: 547 },
+            { x: 3711, y: 1050 },
+            { x: 3661, y: 391 },
+            { x: 4915, y: 2077 },
+            { x: 4859, y: 3954 },
+            { x: 5766, y: 3284 },
+            { x: 4100, y: 5318 },
+            { x: 2722, y: 4899 },
+            { x: 2505, y: 5576 },
+            { x: 1176, y: 4131 },
+            { x: 581, y: 1827 }
         ];
 
         lysosomesPositions.forEach(pos => {
@@ -164,29 +184,6 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.player = new Spaceship(this, CENTER_X, WORLD_SIZE - 300, this.startingTexture);        this.player.setScale(0.3); // Impostiamo una scala per la navicella
         (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
 
-
-    //     // --- APPARATO DI GOLGI (Ostacolo + Corrente) ---
-
-    //   // 1. Creiamo lo sprite visibile e solido (le cisterne del Golgi)
-    //     const GOLGI_X = 1500;
-    //     const GOLGI_Y = 2500; // Posizionato a nord del punto di spawn
-        
-    //     const golgi = this.physics.add.staticImage(GOLGI_X, GOLGI_Y, 'organelle_golgi');
-        
-    //     // 2. Impostiamo le dimensioni visive
-    //     golgi.setDisplaySize(1200, 600);
-        
-    //     // 3. FONDAMENTALE: Questo comando dice ad Arcade Physics di ricalcolare 
-    //     // e centrare la hitbox basandosi sulla nuova dimensione visiva.
-    //     golgi.refreshBody();
-        
-    //     // La navicella colliderà fisicamente con le cisterne
-    //     this.physics.add.collider(this.player, golgi);
-
-        // --- APPARATO DI GOLGI (Mini-Labirinto Locale) ---
-
-        this.golgiWallsGroup = this.physics.add.staticGroup();
-
         // // Punto di partenza del Golgi nel mondo
         // const GOLGI_START_X = 100;
         // const GOLGI_START_Y = 1000;
@@ -195,82 +192,66 @@ export default class Scene3_Internal extends Phaser.Scene {
         // const G_TILE = 128; 
 
 // =========================================================
-        // --- APPARATO DI GOLGI (Macro-Sprite Statico) ---
+        // // --- APPARATO DI GOLGI (Macro-Sprite Statico) ---
+        // // =========================================================
+        // const GOLGI_X = 700;
+        // const GOLGI_Y = 2900; 
+        // const GOLGI_WIDTH = 1200;
+        // const GOLGI_HEIGHT = 600;
+
+        // // 1. Creiamo l'immagine statica con fisica
+        // const golgi = this.physics.add.staticImage(GOLGI_X, GOLGI_Y, 'organelle_golgi');
+        
+        // // 2. Impostiamo la dimensione visiva desiderata
+        // golgi.setDisplaySize(GOLGI_WIDTH, GOLGI_HEIGHT);
+        
+        // // 3. FONDAMENTALE: Sincronizziamo la hitbox con le nuove dimensioni visive.
+        // // Questo evita qualsiasi disallineamento o sfasamento geometrico.
+        // golgi.refreshBody();
+        
+        // this.physics.add.collider(this.player, golgi);
+
         // =========================================================
-        const GOLGI_X = 700;
-        const GOLGI_Y = 2900; 
+        // --- CONFIGURAZIONE APPARATO DI GOLGI (DISACCOPPIATO) ---
+        // =========================================================
+
         const GOLGI_WIDTH = 1200;
-        const GOLGI_HEIGHT = 600;
+        const GOLGI_HEIGHT = 800;
+        const golgiConfig = {
+            // Dati Visivi
+            visX: 700,
+            visY: 2400,
+            angle: 330, // Imposta qui l'angolo di rotazione manuale dello sprite (es. -30 gradi)
 
-        // 1. Creiamo l'immagine statica con fisica
-        const golgi = this.physics.add.staticImage(GOLGI_X, GOLGI_Y, 'organelle_golgi');
-        
-        // 2. Impostiamo la dimensione visiva desiderata
-        golgi.setDisplaySize(GOLGI_WIDTH, GOLGI_HEIGHT);
-        
-        // 3. FONDAMENTALE: Sincronizziamo la hitbox con le nuove dimensioni visive.
-        // Questo evita qualsiasi disallineamento o sfasamento geometrico.
-        golgi.refreshBody();
-        
-        this.physics.add.collider(this.player, golgi);
+            // Dati Fisici della Hitbox (Assoluti nel mondo)
+            // Centrati sulla parte solida reale dell'organulo
+            hitX: 700, // Spostiamo l'hitbox a sinistra per allinearla alla parte solida del Golgi
+            hitY: 2400,  // Spostiamo l'hitbox verso il basso per allinearla alla parte solida del Golgi
+            hitW: GOLGI_WIDTH *0.85,  // Larghezza del muro invisibile
+            hitH: GOLGI_HEIGHT *0.92   // Altezza del muro invisibile
+        };
 
+
+        // --- B. SPRITE VISIVO GOLGI ---
+        const golgiVisual = this.add.image(golgiConfig.visX, golgiConfig.visY, 'organelle_golgi');
+        golgiVisual.setDisplaySize(GOLGI_WIDTH, GOLGI_HEIGHT);
+        golgiVisual.setAngle(golgiConfig.angle); // Applica la rotazione visiva desiderata
+        golgiVisual.setDepth(1);
+
+        // --- C. HITBOX FISICA INVISIBILE (ZONA) ---
+        // Creiamo la zona statica usando le coordinate assolute dell'oggetto di configurazione
+        const golgiHitZone = this.add.zone(golgiConfig.hitX, golgiConfig.hitY, golgiConfig.hitW, golgiConfig.hitH);
+        this.physics.add.existing(golgiHitZone, true); // true = corpo statico
 
     // NUCLEO
         const NUCLEUS_X = WORLD_SIZE / 2; // Centriamo il nucleo orizzontalmente
         const NUCLEUS_SIZE = 800;
-        const NUCLEUS_Y = NUCLEUS_SIZE / 2 + 50; // Posizioniamo il nucleo in alto, lasciando spazio per la navicella
+        const NUCLEUS_Y = WORLD_SIZE /2; 
 
         const nucleus = this.physics.add.staticImage(NUCLEUS_X, NUCLEUS_Y, 'nucleo');
         nucleus.setDisplaySize(NUCLEUS_SIZE, NUCLEUS_SIZE);
         nucleus.refreshBody();
         this.physics.add.collider(this.player, nucleus);
-        // 1 = Muro della cisterna, 0 = Spazio vuoto/lume
-        // 1 = Muro della cisterna, 0 = Spazio vuoto navigabile
-
-
-        // const golgiGrid = [
-        //     [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
-        //     [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
-        //     [0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0],
-        //     [1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1],
-        //     [1,1,0,0,0,1,1,1,1,1,1,0,0,0,1,1],
-        //     [1,1,0,0,1,1,1,1,1,1,1,1,0,0,1,1],
-        //     [1,1,0,0,1,1,0,0,0,0,1,1,0,0,0,0], // <-- Uscita / Entrata Est
-        //     [1,1,0,0,1,1,0,0,0,0,1,1,0,0,0,0], // <-- Uscita / Entrata Est
-        //     [1,1,0,0,1,1,0,0,1,1,1,1,0,0,1,1],
-        //     [1,1,0,0,1,1,0,0,1,1,1,1,0,0,1,1],
-        //     [1,1,0,0,0,0,0,0,0,0,1,1,0,0,1,1], // <-- Connessione corridoi
-        //     [0,1,1,0,0,0,0,0,0,0,1,1,0,0,1,1], // <-- Connessione corridoi
-        //     [0,1,1,1,0,0,1,1,1,1,1,1,0,0,1,1],
-        //     [0,0,1,1,1,0,0,1,1,1,1,0,0,1,1,0],
-        //     [0,0,0,1,1,1,0,0,0,0,0,0,1,1,1,0],
-        //     [0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0]
-        // ];
-
-        // // Costruiamo la griglia leggendo la matrice
-        // for (let row = 0; row < golgiGrid.length; row++) {
-        //     for (let col = 0; col < golgiGrid[row].length; col++) {
-                
-        //         if (golgiGrid[row][col] === 1) {
-        //             // Calcoliamo la posizione assoluta sommando l'offset iniziale
-        //             const posX = GOLGI_START_X + (col * G_TILE) + (G_TILE / 2);
-        //             const posY = GOLGI_START_Y + (row * G_TILE) + (G_TILE / 2);
-
-        //             // Assicurati di caricare 'golgi_wall_tile' nel preload()
-        //             const wall = this.golgiWallsGroup.create(posX, posY, 'golgi_wall');
-        //             wall.scale=1.25;
-                    
-        //             wall.setDisplaySize(G_TILE, G_TILE);
-                    
-        //             const wallBody = wall.body as Phaser.Physics.Arcade.Body;
-        //             wallBody.setSize(G_TILE, G_TILE);
-        //             wallBody.updateFromGameObject();
-        //         }
-        //     }
-        // }
-        
-        // // Collisione con i muri del Golgi
-        // this.physics.add.collider(this.player, this.golgiWallsGroup);
 
         // =========================================================
         // --- RETICOLO ENDOPLASMATICO (Matrice Unificata REL + RER) ---
@@ -283,24 +264,36 @@ export default class Scene3_Internal extends Phaser.Scene {
         const ER_TILE_H = 128;  // Altezza invariata
         
         // Posizioniamo l'intera struttura al centro, sotto il Nucleo
-        const ER_START_X = 500; 
-        const ER_START_Y = 700; 
+        const ER_START_X = 1350; 
+        const ER_START_Y = 1464; 
 
         // 0 = Lume (Vuoto), 1 = REL (Liscio), 2 = RER (Ruvido con Ribosomi)
         const erGrid = [
-    [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0], // Ex R1
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0], // Ex R3
-    [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0], // Ex R5
-    [0,0,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,0,0], // Ex R7
-    [0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0], // Ex R9
-    [0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,1,1,1,2,2,2,2,0,0,1,1,0,0,0,0], // Ex R11
-    [0,0,1,1,0,0,0,0,2,2,0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,0,0,0,0,0,0], // Ex R13
-    [0,0,2,2,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,2,2,2,2,0,0,0,0], // Ex R15
-    [2,2,2,2,2,2,2,2,2,2,0,0,0,0,2,2,2,2,2,2,2,2,0,0,2,2,0,0,1,1,1,1,2,2,2,2,2,2,0,0,0,0], // Ex R17
-    [0,0,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2], // Ex R19
-    [0,0,2,2,2,2,2,2,2,2,0,0,2,2,0,0,2,2,2,2,2,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,2,0,0,0,0], // Ex R21
-    [0,0,0,0,2,2,2,2,2,2,2,2,0,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,0,0,0,0]  // Ex R23
-];
+            [1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,0,0], // <-- Ingresso Nord
+            [0,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0],
+            [0,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0],
+            [0,1,1,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,0,0,1,0,0], // Muro REL intermedio
+            [0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0],
+            [1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0],
+            [1,0,1,0,0,1,0,0,2,2,2,0,0,2,2,2,2,2,1,0,0,1,0,0], // <-- Ingresso interno Nord RER
+            [1,0,1,0,0,1,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,1,0,1],
+            [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,1,0,1], // <-- Ingresso Ovest REL
+            [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,0,0,1], // (Il nucleo va al centro dei 0)
+            [0,0,1,0,0,1,1,1,2,2,0,0,0,0,0,0,2,2,0,0,0,0,0,1], // <-- Ingresso Est REL
+            [0,0,1,0,0,1,1,0,2,2,0,0,0,0,0,0,2,2,0,0,0,1,1,1],
+            [0,0,1,0,0,1,0,0,2,2,0,0,0,0,0,0,2,2,1,1,1,1,0,0],
+            [1,0,1,0,0,1,0,0,2,2,2,2,2,2,2,0,0,2,1,1,0,1,0,0], // <-- Ingresso interno Sud-Est RER
+            [1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+            [1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+            [0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0], // Muro REL intermedio
+            [0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+            [0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1],
+            [0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,0,1], // <-- Ingresso Sud
+            [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+            [0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0]
+        ];
 
         // Generazione procedurale dell'intero labirinto ER
         // Generazione procedurale del labirinto ER rettangolare
@@ -338,6 +331,9 @@ export default class Scene3_Internal extends Phaser.Scene {
 
         this.physics.add.collider(this.player, this.relWallsGroup);
         this.physics.add.collider(this.player, this.rerWallsGroup);
+
+        // Collisione tra il giocatore e la hitbox invisibile del Golgi
+        this.physics.add.collider(this.player, golgiHitZone);
 
         // 5. La telecamera segue il giocatore
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -413,5 +409,53 @@ export default class Scene3_Internal extends Phaser.Scene {
 
         this.background_deep.tilePositionX += 0.10;
         this.background_deep.tilePositionY += 0.05;
+
+        if (this.player && this.player.body) {
+            const WORLD_SIZE = 6000;
+            const CENTER = WORLD_SIZE / 2; // 3000
+            
+            // Regola questo raggio per l'allineamento visivo con la tua cornice
+            // Il tile ha raggio 128, ma la navicella è 0.3.
+            const CELL_RADIUS = 2950; 
+            
+            // Fattore di restituzione (rimbalzo): 0.1 = gratta, 0.9 = rimbalza molto
+            const RESTITUTION = 0.65; 
+
+            // Calcoliamo la distanza radiale (D)
+            const dx = this.player.x - CENTER;
+            const dy = this.player.y - CENTER;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Se la navicella supera o tocca il raggio
+            if (distance > CELL_RADIUS) {
+                // 1. Calcoliamo l'angolo di incidenza (per posizionarla)
+                const angle = Math.atan2(dy, dx);
+
+                // 2. RIPOSIZIONAMENTO (Clamp): la teniamo dentro
+                this.player.x = CENTER + Math.cos(angle) * CELL_RADIUS;
+                this.player.y = CENTER + Math.sin(angle) * CELL_RADIUS;
+
+                // 3. FISICA: Calcoliamo il vettore normale della collisione (fuori)
+                const nx = dx / distance; // Normale normalizzata X
+                const ny = dy / distance; // Normale normalizzata Y
+
+                // 4. FISICA: Calcoliamo il Prodotto Scalare (Velocità attuale dot Normale)
+                // Questo ci dice quanto stiamo andando "fuori"
+                const velocityX = this.player.body.velocity.x;
+                const velocityY = this.player.body.velocity.y;
+                const dotProduct = (velocityX * nx + velocityY * ny);
+
+                // Se stiamo andando verso l'esterno (dotProduct > 0)
+                if (dotProduct > 0) {
+                    // 5. RIFLESSIONE VETTORIALE (Il trucco fisico)
+                    // Vnew = Vold - (1 + RESTITUTION) * dotProduct * Normal
+                    const newVelocityX = velocityX - (1 + RESTITUTION) * dotProduct * nx;
+                    const newVelocityY = velocityY - (1 + RESTITUTION) * dotProduct * ny;
+
+                    // Applichiamo la nuova velocità (riflessa verso dentro)
+                    this.player.body.setVelocity(newVelocityX, newVelocityY);
+                }
+            }
+        }
     }
 }

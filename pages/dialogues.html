@@ -456,6 +456,20 @@
                 </div>
             </details>
 
+            <details>
+                <summary>Final boss</summary>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="dialogue-fb-1">Dialogue 1</label>
+                        <textarea id="dialogue-fb-1" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dialogue-fb-2">Dialogue 2</label>
+                        <textarea id="dialogue-fb-2" placeholder="Insert dialogue..."></textarea>
+                    </div>
+                </div>
+            </details>
+
             <div class="main-divider">Post Minigames</div>
 
             <details>
@@ -586,6 +600,9 @@
                     document.getElementById('dialogue-mg-5-3').value = data.minigames.minigame_5.dialogue_3 || "";
                     document.getElementById('dialogue-mg-6-1').value = data.minigames.minigame_6.dialogue_1 || "";
                     document.getElementById('dialogue-mg-6-2').value = data.minigames.minigame_6.dialogue_2 || "";
+                    document.getElementById('dialogue-mg-6-3').value = data.minigames.minigame_6.dialogue_3 || "";
+                    document.getElementById('dialogue-fb-1').value = data.minigames.final_boss.dialogue_1 || "";
+                    document.getElementById('dialogue-fb-2').value = data.minigames.final_boss.dialogue_2 || "";
 
                     // Post Minigames
                     document.getElementById('dialogue-pg-1-1').value = data.post_minigames.dialogue_1 || "";
@@ -669,6 +686,10 @@
                             "dialogue_1": document.getElementById('dialogue-mg-6-1').value,
                             "dialogue_2": document.getElementById('dialogue-mg-6-2').value,
                             "dialogue_3": document.getElementById('dialogue-mg-6-3').value
+                        },
+                        "final_boss": {
+                            "dialogue_1": document.getElementById('dialogue-fb-1').value,
+                            "dialogue_2": document.getElementById('dialogue-fb-2').value,
                         }
                     },
                     "post_minigames": {

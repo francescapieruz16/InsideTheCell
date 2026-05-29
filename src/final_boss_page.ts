@@ -1,4 +1,20 @@
 import Phaser from 'phaser';
+import ABI from './classes/abi';
+
+import defaultDialogues from '../assets/default_dialogues.json';
+import defaultContent from '../assets/default_context_and_quizzes.json';
+
+type QuizAnswer = {
+    label: string;
+    text: string;
+    correct: boolean;
+};
+
+type QuizQuestion = {
+    question: string;
+    answers: QuizAnswer[];
+    explanation: string;
+};
 
 class FinalBoss extends Phaser.Scene {
     private bg!: Phaser.GameObjects.Image;
@@ -13,12 +29,31 @@ class FinalBoss extends Phaser.Scene {
     private readonly bossGrowthStep = 0.04;
     private readonly bossMaxGrowth = 0.22;
 
-    private abi!: Phaser.GameObjects.Image;
-    private dialogueBox!: Phaser.GameObjects.Rectangle;
-    private dialogueText!: Phaser.GameObjects.Text;
-    private startButton!: Phaser.GameObjects.Container;
+    private abi!: ABI;
+    private interactKey!: Phaser.Input.Keyboard.Key;
 
-    private introActive = true;
+    private dialogue1 = '';
+    private dialogue2 = '';
+
+    private quizzes: QuizQuestion[] = [];
+    private currentQuizIndex = 0;
+
+    private bossHp = 10;
+    private readonly maxBossHp = 10;
+
+    private playerLives = 7;
+    private readonly maxPlayerLives = 7;
+
+    private correctAnswers = 0;
+    private canAnswer = false;
+    private gameEnded = false;
+
+    private isQuestionDisplayed = false;
+
+    private hudPanel!: Phaser.GameObjects.Rectangle;
+    private hudText!: Phaser.GameObjects.Text;
+
+    private answerButtons: Phaser.GameObjects.Container[] = [];
 
     constructor() {
         super('FinalBoss');
@@ -61,11 +96,142 @@ class FinalBoss extends Phaser.Scene {
         this.textures.get('boss_happy').setFilter(Phaser.Textures.FilterMode.NEAREST);
         this.textures.get('ABI_standard').setFilter(Phaser.Textures.FilterMode.NEAREST);
 
+        this.loadDialogues();
+        this.loadQuizzes();
+
         this.createBackground(width, height);
         this.createBoss(width, height);
+        this.createHud(width);
 
-        // ABI introduce il gioco finale.
-        this.createAbiIntro(width, height);
+        this.abi = new ABI(this);
+
+        if (this.input.keyboard) {
+            this.interactKey = this.input.keyboard.addKey(
+                Phaser.Input.Keyboard.KeyCodes.SPACE
+            );
+        }
+
+        this.showAbiIntro();
+    }
+
+    private loadDialogues() {
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+        let allDialogues: any = null;
+
+        if (savedDialogues) {
+            try {
+                allDialogues = JSON.parse(savedDialogues);
+            } catch (e) {
+                console.warn('Error reading saved dialogues. Using defaults.', e);
+                allDialogues = defaultDialogues;
+            }
+        } else {
+            allDialogues = defaultDialogues;
+        }
+
+        this.dialogue1 =
+            allDialogues?.minigames?.final_boss?.dialogue_1 ||
+            'We made it to the final challenge! Answer the questions correctly to weaken the boss.';
+
+        this.dialogue2 =
+            allDialogues?.minigames?.final_boss?.dialogue_2 ||
+            'If you answer wrong, the boss grows stronger. Stay focused and use what you learned!';
+    }
+
+    private loadQuizzes() {
+        const savedContent =
+            localStorage.getItem('ADMIN_SETTINGS_JSON') ||
+            localStorage.getItem('CONTEXT_AND_QUIZZES_JSON') ||
+            localStorage.getItem('QUIZZES_JSON');
+
+        let allContent: any = null;
+
+        if (savedContent) {
+            try {
+                allContent = JSON.parse(savedContent);
+            } catch (e) {
+                console.warn('Error reading saved quiz content. Using defaults.', e);
+                allContent = defaultContent;
+            }
+        } else {
+            allContent = defaultContent;
+        }
+
+        const defaultFinalBossData =
+            (defaultContent as any)?.minigames?.final_boss || {};
+
+        const finalBossData =
+            allContent?.minigames?.final_boss || defaultFinalBossData;
+
+        const rawQuizzes: string[] =
+            finalBossData?.quizzes && finalBossData.quizzes.length > 0
+                ? finalBossData.quizzes
+                : defaultFinalBossData.quizzes || [];
+
+        this.quizzes = rawQuizzes
+            .map((quizText) => this.parseQuizString(quizText))
+            .filter((quiz): quiz is QuizQuestion => quiz !== null);
+
+        this.quizzes = Phaser.Utils.Array.Shuffle(this.quizzes);
+
+        if (this.quizzes.length === 0) {
+            console.warn('No final boss quizzes found.');
+        }
+    }
+
+    private parseQuizString(quizText: string): QuizQuestion | null {
+        const lines = quizText
+            .split('\n')
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0);
+
+        if (lines.length < 4) {
+            return null;
+        }
+
+        const question = lines[0];
+
+        const explanationLine = lines.find((line) =>
+            line.toLowerCase().startsWith('explanation:')
+        );
+
+        const explanation = explanationLine
+            ? explanationLine.replace(/^explanation:\s*/i, '').trim()
+            : 'This question reviews an important step of the viral infection cycle.';
+
+        const answerLines = lines
+            .slice(1)
+            .filter((line) => !line.toLowerCase().startsWith('explanation:'));
+
+        const answers: QuizAnswer[] = answerLines.map((line) => {
+            const match = line.match(/^([abc])\((T|F)\):\s*(.+)$/i);
+
+            if (!match) {
+                return {
+                    label: '',
+                    text: line,
+                    correct: false
+                };
+            }
+
+            return {
+                label: match[1].toUpperCase(),
+                correct: match[2].toUpperCase() === 'T',
+                text: match[3].trim()
+            };
+        });
+
+        const validAnswers = answers.filter((answer) => answer.text.length > 0);
+
+        if (validAnswers.length < 2) {
+            return null;
+        }
+
+        return {
+            question,
+            answers: validAnswers,
+            explanation
+        };
     }
 
     private createBackground(width: number, height: number) {
@@ -101,14 +267,14 @@ class FinalBoss extends Phaser.Scene {
     private createBoss(width: number, height: number) {
         this.boss = this.add.image(
             width / 2,
-            height * 0.47,
+            height * 0.40,
             'boss_normal'
         );
 
         this.boss.setOrigin(0.5);
         this.boss.setDepth(10);
 
-        const bossSize = Math.min(width, height) * 0.34;
+        const bossSize = Math.min(width, height) * 0.31;
         this.boss.setDisplaySize(bossSize, bossSize);
 
         this.bossBaseScaleX = this.boss.scaleX;
@@ -116,6 +282,38 @@ class FinalBoss extends Phaser.Scene {
         this.bossGrowthLevel = 0;
 
         this.startBossFloating();
+    }
+
+    private createHud(width: number) {
+        this.hudPanel = this.add.rectangle(
+            width / 2,
+            54,
+            width * 0.72,
+            78,
+            0x001b1d,
+            0.78
+        );
+
+        this.hudPanel.setDepth(79);
+        this.hudPanel.setStrokeStyle(4, 0x88e6ff, 0.65);
+
+        this.hudText = this.add.text(
+            width / 2,
+            35,
+            '',
+            {
+                fontFamily: 'monospace',
+                fontSize: '30px',
+                color: '#ffffff',
+                stroke: '#001020',
+                strokeThickness: 6
+            }
+        );
+
+        this.hudText.setOrigin(0.5, 0);
+        this.hudText.setDepth(80);
+
+        this.updateHud();
     }
 
     private startBossFloating() {
@@ -137,193 +335,338 @@ class FinalBoss extends Phaser.Scene {
         });
     }
 
-    private createAbiIntro(width: number, height: number) {
-        this.introActive = true;
+    private showAbiIntro() {
+        this.abi.MoveDialogueY(0);
 
-        this.abi = this.add.image(
-            width * 0.16,
-            height * 0.77,
-            'ABI_standard'
-        );
-
-        this.abi.setDepth(40);
-        this.abi.setDisplaySize(220, 220);
-
-        this.dialogueBox = this.add.rectangle(
-            width / 2,
-            height * 0.78,
-            width * 0.64,
-            210,
-            0x001b1d,
-            0.9
-        );
-
-        this.dialogueBox.setDepth(39);
-        this.dialogueBox.setStrokeStyle(5, 0x88e6ff, 0.9);
-
-        this.dialogueText = this.add.text(
-            width * 0.31,
-            height * 0.69,
-            `We made it to the final challenge!
-
-Answer the questions correctly to weaken the boss.
-If you answer wrong, the boss grows stronger.
-
-Ready? Let's finish this mission!`,
-            {
-                fontFamily: 'monospace',
-                fontSize: '25px',
-                color: '#ffffff',
-                stroke: '#001020',
-                strokeThickness: 5,
-                wordWrap: {
-                    width: width * 0.50
-                },
-                lineSpacing: 7
-            }
-        );
-
-        this.dialogueText.setDepth(41);
-
-        this.startButton = this.createButton(
-            width * 0.72,
-            height * 0.895,
-            340,
-            64,
-            'Start final game',
+        this.abi.showDialogue(
+            'ABI',
+            [
+                this.dialogue1,
+                this.dialogue2
+            ],
             () => {
-                this.closeAbiIntro();
+                this.startQuizGame();
             }
         );
-
-        this.startButton.setDepth(42);
     }
 
-    private closeAbiIntro() {
-        this.introActive = false;
+    private startQuizGame() {
+        this.bossHp = this.maxBossHp;
+        this.playerLives = this.maxPlayerLives;
+        this.currentQuizIndex = 0;
+        this.correctAnswers = 0;
+        this.canAnswer = false;
+        this.gameEnded = false;
+        this.isQuestionDisplayed = false;
 
-        if (this.abi) this.abi.destroy();
-        if (this.dialogueBox) this.dialogueBox.destroy();
-        if (this.dialogueText) this.dialogueText.destroy();
-        if (this.startButton) this.startButton.destroy();
+        this.updateHud();
 
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-
-        // Bottoni temporanei per testare le reazioni.
-        // Quando inseriamo il quiz vero, questa riga verrà sostituita dal quiz.
-        this.createTestButtons(width, height);
-    }
-
-    private getBossCurrentScaleMultiplier() {
-        return 1 + Math.min(
-            this.bossGrowthLevel * this.bossGrowthStep,
-            this.bossMaxGrowth
-        );
-    }
-
-    private showCorrectAnswerReaction() {
-        // Risposta corretta -> boss arrabbiato perché viene colpito.
-        this.switchBossSprite('boss_angry');
-
-        const multiplier = this.getBossCurrentScaleMultiplier();
-
-        const currentScaleX = this.bossBaseScaleX * multiplier;
-        const currentScaleY = this.bossBaseScaleY * multiplier;
-
-        this.tweens.killTweensOf(this.boss);
-
-        this.tweens.add({
-            targets: this.boss,
-            scaleX: currentScaleX * 0.96,
-            scaleY: currentScaleY * 0.96,
-            duration: 120,
-            yoyo: true,
-            ease: 'Power2',
-            onComplete: () => {
-                this.boss.setScale(currentScaleX, currentScaleY);
-                this.startBossFloating();
-            }
-        });
-
-        this.time.delayedCall(850, () => {
-            this.switchBossSprite('boss_normal');
-            this.boss.setScale(currentScaleX, currentScaleY);
-        });
-    }
-
-    private showWrongAnswerReaction() {
-        // Risposta sbagliata -> boss felice perché diventa più forte.
-        this.switchBossSprite('boss_happy');
-
-        this.bossGrowthLevel++;
-
-        const multiplier = this.getBossCurrentScaleMultiplier();
-
-        const targetScaleX = this.bossBaseScaleX * multiplier;
-        const targetScaleY = this.bossBaseScaleY * multiplier;
-
-        this.tweens.killTweensOf(this.boss);
-
-        this.tweens.add({
-            targets: this.boss,
-            scaleX: targetScaleX,
-            scaleY: targetScaleY,
-            angle: 4,
-            duration: 180,
-            yoyo: true,
-            repeat: 1,
-            ease: 'Power1',
-            onComplete: () => {
-                this.boss.setAngle(0);
-                this.boss.setScale(targetScaleX, targetScaleY);
-                this.startBossFloating();
-            }
-        });
-
-        this.time.delayedCall(850, () => {
-            this.switchBossSprite('boss_normal');
-            this.boss.setScale(targetScaleX, targetScaleY);
-        });
-    }
-
-    private switchBossSprite(textureKey: string) {
-        if (!this.boss || !this.boss.active) {
+        if (this.quizzes.length === 0) {
+            this.showMissingQuizMessage();
             return;
         }
 
-        const currentDisplayWidth = this.boss.displayWidth;
-        const currentDisplayHeight = this.boss.displayHeight;
-
-        this.boss.setTexture(textureKey);
-        this.boss.setDisplaySize(currentDisplayWidth, currentDisplayHeight);
+        this.showCurrentQuestion();
     }
 
-    private createTestButtons(width: number, height: number) {
-        const correctButton = this.createButton(
-            width / 2 - 190,
-            height * 0.84,
-            300,
-            64,
-            'Correct',
-            () => {
-                this.showCorrectAnswerReaction();
-            }
+    private showCurrentQuestion() {
+        if (this.gameEnded) return;
+
+        this.clearAnswerButtons();
+
+        if (this.currentQuizIndex >= this.quizzes.length) {
+            this.endGame(false);
+            return;
+        }
+
+        const quiz = this.quizzes[this.currentQuizIndex];
+
+        this.canAnswer = true;
+        this.isQuestionDisplayed = true;
+
+        this.abi.MoveDialogueY(-180);
+
+        this.abi.showDialogue(
+            'ABI',
+            quiz.question,
+            undefined,
+            true,
+            true
         );
 
-        const wrongButton = this.createButton(
-            width / 2 + 190,
-            height * 0.84,
-            300,
-            64,
-            'Wrong',
+        this.createAnswerButtons(quiz);
+        this.updateHud();
+    }
+
+    private createAnswerButtons(quiz: QuizQuestion) {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        const shuffledAnswers = Phaser.Utils.Array.Shuffle([...quiz.answers]);
+
+        const buttonWidth = 450;
+        const buttonHeight = 120;
+        const spacing = 40;
+
+        const totalAnswers = shuffledAnswers.length;
+        const totalWidth =
+            buttonWidth * totalAnswers + spacing * (totalAnswers - 1);
+
+        const startX =
+            width / 2 - totalWidth / 2 + buttonWidth / 2;
+
+        const y = height - 95;
+
+        shuffledAnswers.forEach((answer, index) => {
+            const x = startX + index * (buttonWidth + spacing);
+
+            const button = this.createButton(
+                x,
+                y,
+                buttonWidth,
+                buttonHeight,
+                answer.text,
+                '26px',
+                () => {
+                    this.handleAnswer(answer);
+                }
+            );
+
+            button.setDepth(120);
+            this.answerButtons.push(button);
+        });
+    }
+
+    private handleAnswer(answer: QuizAnswer) {
+        if (!this.canAnswer || this.gameEnded) return;
+
+        this.canAnswer = false;
+        this.isQuestionDisplayed = false;
+
+        const quiz = this.quizzes[this.currentQuizIndex];
+
+        this.clearAnswerButtons();
+        this.abi.MoveDialogueY(0);
+
+        if (answer.correct) {
+            this.correctAnswers++;
+            this.bossHp = Math.max(0, this.bossHp - 1);
+
+            this.showCorrectAnswerReaction();
+            this.updateHud();
+
+            this.time.delayedCall(600, () => {
+                this.abi.showDialogue(
+                    'ABI',
+                    `Correct! ${quiz.explanation}`,
+                    () => {
+                        this.afterFeedbackContinue();
+                    }
+                );
+            });
+
+            return;
+        }
+
+        this.playerLives = Math.max(0, this.playerLives - 1);
+
+        const correctAnswer = quiz.answers.find((item) => item.correct);
+
+        this.showWrongAnswerReaction();
+        this.updateHud();
+
+        this.time.delayedCall(600, () => {
+            this.abi.showDialogue(
+                'ABI',
+                [
+                    `Wrong! The correct answer was: ${correctAnswer?.text || 'Unknown'}.`,
+                    quiz.explanation
+                ],
+                () => {
+                    this.afterFeedbackContinue();
+                }
+            );
+        });
+    }
+
+    private afterFeedbackContinue() {
+        if (this.gameEnded) return;
+
+        if (this.bossHp <= 0) {
+            this.endGame(true);
+            return;
+        }
+
+        if (this.playerLives <= 0) {
+            this.endGame(false);
+            return;
+        }
+
+        this.currentQuizIndex++;
+
+        this.showCurrentQuestion();
+    }
+
+    private updateHud() {
+        if (!this.hudText) return;
+
+        const totalQuestions = this.quizzes.length > 0
+            ? this.quizzes.length
+            : 0;
+
+        const visibleQuestionNumber = totalQuestions > 0
+            ? Math.min(this.currentQuizIndex + 1, totalQuestions)
+            : 0;
+
+        this.hudText.setText(
+            `BOSS HP: ${this.bossHp}/${this.maxBossHp}   LIVES: ${this.playerLives}/${this.maxPlayerLives}   QUESTION: ${visibleQuestionNumber}/${totalQuestions}`
+        );
+    }
+
+    private clearAnswerButtons() {
+        this.answerButtons.forEach((button) => {
+            button.destroy();
+        });
+
+        this.answerButtons = [];
+    }
+
+    private showMissingQuizMessage() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        this.abi.MoveDialogueY(0);
+
+        this.abi.showDialogue(
+            'ABI',
+            'No final boss quiz configured. Please add final_boss quizzes in the context and quizzes JSON.',
             () => {
-                this.showWrongAnswerReaction();
+                this.createMenuButton(width / 2, height * 0.68);
             }
         );
+    }
 
-        correctButton.setDepth(20);
-        wrongButton.setDepth(20);
+    private endGame(won: boolean) {
+        if (this.gameEnded) return;
+
+        this.gameEnded = true;
+        this.canAnswer = false;
+        this.isQuestionDisplayed = false;
+
+        this.clearAnswerButtons();
+        this.abi.MoveDialogueY(0);
+
+        if (won) {
+            this.showFinalWin();
+        } else {
+            this.showFinalLose();
+        }
+    }
+
+    private showFinalWin() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        this.switchBossSprite('boss_angry');
+
+        this.tweens.add({
+            targets: this.boss,
+            alpha: 0,
+            scaleX: this.boss.scaleX * 0.4,
+            scaleY: this.boss.scaleY * 0.4,
+            duration: 900,
+            ease: 'Power2'
+        });
+
+        this.abi.showDialogue(
+            'ABI',
+            [
+                'Great job! You defeated the final virus boss!',
+                'You reviewed all six phases of viral infection and completed the mission.'
+            ],
+            () => {
+                this.add.text(
+                    width / 2,
+                    height / 2,
+                    'YOU DEFEATED THE FINAL VIRUS!',
+                    {
+                        fontFamily: 'monospace',
+                        fontSize: '48px',
+                        color: '#66ff7d',
+                        stroke: '#001b10',
+                        strokeThickness: 8,
+                        align: 'center'
+                    }
+                )
+                    .setOrigin(0.5)
+                    .setDepth(100);
+
+                this.createMenuButton(width / 2, height * 0.68);
+            }
+        );
+    }
+
+    private showFinalLose() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        this.switchBossSprite('boss_happy');
+
+        this.abi.showDialogue(
+            'ABI',
+            [
+                'The boss is still too strong!',
+                'Try again and use what you learned about the six infection phases.'
+            ],
+            () => {
+                this.add.text(
+                    width / 2,
+                    height / 2,
+                    'THE BOSS IS STILL TOO STRONG!',
+                    {
+                        fontFamily: 'monospace',
+                        fontSize: '46px',
+                        color: '#ff6b6b',
+                        stroke: '#220000',
+                        strokeThickness: 8,
+                        align: 'center'
+                    }
+                )
+                    .setOrigin(0.5)
+                    .setDepth(100);
+
+                this.createRetryButton(width / 2 - 190, height * 0.68);
+                this.createMenuButton(width / 2 + 190, height * 0.68);
+            }
+        );
+    }
+
+    private createRetryButton(x: number, y: number) {
+        this.createButton(
+            x,
+            y,
+            300,
+            64,
+            'Retry',
+            '26px',
+            () => {
+                this.scene.restart();
+            }
+        ).setDepth(140);
+    }
+
+    private createMenuButton(x: number, y: number) {
+        this.createButton(
+            x,
+            y,
+            300,
+            64,
+            'Menu',
+            '26px',
+            () => {
+                window.location.href = '/pages/menu_page.html';
+            }
+        ).setDepth(140);
     }
 
     private createButton(
@@ -332,6 +675,7 @@ Ready? Let's finish this mission!`,
         width: number,
         height: number,
         label: string,
+        fontSize: string,
         callback: () => void
     ) {
         const container = this.add.container(x, y);
@@ -354,32 +698,151 @@ Ready? Let's finish this mission!`,
             label,
             {
                 fontFamily: 'Arial',
-                fontSize: '26px',
+                fontSize,
                 color: '#ffffff',
-                fontStyle: 'bold'
+                fontStyle: 'bold',
+                align: 'center',
+                wordWrap: {
+                    width: width - 40
+                }
             }
         );
 
         text.setOrigin(0.5);
 
+        if (text.width > width - 40) {
+            text.setScale((width - 40) / text.width);
+        }
+
         container.add([bg, text]);
         container.setDepth(20);
 
         bg.on('pointerover', () => {
+            if (!this.canAnswer && this.answerButtons.includes(container)) {
+                return;
+            }
+
             bg.setFillStyle(0x5276b8, 1);
             container.setScale(1.05);
+            this.game.canvas.style.cursor = 'pointer';
         });
 
         bg.on('pointerout', () => {
             bg.setFillStyle(0x3f5f95, 1);
             container.setScale(1);
+            this.game.canvas.style.cursor = 'default';
         });
 
         bg.on('pointerdown', () => {
+            this.game.canvas.style.cursor = 'default';
             callback();
         });
 
         return container;
+    }
+
+    private getBossCurrentScaleMultiplier() {
+        return 1 + Math.min(
+            this.bossGrowthLevel * this.bossGrowthStep,
+            this.bossMaxGrowth
+        );
+    }
+
+    private showCorrectAnswerReaction() {
+        this.switchBossSprite('boss_angry');
+
+        const multiplier = this.getBossCurrentScaleMultiplier();
+
+        const currentScaleX = this.bossBaseScaleX * multiplier;
+        const currentScaleY = this.bossBaseScaleY * multiplier;
+
+        this.tweens.killTweensOf(this.boss);
+
+        this.tweens.add({
+            targets: this.boss,
+            scaleX: currentScaleX * 0.96,
+            scaleY: currentScaleY * 0.96,
+            duration: 120,
+            yoyo: true,
+            ease: 'Power2',
+            onComplete: () => {
+                if (!this.boss || !this.boss.active) return;
+
+                this.boss.setScale(currentScaleX, currentScaleY);
+                this.startBossFloating();
+            }
+        });
+
+        this.time.delayedCall(850, () => {
+            if (this.gameEnded) return;
+
+            this.switchBossSprite('boss_normal');
+            this.boss.setScale(currentScaleX, currentScaleY);
+        });
+    }
+
+    private showWrongAnswerReaction() {
+        this.switchBossSprite('boss_happy');
+
+        this.bossGrowthLevel++;
+
+        const multiplier = this.getBossCurrentScaleMultiplier();
+
+        const targetScaleX = this.bossBaseScaleX * multiplier;
+        const targetScaleY = this.bossBaseScaleY * multiplier;
+
+        this.tweens.killTweensOf(this.boss);
+
+        this.tweens.add({
+            targets: this.boss,
+            scaleX: targetScaleX,
+            scaleY: targetScaleY,
+            angle: 4,
+            duration: 180,
+            yoyo: true,
+            repeat: 1,
+            ease: 'Power1',
+            onComplete: () => {
+                if (!this.boss || !this.boss.active) return;
+
+                this.boss.setAngle(0);
+                this.boss.setScale(targetScaleX, targetScaleY);
+                this.startBossFloating();
+            }
+        });
+
+        this.time.delayedCall(850, () => {
+            if (this.gameEnded) return;
+
+            this.switchBossSprite('boss_normal');
+            this.boss.setScale(targetScaleX, targetScaleY);
+        });
+    }
+
+    private switchBossSprite(textureKey: string) {
+        if (!this.boss || !this.boss.active) {
+            return;
+        }
+
+        const currentDisplayWidth = this.boss.displayWidth;
+        const currentDisplayHeight = this.boss.displayHeight;
+
+        this.boss.setTexture(textureKey);
+        this.boss.setDisplaySize(currentDisplayWidth, currentDisplayHeight);
+    }
+
+    update() {
+        if (this.abi && this.abi.isTalking) {
+            if (
+                !this.isQuestionDisplayed &&
+                this.interactKey &&
+                Phaser.Input.Keyboard.JustDown(this.interactKey)
+            ) {
+                this.abi.nextDialoguePage();
+            }
+
+            return;
+        }
     }
 }
 

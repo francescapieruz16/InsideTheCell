@@ -57,18 +57,24 @@ class Level6 extends Phaser.Scene {
     private readonly playerSpeed = 360;
     private readonly normalCaptureGoal = 10;
     private readonly vaccinatedCaptureGoal = 6;
-    private readonly timeLimitMs = 30000;
 
-    private readonly playerScale = 0.75;
-    private readonly virusScale = 0.55;
+    private readonly normalTimeLimitMs = 15000;
+    private readonly vaccinatedTimeLimitMs = 30000;
+
+    private readonly playerScale = 0.95;
+    private readonly virusScale = 0.85;
 
     private readonly playerCollisionScale = 0.92;
     private readonly virusCollisionScale = 0.75;
 
-    private readonly virusSpeed = 130;
+    private readonly virusSpeed = 200;
+    private readonly vaccinatedVirusSpeed = 130;
 
     private readonly maxViruses = 256;
-    private readonly initialVirusCount = 5;
+
+    private readonly normalInitialVirusCount = 12;
+    private readonly vaccinatedInitialVirusCount = 5;
+
     private readonly outbreakLoseVirusCount = 40;
     private readonly dynamicCaptureFraction = 0.5;
 
@@ -85,23 +91,23 @@ class Level6 extends Phaser.Scene {
     ];
 
     private readonly mazeGrid = [
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,2,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,4,0,1],
-        [1,0,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1],
-        [1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1,0,1],
-        [1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,0,1],
-        [1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1],
-        [1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1],
-        [1,4,0,0,0,0,0,0,1,0,1,0,0,3,0,0,0,1,0,0,0,0,0,0,0,4,0,1],
-        [1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1],
-        [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1,0,0,0,0,0,0,4,1],
-        [1,0,1,0,1,1,1,1,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,1,0,1,1],
-        [1,0,0,0,1,4,0,0,3,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
-        [1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,3,0,0,0,0,4,0,1],
-        [1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-    ];
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,2,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,4,0,1],
+    [1,0,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1],
+    [1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1,0,1],
+    [1,0,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,0,1],
+    [1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1],
+    [1,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1],
+    [1,4,0,0,0,0,0,0,1,0,1,0,0,3,0,0,0,1,0,0,0,0,0,0,0,4,0,1],
+    [1,0,1,1,1,1,1,0,1,0,1,0,1,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1],
+    [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,3,0,1,0,1,0,0,0,0,0,0,4,1],
+    [1,0,1,0,1,1,1,1,1,1,1,0,1,0,1,1,1,1,0,1,0,1,1,1,1,0,1,1],
+    [1,0,0,0,1,4,0,0,3,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+    [1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1,1,1,0,1],
+    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,3,0,0,0,0,4,0,1],
+    [1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
 
     constructor() {
         super('Level6');
@@ -120,7 +126,7 @@ class Level6 extends Phaser.Scene {
         this.captureGoal = 0;
 
         this.levelStartTime = 0;
-        this.remainingTimeMs = this.timeLimitMs;
+        this.remainingTimeMs = this.getTimeLimitMs();
 
         this.playerSpawn = { x: 0, y: 0 };
         this.virusSpawnPoints = [];
@@ -160,6 +166,24 @@ class Level6 extends Phaser.Scene {
         this.hasStartedPlaying = true;
         this.levelStartTime = this.time.now;
         this.updateHud();
+    }
+
+    private getVirusSpeed() {
+        return this.isVaccinated
+            ? this.vaccinatedVirusSpeed
+            : this.virusSpeed;
+    }
+
+    private getInitialVirusCount() {
+        return this.isVaccinated
+            ? this.vaccinatedInitialVirusCount
+            : this.normalInitialVirusCount;
+    }
+
+    private getTimeLimitMs() {
+        return this.isVaccinated
+            ? this.vaccinatedTimeLimitMs
+            : this.normalTimeLimitMs;
     }
 
     private createBackground(width: number, height: number) {
@@ -209,6 +233,7 @@ class Level6 extends Phaser.Scene {
             0x001b1d,
             0.55
         );
+
         frame.setDepth(3);
         frame.setStrokeStyle(8, 0x88e6ff, 0.75);
 
@@ -244,6 +269,7 @@ class Level6 extends Phaser.Scene {
 
     private createDuplicationZone(x: number, y: number) {
         const visual = this.add.circle(x, y, this.tileSize * 0.42, 0xff3bd4, 0.55);
+
         visual.setDepth(8);
         visual.setStrokeStyle(6, 0xff9beb, 1);
 
@@ -336,11 +362,13 @@ class Level6 extends Phaser.Scene {
 
     private createPlayer() {
         this.player = this.physics.add.image(this.playerSpawn.x, this.playerSpawn.y, 'player_level6');
+
         this.player.setDepth(20);
         this.player.setDisplaySize(this.tileSize * this.playerScale, this.tileSize * this.playerScale);
         this.player.setCollideWorldBounds(false);
 
         const body = this.player.body as Phaser.Physics.Arcade.Body;
+
         body.setAllowGravity(false);
         body.setImmovable(false);
         body.setDrag(0, 0);
@@ -353,9 +381,11 @@ class Level6 extends Phaser.Scene {
     private createViruses() {
         this.viruses = this.physics.add.group();
 
+        const initialVirusCount = this.getInitialVirusCount();
+
         const spawnPoints = Phaser.Utils.Array
             .Shuffle(this.getRandomInitialVirusSpawnPoints())
-            .slice(0, this.initialVirusCount);
+            .slice(0, initialVirusCount);
 
         spawnPoints.forEach((point) => {
             this.spawnVirus(point.x, point.y, true);
@@ -418,7 +448,7 @@ class Level6 extends Phaser.Scene {
 
             selectedPoints.push(point);
 
-            if (selectedPoints.length >= this.initialVirusCount) {
+            if (selectedPoints.length >= this.getInitialVirusCount()) {
                 break;
             }
         }
@@ -451,13 +481,16 @@ class Level6 extends Phaser.Scene {
             startWithCooldown ? this.time.now + this.duplicateCooldown : 0
         );
 
+        const currentVirusSpeed = this.getVirusSpeed();
+
         const body = virus.body as Phaser.Physics.Arcade.Body;
+
         body.enable = true;
         body.setAllowGravity(false);
         body.setBounce(0);
         body.setDrag(0, 0);
         body.setAcceleration(0, 0);
-        body.setMaxVelocity(this.virusSpeed, this.virusSpeed);
+        body.setMaxVelocity(currentVirusSpeed, currentVirusSpeed);
         body.setSize(virus.width * this.virusCollisionScale, virus.height * this.virusCollisionScale, true);
         body.updateFromGameObject();
 
@@ -488,6 +521,7 @@ class Level6 extends Phaser.Scene {
 
         this.physics.add.collider(this.viruses, this.walls, (virusObject) => {
             const virus = virusObject as Phaser.Physics.Arcade.Image;
+
             this.centerObjectOnCurrentCell(virus);
             this.chooseRandomVirusDirection(virus);
         });
@@ -544,6 +578,7 @@ class Level6 extends Phaser.Scene {
             newVirus.setTint(0xff00ff);
 
             const body = newVirus.body as Phaser.Physics.Arcade.Body;
+
             body.reset(spawnPoint.x, spawnPoint.y);
             body.setVelocity(0, 0);
 
@@ -617,6 +652,7 @@ class Level6 extends Phaser.Scene {
         const panelRight = panelX + panelWidth / 2;
 
         const panel = this.add.rectangle(panelX, panelY, panelWidth, 78, 0x001b1d, 0.72);
+
         panel.setDepth(50);
         panel.setStrokeStyle(4, 0x88e6ff, 0.55);
 
@@ -628,6 +664,7 @@ class Level6 extends Phaser.Scene {
             strokeThickness: 5,
             resolution: 2
         });
+
         this.capturedText.setDepth(60);
         this.capturedText.setOrigin(0, 0);
 
@@ -639,6 +676,7 @@ class Level6 extends Phaser.Scene {
             strokeThickness: 5,
             resolution: 2
         });
+
         this.timerText.setDepth(60);
         this.timerText.setOrigin(1, 0);
     }
@@ -659,6 +697,7 @@ class Level6 extends Phaser.Scene {
 
     private isWalkableCell(row: number, col: number) {
         if (row < 0 || row >= this.mazeGrid.length || col < 0 || col >= this.mazeGrid[0].length) return false;
+
         return this.mazeGrid[row][col] !== 1;
     }
 
@@ -668,12 +707,14 @@ class Level6 extends Phaser.Scene {
         return this.directions.filter((direction) => {
             const nextRow = row + direction.y;
             const nextCol = col + direction.x;
+
             return this.isWalkableCell(nextRow, nextCol);
         });
     }
 
     private centerObjectOnCurrentCell(sprite: Phaser.Physics.Arcade.Image) {
         const { row, col } = this.getGridPositionFromWorld(sprite.x, sprite.y);
+
         if (!this.isWalkableCell(row, col)) return;
 
         const center = this.getCellCenter(row, col);
@@ -695,17 +736,21 @@ class Level6 extends Phaser.Scene {
         }
 
         const direction = Phaser.Utils.Array.GetRandom(availableDirections);
+        const currentVirusSpeed = this.getVirusSpeed();
+
         virus.setData('direction', direction);
 
         const body = virus.body as Phaser.Physics.Arcade.Body;
+
         body.setAcceleration(0, 0);
         body.setVelocity(0, 0);
-        body.setMaxVelocity(this.virusSpeed, this.virusSpeed);
-        body.setVelocity(direction.x * this.virusSpeed, direction.y * this.virusSpeed);
+        body.setMaxVelocity(currentVirusSpeed, currentVirusSpeed);
+        body.setVelocity(direction.x * currentVirusSpeed, direction.y * currentVirusSpeed);
     }
 
     private createDuplicationEffect(x: number, y: number) {
         const flash = this.add.circle(x, y, this.tileSize * 0.52, 0xff9beb, 0.95);
+
         flash.setDepth(998);
 
         this.tweens.add({
@@ -765,10 +810,12 @@ class Level6 extends Phaser.Scene {
                 return;
             }
 
+            const currentVirusSpeed = this.getVirusSpeed();
             const body = virus.body as Phaser.Physics.Arcade.Body;
+
             body.setAcceleration(0, 0);
-            body.setMaxVelocity(this.virusSpeed, this.virusSpeed);
-            body.setVelocity(direction.x * this.virusSpeed, direction.y * this.virusSpeed);
+            body.setMaxVelocity(currentVirusSpeed, currentVirusSpeed);
+            body.setVelocity(direction.x * currentVirusSpeed, direction.y * currentVirusSpeed);
         });
     }
 
@@ -790,11 +837,13 @@ class Level6 extends Phaser.Scene {
 
         if (velocityX !== 0 && velocityY !== 0) {
             const diagonalSpeed = this.playerSpeed / Math.SQRT2;
+
             velocityX = velocityX > 0 ? diagonalSpeed : -diagonalSpeed;
             velocityY = velocityY > 0 ? diagonalSpeed : -diagonalSpeed;
         }
 
         const body = this.player.body as Phaser.Physics.Arcade.Body;
+
         body.setAcceleration(0, 0);
         body.setMaxVelocity(this.playerSpeed, this.playerSpeed);
         body.setVelocity(0, 0);
@@ -806,6 +855,7 @@ class Level6 extends Phaser.Scene {
 
         return this.viruses.getChildren().filter((child) => {
             const virus = child as Phaser.Physics.Arcade.Image;
+
             return virus.active;
         }).length;
     }
@@ -819,14 +869,6 @@ class Level6 extends Phaser.Scene {
 
         const activeVirusCount = this.getActiveVirusCount();
         const dynamicGoal = this.getDynamicCaptureGoal();
-
-        if (!this.isVaccinated) {
-            if (activeVirusCount >= this.outbreakLoseVirusCount) {
-                this.loseGame();
-            }
-
-            return;
-        }
 
         if (activeVirusCount >= this.outbreakLoseVirusCount) {
             this.loseGame();
@@ -842,10 +884,14 @@ class Level6 extends Phaser.Scene {
         if (!this.hasStartedPlaying || this.gameEnded) return;
 
         const elapsed = this.time.now - this.levelStartTime;
-        this.remainingTimeMs = Math.max(0, this.timeLimitMs - elapsed);
+
+        this.remainingTimeMs = Math.max(
+            0,
+            this.getTimeLimitMs() - elapsed
+        );
 
         if (this.remainingTimeMs <= 0) {
-            if (this.isVaccinated && this.capturedViruses >= this.getDynamicCaptureGoal()) {
+            if (this.capturedViruses >= this.getDynamicCaptureGoal()) {
                 this.completeLevel();
             } else {
                 this.loseGame();
@@ -882,6 +928,7 @@ class Level6 extends Phaser.Scene {
 
     private createCaptureEffect(x: number, y: number) {
         const flash = this.add.circle(x, y, this.tileSize * 0.28, 0x66ffcc, 0.82);
+
         flash.setDepth(998);
 
         this.tweens.add({
@@ -897,78 +944,87 @@ class Level6 extends Phaser.Scene {
     }
 
     private clearLevelObjects() {
-        if (this.player && this.player.body) this.player.setVelocity(0, 0);
-        if (this.viruses) this.viruses.clear(true, true);
-        if (this.player && this.player.active) this.player.destroy();
+        if (this.player && this.player.body) {
+            this.player.setVelocity(0, 0);
+        }
+
+        if (this.viruses) {
+            this.viruses.clear(true, true);
+        }
+
+        if (this.player && this.player.active) {
+            this.player.destroy();
+        }
     }
 
     private completeLevel() {
-        if (this.gameEnded) return;
+    if (this.gameEnded) return;
 
-        this.gameEnded = true;
-        this.physics.pause();
-        this.clearLevelObjects();
+    this.gameEnded = true;
+    this.physics.pause();
+    this.clearLevelObjects();
 
-        this.postGameManager.showWinScreen();
+    // Sblocca il final boss nel menu
+    localStorage.setItem('FINAL_BOSS_UNLOCKED', 'true');
 
-        this.time.delayedCall(150, () => {
-            this.createFinalBossButton();
+    this.postGameManager.showWinScreen();
+
+    this.time.delayedCall(150, () => {
+        this.createFinalBossButton();
+    });
+}
+
+    private createFinalBossButton() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        const buttonWidth = 320;
+        const buttonHeight = 70;
+
+        const buttonX = width / 2;
+        const buttonY = height * 0.52;
+
+        const button = this.add.rectangle(
+            buttonX,
+            buttonY,
+            buttonWidth,
+            buttonHeight,
+            0x3f5f95,
+            1
+        );
+
+        button.setDepth(10000);
+        button.setStrokeStyle(4, 0xffffff, 1);
+        button.setInteractive({ useHandCursor: true });
+
+        const buttonText = this.add.text(
+            buttonX,
+            buttonY,
+            'Go to the final game!',
+            {
+                fontFamily: 'Arial',
+                fontSize: '28px',
+                color: '#ffffff',
+                fontStyle: 'bold'
+            }
+        );
+
+        buttonText.setOrigin(0.5);
+        buttonText.setDepth(10001);
+
+        button.on('pointerover', () => {
+            button.setFillStyle(0x5276b8, 1);
+        });
+
+        button.on('pointerout', () => {
+            button.setFillStyle(0x3f5f95, 1);
+        });
+
+        button.on('pointerdown', () => {
+            window.location.href = '/pages/final_boss.html';
         });
     }
 
-    private createFinalBossButton() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
-
-    // Stesse dimensioni del bottone Menu
-    const buttonWidth = 320;
-    const buttonHeight = 70;
-
-    const buttonX = width / 2;
-
-    // Sopra il bottone Menu, che resta fisso
-    const buttonY = height * 0.52;
-
-    const button = this.add.rectangle(
-        buttonX,
-        buttonY,
-        buttonWidth,
-        buttonHeight,
-        0x3f5f95,
-        1
-    );
-
-    button.setDepth(10000);
-    button.setStrokeStyle(4, 0xffffff, 1);
-    button.setInteractive({ useHandCursor: true });
-
-    const buttonText = this.add.text(
-        buttonX,
-        buttonY,
-        'Go to the final game!',
-        {
-            fontFamily: 'Arial',
-            fontSize: '28px',
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }
-    );
-
-    buttonText.setOrigin(0.5);
-    buttonText.setDepth(10001);
-
-    button.on('pointerover', () => {
-        button.setFillStyle(0x5276b8, 1);
-    });
-
-    button.on('pointerout', () => {
-        button.setFillStyle(0x3f5f95, 1);
-    });
-
-    button.on('pointerdown', () => {
-        window.location.href = '/pages/final_boss.html';
-    });
-}
     private loseGame() {
         if (this.gameEnded) return;
 
@@ -999,13 +1055,16 @@ class Level6 extends Phaser.Scene {
 
 const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
+
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 1920,
         height: 1080
     },
+
     parent: 'game-container',
+
     physics: {
         default: 'arcade',
         arcade: {
@@ -1016,9 +1075,11 @@ const config: Phaser.Types.Core.GameConfig = {
             }
         }
     },
+
     render: {
         roundPixels: true
     },
+
     scene: [Level6]
 };
 

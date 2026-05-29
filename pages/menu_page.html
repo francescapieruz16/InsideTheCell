@@ -4,15 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InsideTheCell</title>
-  <style>
 
+  <style>
     body, html {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100vh;
       font-family: Arial, sans-serif;
-      overflow: hidden; 
+      overflow: hidden;
     }
 
     #background {
@@ -21,18 +21,17 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      object-fit: cover; /* Mantiene le proporzioni coprendo tutto lo schermo */
-      z-index: -1; 
+      object-fit: cover;
+      z-index: -1;
     }
 
-    /* Contenitore flessibile per centrare i livelli */
     .level-container {
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      gap: 15px; /* Spazio uniforme tra i bottoni */
+      gap: 15px;
     }
 
     button {
@@ -47,7 +46,7 @@
     }
 
     .level-btn {
-      background-color: #FF3E00; 
+      background-color: #FF3E00;
       color: white;
       border: 3px solid white;
       padding: 15px 40px;
@@ -61,6 +60,22 @@
       transform: scale(1.05);
     }
 
+    .final-boss-btn {
+      background-color: #3f5f95;
+      color: white;
+      border: 3px solid white;
+      padding: 15px 40px;
+      font-size: 1.5rem;
+      box-shadow: 0 4px #1b5e20;
+      width: 250px;
+      display: none;
+    }
+
+    .final-boss-btn:hover {
+      background-color: #5276b8;
+      transform: scale(1.05);
+    }
+
     button:hover {
       background-color: rgba(255, 255, 255, 1);
       transform: scale(1.05);
@@ -68,18 +83,17 @@
 
     .corner-btn {
       position: absolute;
-      
     }
 
     #Tutorial {
       bottom: 100px;
-      left:100px;
+      left: 100px;
       padding: 30px 60px;
-        font-size: 1.5rem;
-        background-color: #19c482e7; 
-        color: white;
-        border: 3px solid white;
-          box-shadow: 0 4px #1b5e20;
+      font-size: 1.5rem;
+      background-color: #19c482e7;
+      color: white;
+      border: 3px solid white;
+      box-shadow: 0 4px #1b5e20;
     }
 
     #Options {
@@ -91,14 +105,14 @@
       top: 20px;
       left: 20px;
     }
-
-
   </style>
 </head>
+
 <body>
   <div id="app"></div>
+
   <img id="background" src="/assets/backgroundlevelselection.png" alt="Sfondo selezione livello"/>
-  
+
   <button id="Back" class="corner-btn">Back</button>
   <button id="Options" class="corner-btn">Options</button>
   <button id="Tutorial" class="corner-btn">Tutorial Zone</button>
@@ -110,8 +124,12 @@
     <button id="Level4" class="level-btn">Level 4</button>
     <button id="Level5" class="level-btn">Level 5</button>
     <button id="Level6" class="level-btn">Level 6</button>
+
+    <button id="FinalBoss" class="final-boss-btn">
+      Final Game
+    </button>
   </div>
-  
+
   <script type="module" src="/src/menu_page.ts"></script>
 </body>
 </html>

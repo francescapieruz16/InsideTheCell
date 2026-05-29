@@ -61,11 +61,60 @@
             ]
         },
         "minigame_6": {
-            "description": "The objective of the minigame is to prevent the newly formed viruses from leaving the cell. Stop them before they escape and infect other cells.",
-            "knowledge": "The final stage of the viral lifecycle is release or egress. The newly assembled viruses break out of the host cell to infect neighboring cells, often destroying the host cell in the process.",
+            "description": "The objective of the minigame represents the release stage of the viral infection cycle. After new viral particles have been assembled inside the host cell, they leave the cell and can spread to infect other cells. The player controls an antibody-like character and must stop the released viruses before they spread further.",
+            "knowledge": "The final stage of many viral infection cycles is release. After viral components are copied and assembled into new virus particles, these particles leave the host cell. Some viruses exit by budding through the cell membrane, while others can cause the host cell to break open, a process called lysis. Once released, new viruses can spread and infect other cells. The immune system, including antibodies, helps recognize and neutralize viruses after they are released. Vaccination prepares the immune system to respond faster and more effectively when it encounters the virus.",
             "quizzes": [
-                "What is the final stage of the viral lifecycle?\na(T): Release or egress\nb(F): Binding\nc(F): Genome Replication"
+                "What is the release stage of a viral infection cycle?\na(F): The virus enters the cell for the first time\nb(T): New virus particles leave the host cell\nc(F): The cell destroys all viral particles before they form",
+                "What usually happens before viruses are released?\na(T): Viral components are copied and assembled into new virus particles\nb(F): The virus turns into a healthy cell part\nc(F): The immune system builds the viral genome",
+                "What can newly released viruses do?\na(F): They always disappear immediately\nb(T): They can spread and infect other cells\nc(F): They become antibodies",
+                "What is budding?\na(F): When a virus deletes its genetic material\nb(T): When a virus exits through the cell membrane\nc(F): When a cell becomes immune forever",
+                "What is lysis?\na(T): When a host cell breaks open and releases new viruses\nb(F): When a virus quietly enters another virus\nc(F): When antibodies assemble new viral particles",
+                "Why is viral release important for infection spread?\na(F): It keeps all viruses trapped inside one cell\nb(F): It stops the infection immediately\nc(T): It allows newly formed viruses to reach and infect other cells"
             ]
-        }
+        },
+
+
+
+"final_boss": {
+    "description": "The final boss quiz challenges the player to review all six phases of the viral infection cycle. The player must answer questions about binding, entry, genome release, genome replication, viral assembly, and viral release in order to defeat the final virus boss.",
+    "knowledge": "A viral infection cycle can be divided into six main phases. First, during binding, the virus attaches to specific receptors on the host cell using surface proteins. Second, during entry, the virus crosses the cell membrane through mechanisms such as membrane fusion or endocytosis. Third, during genome release, also called uncoating, the virus releases its genetic material inside the host cell. Fourth, during genome replication, the virus copies its genetic material to make new viral instructions. Fifth, during viral assembly, copied genomes and viral proteins come together to form new virus particles. Sixth, during viral release, the newly formed viruses leave the host cell, sometimes by budding through the membrane or by lysis, where the cell breaks open. Antibodies and vaccination help the immune system recognize and neutralize viruses more effectively.",
+    "quizzes": [
+        "What happens during viral release?\na(T): Newly formed viruses leave the host cell\nb(F): The virus attaches to the host cell for the first time\nc(F): The viral genome is copied for the first time\nexplanation: Viral release is the final phase, when newly formed viruses leave the host cell and can spread to infect other cells.",
+
+        "What does the virus use to attach to the host cell during binding?\na(F): Antibodies\nb(T): Surface proteins\nc(F): Mitochondria\nexplanation: During binding, viral surface proteins recognize and attach to specific receptors on the host cell.",
+
+        "What happens during genome replication?\na(T): The virus copies its genetic material\nb(F): The virus exits through the membrane\nc(F): The virus attaches to a receptor\nexplanation: During genome replication, the virus makes new copies of its genetic instructions so more virus particles can be produced.",
+
+        "Which process can help a virus enter a host cell?\na(T): Endocytosis\nb(F): Budding\nc(F): Lysis\nexplanation: Endocytosis is one way a virus can enter a host cell after binding to the cell surface.",
+
+        "What happens during viral assembly?\na(F): The virus enters the host cell for the first time\nb(T): Viral components come together to form new virus particles\nc(F): The cell membrane disappears\nexplanation: During assembly, copied viral genomes and viral proteins are put together to form new virus particles.",
+
+        "What is another name for genome release?\na(T): Uncoating\nb(F): Binding\nc(F): Budding\nexplanation: Genome release is also called uncoating because the virus opens and releases its genetic material inside the host cell.",
+
+        "What is lysis?\na(F): When the virus attaches to a receptor\nb(T): When the host cell breaks open and releases viruses\nc(F): When the virus copies its genome\nexplanation: Lysis happens when the host cell breaks open, allowing newly formed viruses to escape.",
+
+        "Which phase happens first in many viral infection cycles?\na(T): Binding to specific receptors on the host cell\nb(F): Release from the host cell\nc(F): Assembly of new virus particles\nexplanation: Binding is usually the first step because the virus must attach to the correct host cell before it can enter.",
+
+        "Why does the virus need to replicate its genome?\na(F): To become a healthy cell\nb(T): To make new copies of its genetic instructions\nc(F): To remove its surface proteins\nexplanation: The virus needs genome replication to create more copies of the instructions used to build new viruses.",
+
+        "What happens during the entry phase?\na(F): The virus leaves the host cell\nb(T): The virus crosses the cell membrane\nc(F): The virus becomes an antibody\nexplanation: During entry, the virus crosses the cell membrane and gets inside the host cell.",
+
+        "Which materials are used during viral assembly?\na(T): Copied viral genomes and viral proteins\nb(F): Antibodies and oxygen molecules\nc(F): Healthy cell receptors only\nexplanation: New virus particles are assembled from copied viral genomes and viral proteins.",
+
+        "What happens during genome release?\na(F): The virus attaches to receptors\nb(T): The virus releases its genetic material inside the host cell\nc(F): New viruses leave the cell\nexplanation: During genome release, the virus releases its genetic material so it can begin using the host cell machinery.",
+
+        "What is budding?\na(F): When antibodies build new viruses\nb(F): When the virus destroys its own genome\nc(T): When a virus exits through the cell membrane\nexplanation: Budding is a release method where a virus exits through the host cell membrane.",
+
+        "Why are host cell receptors important during binding?\na(F): They copy the viral genome\nb(F): They destroy all viruses immediately\nc(T): They allow the virus to attach to the correct cell\nexplanation: Receptors are important because viruses often need specific receptors to attach to and infect a cell.",
+
+        "What can replication errors cause?\na(F): The virus immediately becomes harmless\nb(F): The host cell becomes a receptor\nc(T): Unstable or mutated viral copies\nexplanation: Replication errors can change the copied genetic material, sometimes creating unstable or mutated viral copies.",
+
+        "Why is stopping entry important?\na(F): It helps the virus copy its genome\nb(T): It can prevent the infection from progressing inside the cell\nc(F): It makes the virus assemble faster\nexplanation: If the virus cannot enter the host cell, it cannot release its genome or use the cell to make more viruses.",
+
+        "Why is uncontrolled viral assembly dangerous?\na(F): It stops all infection immediately\nb(F): It prevents new virus particles from forming\nc(T): It can produce many new virus particles\nexplanation: If viral assembly is uncontrolled, many new virus particles can form and continue the infection.",
+
+        "Why is genome release dangerous for the host cell?\na(F): It prevents the virus from entering\nb(F): It turns the virus into an antibody\nc(T): The viral genome can begin using the host cell machinery\nexplanation: Once the viral genome is released, it can use the host cell machinery to produce viral components."
+    ]
+}
     }
 }

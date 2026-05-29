@@ -62,8 +62,13 @@
             "dialogue_3": "Remember that after genome replication, viral components can assemble into new virus particles.\nIn this level, your goal is to contain that process: merge matching components, clear the largest structures, and stop the box from overflowing above the red line."
         },
         "minigame_6": {
-            "dialogue_1": "The new virions are trying to escape the host cell.",
-            "dialogue_2": "Stop the egress phase to prevent the infection from spreading further!"
+            "dialogue_1": "The viruses spread through the cell environment! You were not able to capture enough viruses in time. After new virus particles are assembled, they can spread and infect other cells.",
+            "dialogue_2": "The immune system can fight viruses using antibodies, which help recognize and neutralize them. Vaccination helps the immune system respond faster and more effectively. This represents the final step of infection control.",
+            "dialogue_3": "Remember that after new virus particles are assembled, they can spread and infect other cells. Antibodies and vaccination help the immune system recognize and neutralize viruses faster."
+        },
+        "final_boss": {
+            "dialogue_1": "We made it to the final challenge! Answer the questions correctly to weaken the boss. If you answer wrong, the boss grows stronger. ",
+            "dialogue_2": "Ready? Let's finish this mission!"
         }
     },
     "post_minigames" : {

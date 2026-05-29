@@ -1,0 +1,76 @@
+{
+    "tutorials": {
+        "tutorial_1": {
+            "dialogue_1": "Hey! I am A.B.I.: Advanced Biometric Informer! I will be your assistant during this exploration!", 
+            "dialogue_2": "We are in the extracellular space. Below us is the plasma membrane. To enter, we will mimic the infection strategy of the Coronavirus.", 
+            "dialogue_3": "The virus uses a specific 'molecular handshake': its Spike protein must bind to a human receptor called ACE2 to unlock the cell.",
+            "dialogue_4": "Step 1: Locate the target gateway. You must search the membrane and find the ACE2 receptor first, just like a real virus would.",
+            "dialogue_5": "Step 2: Once scanned, our systems will calculate the exact shape of the Spike protein fragments we need to synthesize the key.",
+            "dialogue_6": "Step 3: Only then can we scavenge those floating viral remnants to extract the necessary protein components.",
+            "dialogue_7": "Let's move! Explore the area and locate the ACE2 receptor first!",
+            "dialogue_8": "Great job! You've retrieved a Spike Protein Module. Our external surface now perfectly mimics the envelope of SARS-CoV-2. We can trick the ACE2 receptor. Let's return to the docking point.",
+            "dialogue_9": "Excellent! Target identified: the Angiotensin-Converting Enzyme 2 (ACE2) receptor. This is our gateway. However, we cannot trigger endocytosis without the correct molecular key. Search the viral debris scattered nearby for Spike protein fragments!",
+            "dialogue_10": "This is the correct ACE2 receptor, but access is denied. Our biochemical affinity is currently insufficient. We need to fully assemble the Spike Module first. Let's search the area for usable viral debris to extract the missing components.",
+            "dialogue_11": "Molecular recognition confirmed. Docking sequence initiated. Hold on tight, the membrane is forming an invagination to pull us inside!",
+            "dialogue_12": "Wait! Don't extract random materials yet. We must locate our specific target, the ACE2 receptor, before we know exactly which viral components we need to synthesize the key.",
+            "dialogue_13": "Usable protein fragment extracted! We currently have 1 out of 3 necessary components. Let's keep searching the area for more viable debris.",
+            "dialogue_14": "Usable protein fragment extracted! We currently have 2 out of 3 necessary components. Let's keep searching the area for more viable debris.",
+            "dialogue_15": "Third fragment acquired! The Spike Module is fully assembled. Our hull now mimics the viral envelope perfectly. Let's locate the specific ACE2 receptor and initiate docking.",
+            "dialogue_16": "Scanning... Negative. This viral particle is too degraded. The glycoproteins have completely denatured. There is nothing useful to extract here.",
+            "dialogue_17": "Negative. This is not the target receptor. The molecular structure does not match our parameters. We need to find the specific Angiotensin-Converting Enzyme 2 (ACE2) to gain entry."
+        },
+        "tutorial_2": {
+            "dialogue_1": "We're inside the cytoplasm! It's a maze of cytoskeletal filaments. We must navigate carefully to reach the nuclear pore, our next destination.",
+            "dialogue_2_1": "Warning. I am detecting the hardened remains of an unknown pathogen.",
+            "dialogue_2_2": "A previous viral incursion that failed to breach the cortical matrix and got entombed in the membrane.",
+            "dialogue_2_3": "A grim reminder of our mission's stakes. We must find the correct path.",
+            "dialogue_3_1": "Path blocked. Scanners show a massive accumulation of crystallized cholesterol molecules.",
+            "dialogue_3_2": "It seems the host organism has built up rigid 'lipid icebergs' within its fluid membrane.",
+            "dialogue_4": "Nuclear pore complex breached. We are proceeding into the cytoplasm. Brace for environmental shift."
+        },
+        "tutorial_3": {
+            "dialogue_1": "Your primary objective is to defend the cell at all costs.",
+            "dialogue_2": "If you fail, the virus will take over. Good luck!"
+        }
+    },
+    "minigames": {
+        "minigame_1": {
+            "dialogue_1": "The virus reached the cell!",
+            "dialogue_2": "You were not able to stop it in time.\nThe virus reached the receptors on the surface of the cell and attached to it.\nThis is the first step of the infection.",
+            "dialogue_3": "Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key."
+        },
+        "minigame_2": {
+            "dialogue_1": "Viruses entered the membrane!",
+            "dialogue_2": "You were not able to stop them in time.\nThe virus fused with the cell membrane.\nThis is the second step of the infection.",
+            "dialogue_3": "Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane.\nThey do this through mechanisms like membrane fusion or endocytosis.\nStopping the virus before it enters is essential to prevent the infection from progressing."
+        },
+        "minigame_3": {
+            "dialogue_1": "The viral genome was released!",
+            "dialogue_2": "You were not able to reach the end in time.\nThe virus opened and released its genetic material inside the cell.\nNow the viral genome can take control of the host cell machinery and start producing new viral components.\nThis is the third step of the infection.",
+            "dialogue:3": "Remember that after entering the cell, the virus releases its genetic material during a process called genome release or uncoating.\nOnce the viral genome is free inside the host cell, it can take control of the cell machinery and start producing new viral components."
+
+        },
+        "minigame_4": {
+            "dialogue_1": "Replication error detected!",
+            "dialogue_2": "You matched unstable genetic material.\nDuring genome replication, the virus tries to copy its genetic instructions inside the host cell.\nMutation and replication-error fragments can make the copied genome unstable.\nMutation and replication-error fragments can make the copied genome unstable.",
+            "dialogue_3": "Remember that after genome release, the virus must copy its genetic material.\nIn this level, the correct memory cards represent stable genome components, while the buffer cards represent mutations or replication errors."
+
+        },
+        "minigame_5": {
+            "dialogue_1": "Viral assembly escaped containment!",
+            "dialogue_2": "The box overflowed above the red line.\nToo many viral parts accumulated and assembly became uncontrolled.\nTo defeat the virus, keep components contained and prevent overflow.\nThis represents the fifth step of infection.",
+            "dialogue_3": "Remember that after genome replication, viral components can assemble into new virus particles.\nIn this level, your goal is to contain that process: merge matching components, clear the largest structures, and stop the box from overflowing above the red line."
+        },
+        "minigame_6": {
+            "dialogue_1": "The new virions are trying to escape the host cell.",
+            "dialogue_2": "Stop the egress phase to prevent the infection from spreading further!"
+        }
+    },
+    "post_minigames" : {
+        "dialogue_1": "Why do you think you lost?",
+        "dialogue_2": "Do you have any other questions?\nIf not, proceed to the quiz.",
+        "dialogue_3": "Let's proceed to the quiz!",
+        "dialogue_4": "Correct! You are now vaccinated!",
+        "dialogue_5": "Wrong answer. Try again!"
+    }
+}

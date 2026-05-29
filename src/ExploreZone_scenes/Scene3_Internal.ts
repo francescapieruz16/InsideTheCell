@@ -16,7 +16,7 @@ export default class Scene3_Internal extends Phaser.Scene {
 
     preload() {
         // Carichiamo l'immagine che useremo per lo sfondo scorrevole
-        this.load.image('background_scene3', '/assets/tutorial/sfondi/scene2_background.png'); // ATTENZIONE: Sostituisci con il percorso reale!
+        this.load.image('background_scene3', '/assets/tutorial/sfondi/scene3_background3.png'); // ATTENZIONE: Sostituisci con il percorso reale!
     }
 
     constructor() {
@@ -46,6 +46,8 @@ export default class Scene3_Internal extends Phaser.Scene {
             WORLD_SIZE,
             'background_scene3'
         ).setDepth(-1); // Lo mettiamo dietro a tutto
+
+        this.background_scene.setTileScale(0.25, 0.25);
 
         // 4. Creiamo il giocatore al centro del mondo
         this.player = new Spaceship(this, WORLD_SIZE / 2, WORLD_SIZE / 2, this.startingTexture);
@@ -93,7 +95,7 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.player.update();
 
         // Facciamo scorrere lo sfondo per dare un'illusione di movimento e profondità
-        this.background_scene.tilePositionX += 0.2;
-        this.background_scene.tilePositionY += 0.1;
+        this.background_scene.tilePositionX += 0.25;
+        this.background_scene.tilePositionY += 0.15;
     }
 }

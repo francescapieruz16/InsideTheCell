@@ -81,6 +81,7 @@ export class ChatManager {
     public show() {
         this.chatInput.value = '';
         this.chatUi.style.display = 'flex';
+        this.chatUi.style.pointerEvents = 'auto';
         this.onChatStateChange(true);
         setTimeout(() => this.chatInput.focus(), 50);
     }

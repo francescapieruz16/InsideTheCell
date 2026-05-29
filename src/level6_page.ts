@@ -910,8 +910,65 @@ class Level6 extends Phaser.Scene {
         this.clearLevelObjects();
 
         this.postGameManager.showWinScreen();
+
+        this.time.delayedCall(150, () => {
+            this.createFinalBossButton();
+        });
     }
 
+    private createFinalBossButton() {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    // Stesse dimensioni del bottone Menu
+    const buttonWidth = 320;
+    const buttonHeight = 70;
+
+    const buttonX = width / 2;
+
+    // Sopra il bottone Menu, che resta fisso
+    const buttonY = height * 0.52;
+
+    const button = this.add.rectangle(
+        buttonX,
+        buttonY,
+        buttonWidth,
+        buttonHeight,
+        0x3f5f95,
+        1
+    );
+
+    button.setDepth(10000);
+    button.setStrokeStyle(4, 0xffffff, 1);
+    button.setInteractive({ useHandCursor: true });
+
+    const buttonText = this.add.text(
+        buttonX,
+        buttonY,
+        'Go to the final game!',
+        {
+            fontFamily: 'Arial',
+            fontSize: '28px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }
+    );
+
+    buttonText.setOrigin(0.5);
+    buttonText.setDepth(10001);
+
+    button.on('pointerover', () => {
+        button.setFillStyle(0x5276b8, 1);
+    });
+
+    button.on('pointerout', () => {
+        button.setFillStyle(0x3f5f95, 1);
+    });
+
+    button.on('pointerdown', () => {
+        window.location.href = '/pages/final_boss.html';
+    });
+}
     private loseGame() {
         if (this.gameEnded) return;
 

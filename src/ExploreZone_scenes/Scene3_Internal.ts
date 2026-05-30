@@ -122,17 +122,17 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_2);
         this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_3);
 
-        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_1);
-        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_2);
-        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_3);
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogue_Log1_1);
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogue_Log1_2);
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogue_Log1_3);
 
-        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_1);
-        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_2);
-        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_3);
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogue_Log2_1);
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogue_Log2_2);
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogue_Log2_3);
 
-        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_1);
-        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_2);
-        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_3);
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogue_Log3_1);
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogue_Log3_2);
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogue_Log3_3);
 
 
 
@@ -422,7 +422,7 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.dataLogsGroup.getChildren().forEach((child) => {
             const log = child as Phaser.GameObjects.Sprite;
             log.setDisplaySize(100, 100); // Regola la grandezza se necessario
-            log.refreshBody(); // Aggiorna la hitbox dopo aver cambiato la grandezza
+            //log.refreshBody; // Aggiorna la hitbox dopo aver cambiato la grandezza
             log.setTint(0xff5555); // Una leggera tinta rossa/allarme per farli risaltare
             
             // Effetto fluttuante per indicare che si può interagire

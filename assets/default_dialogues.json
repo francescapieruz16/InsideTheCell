@@ -28,9 +28,35 @@
             "dialogue_3_2": "It seems the host organism has built up rigid 'lipid icebergs' within its fluid membrane.",
             "dialogue_4": "Nuclear pore complex breached. We are proceeding into the cytoplasm. Brace for environmental shift."
         },
+
+
         "tutorial_3": {
-            "dialogue_1": "Your primary objective is to defend the cell at all costs.",
-            "dialogue_2": "If you fail, the virus will take over. Good luck!"
+            "dialogue_1":   "We have successfully entered the cytoplasm. The environment is vast and teeming with organelles. Our next objective is to locate the Endoplasmic Reticulum.",
+            "dialogue_2_1": "We are approaching a cluster of Mitochondria—the power plants of the cell.",
+            "dialogue_2_2": "Through cellular respiration, they burn nutrients floating in the cytoplasm to produce ATP, which is the actual chemical fuel used by the cell to function.",
+            "dialogue_3_1": "Those green spheres ahead are Lysosomes, the cell's waste disposal and defense system.",
+            "dialogue_3_2": "They are packed with highly acidic digestive enzymes that destroy worn-out organelles and eliminate invading bacteria. Don't crash into them.",
+            "dialogue_4_1": "This large structure is the Golgi Apparatus, the shipping and logistics hub of the cell.",
+            "dialogue_4_2": "It receives raw proteins from the reticulum, chemically modifies them, packages them into bubbles called vesicles, and ships them to their final destinations.",
+            "dialogue_5_1": "We are inside the Smooth Endoplasmic Reticulum (SER), a network of smooth, continuous tubules.",
+            "dialogue_5_2": "Unlike the rough part, it does not deal with proteins; its main job is to synthesize lipids (fats) and detoxify the cell by neutralizing harmful toxins.",
+            "dialogue_6_1": "These walls belong to the Rough Endoplasmic Reticulum (RER). Those beads on the surface are Ribosomes.",
+            "dialogue_6_2": "The ribosomes act as assembly lines that build proteins based on DNA instructions, while the RER collects and folds them before shipping.",
+            "dialogue_7_1": "We have reached the heart of the cell: the Nucleus. This organelle acts as the master vault, safely protecting the DNA from the hazards of the cytoplasm.",
+            "dialogue_7_2": "Every biological process you witnessed—from energy production in the mitochondria to protein folding in the RER—is strictly regulated by instructions sent from here.",
+            "dialogue_7_3": "Our data extraction is now complete, and the cellular blueprint is secure. Mission accomplished, Commander. Let's chart a course for extraction and head back home.",
+
+            "dialogueLog1_1": "Encrypted viral fragment recovered. This signature belongs to a positive-sense single-stranded RNA virus, like the common cold or SARS-CoV-2.",
+            "dialogueLog1_2": "Think of them as 'lazy hackers'. Their RNA is already formatted exactly like our own cellular mRNA.",
+            "dialogueLog1_3": "Because of this, our ribosomes will blindly read it and start manufacturing new virus copies immediately, without ever needing to breach the Nucleus.",
+
+            "dialogueLog2_1": "Viral signature analyzed. Warning: this data fragment belongs to a Retrovirus, such as HIV.",
+            "dialogueLog2_2": "These pathogens are highly insidious. They carry a special enzyme that converts their RNA payload backwards into DNA.",
+            "dialogueLog2_3": "Once converted, they sneak into the Nucleus and permanently stitch their malicious code directly into the cell's master DNA.",
+
+            "dialogueLog3_1": "Fragment decoded. This signature matches a standard DNA virus, similar to an Adenovirus.",
+            "dialogueLog3_2": "Unlike RNA viruses, these cannot replicate in the cytoplasm. Their primary target is the highly secured Nucleus.",
+            "dialogueLog3_3": "They must breach the nuclear membrane to hijack our master polymerases, using our own machinery to mass-produce their genetic material."
         }
     },
     "minigames": {

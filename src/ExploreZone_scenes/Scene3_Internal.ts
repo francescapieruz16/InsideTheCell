@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 
 import ABI from '../classes/abi';
 import Spaceship from '../classes/spaceship';
+import defaultDialogues from '../../assets/default_dialogues.json';
 
 export default class Scene3_Internal extends Phaser.Scene {
 
@@ -13,10 +14,66 @@ export default class Scene3_Internal extends Phaser.Scene {
     private abi!: ABI;
 
     private background_scene!: Phaser.GameObjects.TileSprite;
+    private background_deep!: Phaser.GameObjects.TileSprite;
+
+    private lysosomesGroup!: Phaser.Physics.Arcade.StaticGroup;
+    private mitochondriaGroup!: Phaser.Physics.Arcade.StaticGroup;
+
+    private relWallsGroup!: Phaser.Physics.Arcade.StaticGroup;
+    private rerWallsGroup!: Phaser.Physics.Arcade.StaticGroup;
+
+    private relTriggerGroup!: Phaser.Physics.Arcade.StaticGroup;
+    private rerTriggerGroup!: Phaser.Physics.Arcade.StaticGroup;
+
+    //dialoghi
+    private dialogue1: string = "";
+    
+    private dialogue2: any = [];
+    private dialogue3: any = [];
+    private dialogue4: any = [];
+    private dialogue5: any = [];
+    private dialogue6: any = [];
+    private dialogue7: any = [];
+
+    // --- DIALOGHI DATA LOG VIRALI ---
+    private dialogueLog1: any= [];
+    private dialogueLog2: any= [];
+    private dialogueLog3: any= [];
+    
+    private dataLogsGroup!: Phaser.Physics.Arcade.StaticGroup;
+
+    // --- VARIABILI COOLDOWN E FLAG DIALOGHI ---
+    private lastMitoDialogueTime: number = 0; 
+    private lastLysoDialogueTime: number = 0;
+    private lastGolgiDialogueTime: number = 0;
+    private lastNucleusDialogueTime: number = 0; // Per il Nucleo
+    private readonly DIALOGUE_COOLDOWN: number = 1000;
+
+    private lastLog1Time: number = 2000;
+    private lastLog2Time: number = 2000;
+    private lastLog3Time: number = 2000;
+
+    private hasTriggeredSER: boolean = false; // Trigger unico
+    private hasTriggeredRER: boolean = false; // Trigger unico
+
+
 
     preload() {
         // Carichiamo l'immagine che useremo per lo sfondo scorrevole
-        this.load.image('background_scene3', '/assets/tutorial/sfondi/scene3_background3.png'); // ATTENZIONE: Sostituisci con il percorso reale!
+        this.load.image('background_scene3', '/assets/tutorial/sfondi/scene3_background4.png'); 
+        this.load.image('organelle_lysosome', '/assets/tutorial/obstacles/lysosome4.png'); 
+        this.load.image('organelle_mitochondrion', '/assets/tutorial/obstacles/mitochondrion2.png');
+        this.load.image('organelle_golgi', '/assets/tutorial/obstacles/golgi3.png');
+        this.load.image('golgi_wall', '/assets/tutorial/obstacles/golgi_wall.png');
+        this.load.image('nucleo', '/assets/tutorial/obstacles/nucleo.png');
+        this.load.image('organelle_rel_tile', '/assets/tutorial/obstacles/REL3.png');
+        this.load.image('organelle_rer_tile', '/assets/tutorial/obstacles/RER3.png');
+        this.load.image('background_deep', '/assets/tutorial/sfondi/scene3_background_deep.png');
+        this.load.image('circle', '/assets/tutorial/sfondi/circle.png');
+
+        this.load.image('virus_debris_1', '/assets/tutorial/virus/virus1.png');
+        this.load.image('virus_debris_2', '/assets/tutorial/virus/virus2.png');
+        this.load.image('virus_debris_3', '/assets/tutorial/virus/virus3.png');
     }
 
     constructor() {
@@ -31,28 +88,382 @@ export default class Scene3_Internal extends Phaser.Scene {
     }
 
     create() {
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+                let allDialogues = null;    
+                if (savedDialogues) {
+                    try {
+                        allDialogues = JSON.parse(savedDialogues);
+                    } catch (e) {
+                        console.warn("Error reading saved dialogues. Using defaults.", e);
+                        allDialogues = defaultDialogues;
+                    }
+                } else {
+                    allDialogues = defaultDialogues;
+                }
+        
+        this.dialogue1 = allDialogues.tutorials.tutorial_3.dialogue_1;
+
+        this.dialogue2.push(allDialogues.tutorials.tutorial_3.dialogue_2_1);
+        this.dialogue2.push(allDialogues.tutorials.tutorial_3.dialogue_2_2);
+
+        this.dialogue3.push(allDialogues.tutorials.tutorial_3.dialogue_3_1);
+        this.dialogue3.push(allDialogues.tutorials.tutorial_3.dialogue_3_2);
+
+        this.dialogue4.push(allDialogues.tutorials.tutorial_3.dialogue_4_1);
+        this.dialogue4.push(allDialogues.tutorials.tutorial_3.dialogue_4_2);
+
+        this.dialogue5.push(allDialogues.tutorials.tutorial_3.dialogue_5_1);
+        this.dialogue5.push(allDialogues.tutorials.tutorial_3.dialogue_5_2);
+
+        this.dialogue6.push(allDialogues.tutorials.tutorial_3.dialogue_6_1);
+        this.dialogue6.push(allDialogues.tutorials.tutorial_3.dialogue_6_2);
+
+        this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_1);
+        this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_2);
+        this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_3);
+
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_1);
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_2);
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_3);
+
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_1);
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_2);
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_3);
+
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_1);
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_2);
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_3);
+
+
+
         // 1. Definiamo una dimensione molto grande per il nostro mondo di gioco
-        const WORLD_SIZE = 4000;
+        const WORLD_SIZE = 6000;
+        const CENTER_X = WORLD_SIZE / 2;
+        const CENTER_Y = WORLD_SIZE / 2;
+
+        const membrane = this.add.image(CENTER_X, CENTER_Y, 'circle');
+        
+        // Stira l'immagine 3k per coprire i 6k del mondo fisico
+        membrane.setDisplaySize(WORLD_SIZE, WORLD_SIZE);
+        
+        // Depth 100 garantisce che la maschera nera copra tutto ciò che c'è sotto, 
+        // inclusi gli organuli che potresti aver inavvertitamente piazzato negli angoli
+        membrane.setDepth(100);
 
         // 2. Impostiamo i limiti della fisica e della telecamera a questa dimensione
         this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
         this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-        // 3. Creiamo lo sfondo animato (TileSprite) che copre l'intero mondo
-        this.background_scene = this.add.tileSprite(
-            WORLD_SIZE / 2,
-            WORLD_SIZE / 2,
-            WORLD_SIZE,
-            WORLD_SIZE,
-            'background_scene3'
-        ).setDepth(-1); // Lo mettiamo dietro a tutto
+        // 1. Sfondo profondo (fuori fuoco)
+        this.background_deep = this.add.tileSprite(CENTER_X, CENTER_Y, WORLD_SIZE, WORLD_SIZE, 'background_deep')
+            .setDepth(-2)
+            .setTileScale(0.5, 0.5);
 
-        this.background_scene.setTileScale(0.25, 0.25);
+        // 2. Il tuo sfondo attuale (rimuovi il setDepth(-1) se lo avevi, 
+        // per farlo stare sopra background_deep ma sotto gli organuli)
+        this.background_scene = this.add.tileSprite(CENTER_X, CENTER_Y, WORLD_SIZE, WORLD_SIZE, 'background_scene3')
+            .setDepth(-1)
+            .setAlpha(0.75) // Leggermente trasparente per far intravedere il fondo!
+            .setTileScale(0.25, 0.25);
 
-        // 4. Creiamo il giocatore al centro del mondo
-        this.player = new Spaceship(this, WORLD_SIZE / 2, WORLD_SIZE / 2, this.startingTexture);
-        this.player.setScale(0.3); // Impostiamo una scala per la navicella
+
+        // --- 1. INIZIALIZZAZIONE GRUPPI ORGANULI ---
+        this.lysosomesGroup = this.physics.add.staticGroup();
+        this.mitochondriaGroup = this.physics.add.staticGroup();
+        this.relWallsGroup = this.physics.add.staticGroup();
+        this.rerWallsGroup = this.physics.add.staticGroup();
+
+            
+        const MITO_WIDTH = 500;
+        const MITO_HEIGHT = 300;
+        // Struttura:
+        // visX, visY, angle: Dove appare il disegno e come è ruotato
+        // hitX, hitY, hitW, hitH: Le coordinate ASSOLUTE NEL MONDO e le dimensioni del muro invisibile
+        const mitochondriaPositions = [
+            { 
+                visX: 2022, visY: 5352, angle: 0, 
+                hitX: 2022, hitY: 5352, hitW: 480, hitH: 280 
+            },
+            { 
+                visX: 1630, visY: 947, angle: 15, 
+                hitX: 1630, hitY: 947, hitW: 480, hitH: 300 
+            },
+            { 
+                visX: 742, visY: 4452, angle: 45, 
+                hitX: 742, hitY: 4452, hitW: 400, hitH: 450 
+            },
+            { 
+                visX: 4646, visY: 4857, angle: 315, 
+                hitX: 4646, hitY: 4857, hitW: 400, hitH: 450 
+            },
+            { 
+                visX: 4576, visY: 1115, angle: 215, 
+                hitX: 4576, hitY: 1115, hitW: 400, hitH: 450 
+            },
+            { 
+                visX: 5300, visY: 2800, angle: 270, 
+                hitX: 5300, hitY: 2800, hitW: 400, hitH: 450 
+            }
+        ];
+
+       
+
+        mitochondriaPositions.forEach(pos => {
+            
+            // --- 1. PARTE VISIVA (Nessuna fisica, solo grafica) ---
+            // Aggiungiamo l'aura luminosa
+            const glow = this.add.image(pos.visX, pos.visY, 'organelle_mitochondrion');
+            glow.setDisplaySize(MITO_WIDTH * 1.2, MITO_HEIGHT * 1.2); 
+            glow.setAngle(pos.angle); 
+            glow.setTint(0xffaa00); 
+            glow.setBlendMode(Phaser.BlendModes.ADD); 
+            glow.setAlpha(0.3); 
+            glow.setDepth(0); 
+
+            this.tweens.add({
+                targets: glow,
+                alpha: 0.6,
+                duration: 1500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+
+            // Aggiungiamo l'organulo visivo
+            const mitoVisual = this.add.image(pos.visX, pos.visY, 'organelle_mitochondrion');
+            mitoVisual.setDisplaySize(MITO_WIDTH, MITO_HEIGHT);
+            mitoVisual.setAngle(pos.angle);
+            mitoVisual.setDepth(1);
+
+
+            // --- 2. PARTE FISICA (Coordinate assolute nel mondo) ---
+            // Creiamo un rettangolo invisibile nel gruppo statico usando le tue coordinate esatte
+            const hitZone = this.add.zone(pos.hitX, pos.hitY, pos.hitW, pos.hitH);
+            this.physics.add.existing(hitZone, true); // true = corpo statico
+            
+            // Aggiungiamo la zona al gruppo per la collisione
+            this.mitochondriaGroup.add(hitZone);
+        });
+
+        // Fai la stessa identica cosa per i Lisosomi
+        const lysosomesPositions = [
+          { x: 2345, y: 547 },
+            { x: 3711, y: 1050 },
+            { x: 3661, y: 391 },
+            { x: 4915, y: 2077 },
+            { x: 4859, y: 3954 },
+            { x: 5766, y: 3284 },
+            { x: 4100, y: 5318 },
+            { x: 2722, y: 4899 },
+            { x: 2505, y: 5576 },
+            { x: 1176, y: 4131 },
+            { x: 581, y: 1827 }
+        ];
+
+        lysosomesPositions.forEach(pos => {
+            const lysosome = this.lysosomesGroup.create(pos.x, pos.y, 'organelle_lysosome');
+            lysosome.setDisplaySize(120, 120);
+            
+            const lysoBody = lysosome.body as Phaser.Physics.Arcade.Body;
+            lysoBody.setSize(120, 120);
+            lysoBody.updateFromGameObject();
+        });
+
+        // 4. Creiamo il giocatore
+        this.player = new Spaceship(this, CENTER_X, WORLD_SIZE - 300, this.startingTexture);        this.player.setScale(0.3); // Impostiamo una scala per la navicella
         (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+
+        //  =================================================
+        // --- CONFIGURAZIONE APPARATO DI GOLGI (DISACCOPPIATO) ---
+        // =========================================================
+
+        const GOLGI_WIDTH = 1200;
+        const GOLGI_HEIGHT = 800;
+        const golgiConfig = {
+            // Dati Visivi
+            visX: 700,
+            visY: 2400,
+            angle: 330, // Imposta qui l'angolo di rotazione manuale dello sprite (es. -30 gradi)
+
+            // Dati Fisici della Hitbox (Assoluti nel mondo)
+            // Centrati sulla parte solida reale dell'organulo
+            hitX: 700, // Spostiamo l'hitbox a sinistra per allinearla alla parte solida del Golgi
+            hitY: 2400,  // Spostiamo l'hitbox verso il basso per allinearla alla parte solida del Golgi
+            hitW: GOLGI_WIDTH *0.85,  // Larghezza del muro invisibile
+            hitH: GOLGI_HEIGHT *0.92   // Altezza del muro invisibile
+        };
+
+
+        // --- B. SPRITE VISIVO GOLGI ---
+        const golgiVisual = this.add.image(golgiConfig.visX, golgiConfig.visY, 'organelle_golgi');
+        golgiVisual.setDisplaySize(GOLGI_WIDTH, GOLGI_HEIGHT);
+        golgiVisual.setAngle(golgiConfig.angle); // Applica la rotazione visiva desiderata
+        golgiVisual.setDepth(1);
+
+        // --- C. HITBOX FISICA INVISIBILE (ZONA) ---
+        // Creiamo la zona statica usando le coordinate assolute dell'oggetto di configurazione
+        const golgiHitZone = this.add.zone(golgiConfig.hitX, golgiConfig.hitY, golgiConfig.hitW, golgiConfig.hitH);
+        this.physics.add.existing(golgiHitZone, true); // true = corpo statico
+
+    // NUCLEO
+        const NUCLEUS_X = WORLD_SIZE / 2; // Centriamo il nucleo orizzontalmente
+        const NUCLEUS_SIZE = 800;
+        const NUCLEUS_Y = WORLD_SIZE /2; 
+
+        const nucleus = this.physics.add.staticImage(NUCLEUS_X, NUCLEUS_Y, 'nucleo');
+        nucleus.setDisplaySize(NUCLEUS_SIZE, NUCLEUS_SIZE);
+        nucleus.refreshBody();
+        this.physics.add.collider(this.player, nucleus, () => {
+            this.handleNucleusCollision();
+        });
+
+        // =========================================================
+        // --- RETICOLO ENDOPLASMATICO (Matrice Unificata REL + RER) ---
+        // =========================================================
+        
+        this.relWallsGroup = this.physics.add.staticGroup();
+        this.rerWallsGroup = this.physics.add.staticGroup();
+
+        this.relTriggerGroup = this.physics.add.staticGroup();
+        this.rerTriggerGroup = this.physics.add.staticGroup();
+
+        
+
+        const ER_TILE_W = 128; // Esempio: largo il doppio
+        const ER_TILE_H = 128;  // Altezza invariata
+        
+        // Posizioniamo l'intera struttura al centro, sotto il Nucleo
+        const ER_START_X = 1350; 
+        const ER_START_Y = 1464; 
+
+        // 0 = Lume, 1 = REL, 2 = RER, 3 = Trigger Dialogo REL, 4 = Trigger Dialogo RER
+        const erGrid = [
+            [1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,3,3,1,1,1,1,1,1,1,1,1,0,0], // <-- 3: Ingressi REL Nord
+            [0,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0],
+            [0,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0],
+            [0,1,1,0,0,1,1,1,1,1,1,1,1,0,4,1,1,1,1,0,0,1,0,0], 
+            [0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0],
+            [1,0,1,0,0,1,0,4,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0], // <-- 4: Ingressi RER Nord
+            [1,0,1,0,0,1,0,0,2,2,2,0,0,2,2,2,2,2,1,0,0,1,0,0], 
+            [1,0,1,0,0,1,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,1,0,1],
+            [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,0,3,1], // <-- 3: Ingressi REL Laterali
+            [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,0,0,1], 
+            [0,0,1,0,0,1,1,1,2,2,0,0,0,0,0,0,2,2,0,0,0,0,0,1], 
+            [0,0,1,0,0,1,1,0,2,2,0,0,0,0,0,0,2,2,0,0,0,1,1,1],
+            [0,0,1,0,0,1,0,0,2,2,0,0,0,0,0,0,2,2,1,1,1,1,0,0],
+            [1,3,1,0,0,1,0,0,2,2,2,2,2,2,2,0,0,2,1,1,0,1,0,0], 
+            [1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,1,0,0], // <-- 4: Ingressi RER Sud
+            [1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,1,0,0],
+            [0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0], 
+            [0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+            [0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1],
+            [0,0,1,1,1,1,1,1,1,1,3,3,1,1,1,1,1,1,1,1,1,1,0,1], // <-- 3: Ingressi REL Sud
+            [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+            [0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0]
+        ];
+
+        // Generazione procedurale dell'intero labirinto 
+        for (let row = 0; row < erGrid.length; row++) {
+            for (let col = 0; col < erGrid[row].length; col++) {
+                
+                const cellValue = erGrid[row][col];
+                
+                if (cellValue !== 0) {
+                    const posX = ER_START_X + (col * ER_TILE_W) + (ER_TILE_W / 2);
+                    const posY = ER_START_Y + (row * ER_TILE_H) + (ER_TILE_H / 2);
+                    
+                    // --- MURI SOLIDI ---
+                    if (cellValue === 1 || cellValue === 2) {
+                        let wall;
+                        if (cellValue === 1) {
+                            wall = this.relWallsGroup.create(posX, posY, 'organelle_rel_tile');
+                        } else if (cellValue === 2) {
+                            wall = this.rerWallsGroup.create(posX, posY, 'organelle_rer_tile');
+                        }
+
+                        if (wall) {
+                            wall.setDisplaySize(ER_TILE_W, ER_TILE_H);
+                            wall.refreshBody(); 
+                        }
+                    } 
+                    // --- TRIGGER INVISIBILI (3 e 4) ---
+                    else if (cellValue === 3) {
+                        const trigger = this.add.zone(posX, posY, ER_TILE_W, ER_TILE_H);
+                        this.physics.add.existing(trigger, true); // true = corpo statico
+                        this.relTriggerGroup.add(trigger);
+                    }
+                    else if (cellValue === 4) {
+                        const trigger = this.add.zone(posX, posY, ER_TILE_W, ER_TILE_H);
+                        this.physics.add.existing(trigger, true); // true = corpo statico
+                        this.rerTriggerGroup.add(trigger);
+                    }
+                }
+            }
+        }
+
+        // =========================================================
+        // --- COLLEZIONABILI: DATA LOG VIRALI (RIUTILIZZABILI) ---
+        // =========================================================
+        this.dataLogsGroup = this.physics.add.staticGroup();
+
+        // Usa i 3 sprite virali diversi
+        const log1 = this.dataLogsGroup.create(2200, 4000, 'virus_debris_1');
+        log1.name = 'log1';
+        
+        const log2 = this.dataLogsGroup.create(3800, 3100, 'virus_debris_2');
+        log2.name = 'log2';
+
+        const log3 = this.dataLogsGroup.create(2681, 2405, 'virus_debris_3');
+        log3.name = 'log3';
+
+        // Impostiamo l'aspetto visivo
+        this.dataLogsGroup.getChildren().forEach((child) => {
+            const log = child as Phaser.GameObjects.Sprite;
+            log.setDisplaySize(100, 100); // Regola la grandezza se necessario
+            log.refreshBody(); // Aggiorna la hitbox dopo aver cambiato la grandezza
+            log.setTint(0xff5555); // Una leggera tinta rossa/allarme per farli risaltare
+            
+            // Effetto fluttuante per indicare che si può interagire
+            this.tweens.add({
+                targets: log,
+                y: log.y - 15,
+                alpha: 0.7,
+                duration: 1500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        });
+
+        // Aggiungiamo l'overlap
+        this.physics.add.overlap(this.player, this.dataLogsGroup, (player, log) => {
+            this.handleLogCollection(log as Phaser.GameObjects.Sprite);
+        });
+
+        this.physics.add.collider(this.player, this.mitochondriaGroup, () => {
+            this.handleMitoCollision();
+        });
+        
+        this.physics.add.collider(this.player, this.lysosomesGroup, () => {
+            this.handleLysoCollision();
+        });
+        
+        this.physics.add.collider(this.player, golgiHitZone, () => {
+            this.handleGolgiCollision();
+        });
+
+        this.physics.add.collider(this.player, this.relWallsGroup);
+        this.physics.add.collider(this.player, this.rerWallsGroup);
+
+        this.physics.add.overlap(this.player, this.relTriggerGroup, () => {
+                    this.handleSEROverlap();
+                });
+
+        this.physics.add.overlap(this.player, this.rerTriggerGroup, () => {
+            this.handleREROverlap();
+        });
 
         // 5. La telecamera segue il giocatore
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -61,24 +472,52 @@ export default class Scene3_Internal extends Phaser.Scene {
         // 6. Inizializziamo l'assistente A.B.I.
         this.abi = new ABI(this);
 
-        // 7. Gestiamo gli input da tastiera
-        if (this.input.keyboard) {
-            this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-
-            // Mettiamo in pausa il gioco con il tasto ESC
-            this.input.keyboard.on('keydown-ESC', () => {
-                if (!this.abi.isTalking) {
-                    this.scene.pause();
-                    this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+        // INPUTS
+                if (this.input.keyboard) {
+                    // this.cursors = this.input.keyboard.createCursorKeys();
+                    this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        
+                    this.input.keyboard.on('keydown-ESC', () => {
+                        // Se A.B.I. sta parlando, potresti voler bloccare la pausa per evitare conflitti grafici
+                        if (!this.abi.isTalking) {
+                            this.scene.pause();
+                            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+                        }
+                    });
                 }
-            });
-        }
 
         // Messaggio di benvenuto da A.B.I.
         this.abi.showDialogue(
             "A.B.I.",
-            "We have successfully entered the cytoplasm. The environment is vast and teeming with organelles. Our next objective is to locate the Endoplasmic Reticulum."
+            this.dialogue1,
         );
+
+        // DEBUG: Clicca col mouse per ottenere le coordinate esatte
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            // pointer.worldX e worldY tengono conto dello scorrimento della telecamera
+            console.log(`{ x: ${Math.round(pointer.worldX)}, y: ${Math.round(pointer.worldY)} },`);
+        });
+
+
+        // --- CONTROLLO DINAMICO DELLO ZOOM CON IL MOUSE ---
+        this.input.on('wheel', (pointer: Phaser.Input.Pointer, gameObjects: any, deltaX: number, deltaY: number) => {
+            // Ottieni lo zoom attuale
+            let currentZoom = this.cameras.main.zoom;
+
+            // Se deltaY è positivo si sta scorrendo in basso (zoom out), altrimenti in alto (zoom in)
+            if (deltaY > 0) {
+                currentZoom -= 0.05; // Allontana
+            } else {
+                currentZoom += 0.05; // Avvicina
+            }
+
+            // Limitiamo lo zoom per evitare che vada a valori negativi o troppo alti
+            // Minimo 0.15 (visione amplissima), Massimo 1.5 (molto vicino)
+            currentZoom = Phaser.Math.Clamp(currentZoom, 0.15, 1.5);
+
+            // Applica il nuovo zoom
+            this.cameras.main.setZoom(currentZoom);
+        });
     }
 
     update() {
@@ -97,5 +536,155 @@ export default class Scene3_Internal extends Phaser.Scene {
         // Facciamo scorrere lo sfondo per dare un'illusione di movimento e profondità
         this.background_scene.tilePositionX += 0.25;
         this.background_scene.tilePositionY += 0.15;
+
+        this.background_deep.tilePositionX += 0.10;
+        this.background_deep.tilePositionY += 0.05;
+
+        if (this.player && this.player.body) {
+            const body = this.player.body as Phaser.Physics.Arcade.Body;
+
+            const WORLD_SIZE = 6000;
+            const CENTER = WORLD_SIZE / 2; // 3000
+            
+            // Regola questo raggio per l'allineamento visivo con la tua cornice
+            // Il tile ha raggio 128, ma la navicella è 0.3.
+            const CELL_RADIUS = 2950; 
+            
+            // Fattore di restituzione (rimbalzo): 0.1 = gratta, 0.9 = rimbalza molto
+            const RESTITUTION = 0.65; 
+
+            // Calcoliamo la distanza radiale (D)
+            const dx = this.player.x - CENTER;
+            const dy = this.player.y - CENTER;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Se la navicella supera o tocca il raggio
+            if (distance > CELL_RADIUS) {
+                // 1. Calcoliamo l'angolo di incidenza (per posizionarla)
+                const angle = Math.atan2(dy, dx);
+
+                // 2. RIPOSIZIONAMENTO (Clamp): la teniamo dentro
+                this.player.x = CENTER + Math.cos(angle) * CELL_RADIUS;
+                this.player.y = CENTER + Math.sin(angle) * CELL_RADIUS;
+
+                // 3. FISICA: Calcoliamo il vettore normale della collisione (fuori)
+                const nx = dx / distance; // Normale normalizzata X
+                const ny = dy / distance; // Normale normalizzata Y
+
+                // 4. FISICA: Calcoliamo il Prodotto Scalare (Velocità attuale dot Normale)
+                // Questo ci dice quanto stiamo andando "fuori"
+                const velocityX = body.velocity.x;
+                const velocityY = body.velocity.y;
+                const dotProduct = (velocityX * nx + velocityY * ny);
+
+                // Se stiamo andando verso l'esterno (dotProduct > 0)
+                if (dotProduct > 0) {
+                    // 5. RIFLESSIONE VETTORIALE (Il trucco fisico)
+                    // Vnew = Vold - (1 + RESTITUTION) * dotProduct * Normal
+                    const newVelocityX = velocityX - (1 + RESTITUTION) * dotProduct * nx;
+                    const newVelocityY = velocityY - (1 + RESTITUTION) * dotProduct * ny;
+
+                    // Applichiamo la nuova velocità (riflessa verso dentro)
+                    body.setVelocity(newVelocityX, newVelocityY);
+                }
+            }
+        }
+    }
+   // =========================================================
+    // --- CALLBACK DELLE COLLISIONI (TRIGGER DIALOGHI) ---
+    // =========================================================
+
+    private handleMitoCollision(): void {
+        // Se ABI sta già parlando, non fare nulla (come nella Scena 1)
+        if (this.abi.isTalking) return;
+
+        // Controlla se il tempo trascorso è maggiore del cooldown
+        if (this.time.now > this.lastMitoDialogueTime + this.DIALOGUE_COOLDOWN) {
+            this.lastMitoDialogueTime = this.time.now;
+            this.abi.showDialogue("A.B.I.", this.dialogue2);
+        }
+    }
+
+    private handleLysoCollision(): void {
+        if (this.abi.isTalking) return;
+
+        if (this.time.now > this.lastLysoDialogueTime + this.DIALOGUE_COOLDOWN) {
+            this.lastLysoDialogueTime = this.time.now;
+            this.abi.showDialogue("A.B.I.", this.dialogue3);
+        }
+    }
+
+    private handleGolgiCollision(): void {
+        if (this.abi.isTalking) return;
+
+        if (this.time.now > this.lastGolgiDialogueTime + this.DIALOGUE_COOLDOWN) {
+            this.lastGolgiDialogueTime = this.time.now;
+            this.abi.showDialogue("A.B.I.", this.dialogue4);
+        }
+    }
+
+    private handleNucleusCollision(): void {
+        if (this.abi.isTalking) return;
+
+        // Comportamento a cooldown come gli altri organuli fisici
+        if (this.time.now > this.lastNucleusDialogueTime + this.DIALOGUE_COOLDOWN) {
+            this.lastNucleusDialogueTime = this.time.now;
+            this.abi.showDialogue("A.B.I.", this.dialogue7);
+        }
+    }
+
+    private handleSEROverlap(): void {
+        // Se ABI sta già parlando o se il dialogo è già scattato in precedenza, ignora
+        if (this.abi.isTalking || this.hasTriggeredSER) return;
+        
+        this.hasTriggeredSER = true; // Blocca future attivazioni
+        this.abi.showDialogue("A.B.I.", this.dialogue5);
+    }
+
+    private handleREROverlap(): void {
+        if (this.abi.isTalking || this.hasTriggeredRER) return;
+        
+        this.hasTriggeredRER = true;
+        this.abi.showDialogue("A.B.I.", this.dialogue6);
+    }
+    // =========================================================
+    // --- CALLBACK RACCOLTA DATA LOG (FIX LOOP INFINITO) ---
+    // =========================================================
+    private handleLogCollection(log: Phaser.GameObjects.Sprite): void {
+        const logName = log.name;
+
+        // FIX: Se A.B.I. sta parlando e la navicella è ferma sul virus,
+        // aggiorniamo il timer al tempo attuale. In questo modo il cooldown
+        // vero e proprio inizierà a scalare solo DOPO la chiusura del dialogo.
+        if (this.abi.isTalking) {
+            if (logName === 'log1') this.lastLog1Time = this.time.now;
+            else if (logName === 'log2') this.lastLog2Time = this.time.now;
+            else if (logName === 'log3') this.lastLog3Time = this.time.now;
+            return;
+        }
+
+        // Usiamo un cooldown dedicato per i log (es. 5000 ms = 5 secondi).
+        // Questo ti dà 5 secondi di tempo per spostare la navicella dallo sprite
+        // prima che il dialogo scatti di nuovo.
+        const LOG_COOLDOWN = 5000;
+
+        if (logName === 'log1') {
+            if (this.time.now > this.lastLog1Time + LOG_COOLDOWN) {
+                this.lastLog1Time = this.time.now;
+                this.abi.showDialogue("A.B.I.", this.dialogueLog1);
+            }
+        } 
+        else if (logName === 'log2') {
+            if (this.time.now > this.lastLog2Time + LOG_COOLDOWN) {
+                this.lastLog2Time = this.time.now;
+                this.abi.showDialogue("A.B.I.", this.dialogueLog2);
+            }
+        } 
+        else if (logName === 'log3') {
+            if (this.time.now > this.lastLog3Time + LOG_COOLDOWN) {
+                this.lastLog3Time = this.time.now;
+                this.abi.showDialogue("A.B.I.", this.dialogueLog3);
+            }
+        }
     }
 }

@@ -55,6 +55,9 @@ class FinalBoss extends Phaser.Scene {
 
     private answerButtons: Phaser.GameObjects.Container[] = [];
 
+    private endScreenContainer?: Phaser.GameObjects.Container;
+    private readonly menuFont = 'Arial';
+
     constructor() {
         super('FinalBoss');
     }
@@ -564,9 +567,6 @@ class FinalBoss extends Phaser.Scene {
     }
 
     private showFinalWin() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-
         this.switchBossSprite('boss_angry');
 
         this.tweens.add({
@@ -585,31 +585,12 @@ class FinalBoss extends Phaser.Scene {
                 'You reviewed all six phases of viral infection and completed the mission.'
             ],
             () => {
-                this.add.text(
-                    width / 2,
-                    height / 2,
-                    'YOU DEFEATED THE FINAL VIRUS!',
-                    {
-                        fontFamily: 'monospace',
-                        fontSize: '48px',
-                        color: '#66ff7d',
-                        stroke: '#001b10',
-                        strokeThickness: 8,
-                        align: 'center'
-                    }
-                )
-                    .setOrigin(0.5)
-                    .setDepth(100);
-
-                this.createMenuButton(width / 2, height * 0.68);
+                this.createFinalPostGameWindow(true);
             }
         );
     }
 
     private showFinalLose() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-
         this.switchBossSprite('boss_happy');
 
         this.abi.showDialogue(
@@ -619,40 +600,135 @@ class FinalBoss extends Phaser.Scene {
                 'Try again and use what you learned about the six infection phases.'
             ],
             () => {
-                this.add.text(
-                    width / 2,
-                    height / 2,
-                    'THE BOSS IS STILL TOO STRONG!',
-                    {
-                        fontFamily: 'monospace',
-                        fontSize: '46px',
-                        color: '#ff6b6b',
-                        stroke: '#220000',
-                        strokeThickness: 8,
-                        align: 'center'
-                    }
-                )
-                    .setOrigin(0.5)
-                    .setDepth(100);
-
-                this.createRetryButton(width / 2 - 190, height * 0.68);
-                this.createMenuButton(width / 2 + 190, height * 0.68);
+                this.createFinalPostGameWindow(false);
             }
         );
     }
 
-    private createRetryButton(x: number, y: number) {
-        this.createButton(
-            x,
-            y,
-            300,
-            64,
-            'Retry',
-            '26px',
-            () => {
-                this.scene.restart();
+    private createFinalPostGameWindow(won: boolean) {
+        if (this.endScreenContainer && this.endScreenContainer.active) {
+            this.endScreenContainer.destroy();
+        }
+
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+
+        const container = this.add.container(width / 2, height / 2);
+        container.setDepth(200);
+        container.setScrollFactor(0);
+
+        const windowWidth = 820;
+        const windowHeight = won ? 380 : 420;
+
+        const windowUi = this.createPostGameWindow(windowWidth, windowHeight);
+
+        const title = this.add.text(
+            0,
+            won ? -90 : -100,
+            won ? 'FINAL GAME COMPLETED!' : 'GAME OVER',
+            {
+                fontFamily: this.menuFont,
+                fontSize: won ? '46px' : '56px',
+                fontStyle: 'bold',
+                color: won ? '#00ff00' : '#770000',
+                align: 'center'
             }
-        ).setDepth(140);
+        );
+
+        title.setOrigin(0.5);
+
+        if (won) {
+            const menuBtn = this.createButton(
+                0,
+                110,
+                320,
+                70,
+                'Menu',
+                '28px',
+                () => {
+                    window.location.href = '/pages/menu_page.html';
+                }
+            );
+
+            container.add([
+                ...windowUi.list,
+                title,
+                menuBtn
+            ]);
+        } else {
+            const retryBtn = this.createButton(
+                0,
+                70,
+                320,
+                70,
+                'Try Again',
+                '28px',
+                () => {
+                    this.scene.restart();
+                }
+            );
+
+            const menuBtn = this.createButton(
+                0,
+                160,
+                320,
+                70,
+                'Menu',
+                '28px',
+                () => {
+                    window.location.href = '/pages/menu_page.html';
+                }
+            );
+
+            container.add([
+                ...windowUi.list,
+                title,
+                retryBtn,
+                menuBtn
+            ]);
+        }
+
+        const zoom = height / 1080;
+        container.setScale(zoom);
+
+        this.endScreenContainer = container;
+    }
+
+    private createPostGameWindow(width: number, height: number) {
+        const container = this.add.container(0, 0);
+
+        const shadow = this.add.rectangle(
+            8,
+            8,
+            width,
+            height,
+            0x000000,
+            0.35
+        );
+
+        const outer = this.add.rectangle(
+            0,
+            0,
+            width,
+            height,
+            0xff5a0a,
+            1
+        );
+
+        outer.setStrokeStyle(4, 0xffffff);
+
+        const inner = this.add.rectangle(
+            0,
+            0,
+            width - 12,
+            height - 12,
+            0xd94700,
+            1
+        );
+
+        container.add([shadow, outer, inner]);
+
+        return container;
     }
 
     private createMenuButton(x: number, y: number) {

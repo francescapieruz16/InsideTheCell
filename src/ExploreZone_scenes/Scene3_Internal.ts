@@ -35,12 +35,23 @@ export default class Scene3_Internal extends Phaser.Scene {
     private dialogue6: any = [];
     private dialogue7: any = [];
 
+    // --- DIALOGHI DATA LOG VIRALI ---
+    private dialogueLog1: any= [];
+    private dialogueLog2: any= [];
+    private dialogueLog3: any= [];
+    
+    private dataLogsGroup!: Phaser.Physics.Arcade.StaticGroup;
+
     // --- VARIABILI COOLDOWN E FLAG DIALOGHI ---
     private lastMitoDialogueTime: number = 0; 
     private lastLysoDialogueTime: number = 0;
     private lastGolgiDialogueTime: number = 0;
     private lastNucleusDialogueTime: number = 0; // Per il Nucleo
     private readonly DIALOGUE_COOLDOWN: number = 1000;
+
+    private lastLog1Time: number = 2000;
+    private lastLog2Time: number = 2000;
+    private lastLog3Time: number = 2000;
 
     private hasTriggeredSER: boolean = false; // Trigger unico
     private hasTriggeredRER: boolean = false; // Trigger unico
@@ -59,6 +70,10 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.load.image('organelle_rer_tile', '/assets/tutorial/obstacles/RER3.png');
         this.load.image('background_deep', '/assets/tutorial/sfondi/scene3_background_deep.png');
         this.load.image('circle', '/assets/tutorial/sfondi/circle.png');
+
+        this.load.image('virus_debris_1', '/assets/tutorial/virus/virus1.png');
+        this.load.image('virus_debris_2', '/assets/tutorial/virus/virus2.png');
+        this.load.image('virus_debris_3', '/assets/tutorial/virus/virus3.png');
     }
 
     constructor() {
@@ -105,6 +120,19 @@ export default class Scene3_Internal extends Phaser.Scene {
 
         this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_1);
         this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_2);
+        this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_3);
+
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_1);
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_2);
+        this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogueLog1_3);
+
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_1);
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_2);
+        this.dialogueLog2.push(allDialogues.tutorials.tutorial_3.dialogueLog2_3);
+
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_1);
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_2);
+        this.dialogueLog3.push(allDialogues.tutorials.tutorial_3.dialogueLog3_3);
 
 
 
@@ -315,19 +343,19 @@ export default class Scene3_Internal extends Phaser.Scene {
             [0,1,1,1,1,1,1,1,1,1,1,3,3,1,1,1,1,1,1,1,1,1,0,0], // <-- 3: Ingressi REL Nord
             [0,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0],
             [0,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0],
-            [0,1,1,0,0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,0,0,1,0,0], 
+            [0,1,1,0,0,1,1,1,1,1,1,1,1,0,4,1,1,1,1,0,0,1,0,0], 
             [0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0],
-            [1,0,1,0,0,1,0,0,0,0,0,4,4,0,0,0,0,0,1,0,0,1,0,0], // <-- 4: Ingressi RER Nord
+            [1,0,1,0,0,1,0,4,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0], // <-- 4: Ingressi RER Nord
             [1,0,1,0,0,1,0,0,2,2,2,0,0,2,2,2,2,2,1,0,0,1,0,0], 
             [1,0,1,0,0,1,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,1,0,1],
-            [1,3,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,3,0,1], // <-- 3: Ingressi REL Laterali
+            [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,0,3,1], // <-- 3: Ingressi REL Laterali
             [1,0,1,0,0,0,0,0,2,2,0,0,0,0,0,0,2,2,1,0,0,0,0,1], 
             [0,0,1,0,0,1,1,1,2,2,0,0,0,0,0,0,2,2,0,0,0,0,0,1], 
             [0,0,1,0,0,1,1,0,2,2,0,0,0,0,0,0,2,2,0,0,0,1,1,1],
             [0,0,1,0,0,1,0,0,2,2,0,0,0,0,0,0,2,2,1,1,1,1,0,0],
-            [1,0,1,0,0,1,0,0,2,2,2,2,2,2,2,0,0,2,1,1,0,1,0,0], 
-            [1,0,0,0,0,1,1,0,0,0,0,4,4,0,0,0,0,0,0,0,0,1,0,0], // <-- 4: Ingressi RER Sud
-            [1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+            [1,3,1,0,0,1,0,0,2,2,2,2,2,2,2,0,0,2,1,1,0,1,0,0], 
+            [1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,1,0,0], // <-- 4: Ingressi RER Sud
+            [1,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,1,0,0],
             [0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0], 
             [0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
             [0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,1],
@@ -374,6 +402,45 @@ export default class Scene3_Internal extends Phaser.Scene {
                 }
             }
         }
+
+        // =========================================================
+        // --- COLLEZIONABILI: DATA LOG VIRALI (RIUTILIZZABILI) ---
+        // =========================================================
+        this.dataLogsGroup = this.physics.add.staticGroup();
+
+        // Usa i 3 sprite virali diversi
+        const log1 = this.dataLogsGroup.create(2200, 4000, 'virus_debris_1');
+        log1.name = 'log1';
+        
+        const log2 = this.dataLogsGroup.create(3800, 3100, 'virus_debris_2');
+        log2.name = 'log2';
+
+        const log3 = this.dataLogsGroup.create(2681, 2405, 'virus_debris_3');
+        log3.name = 'log3';
+
+        // Impostiamo l'aspetto visivo
+        this.dataLogsGroup.getChildren().forEach((child) => {
+            const log = child as Phaser.GameObjects.Sprite;
+            log.setDisplaySize(100, 100); // Regola la grandezza se necessario
+            log.refreshBody(); // Aggiorna la hitbox dopo aver cambiato la grandezza
+            log.setTint(0xff5555); // Una leggera tinta rossa/allarme per farli risaltare
+            
+            // Effetto fluttuante per indicare che si può interagire
+            this.tweens.add({
+                targets: log,
+                y: log.y - 15,
+                alpha: 0.7,
+                duration: 1500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        });
+
+        // Aggiungiamo l'overlap
+        this.physics.add.overlap(this.player, this.dataLogsGroup, (player, log) => {
+            this.handleLogCollection(log as Phaser.GameObjects.Sprite);
+        });
 
         this.physics.add.collider(this.player, this.mitochondriaGroup, () => {
             this.handleMitoCollision();
@@ -579,5 +646,45 @@ export default class Scene3_Internal extends Phaser.Scene {
         
         this.hasTriggeredRER = true;
         this.abi.showDialogue("A.B.I.", this.dialogue6);
+    }
+    // =========================================================
+    // --- CALLBACK RACCOLTA DATA LOG (FIX LOOP INFINITO) ---
+    // =========================================================
+    private handleLogCollection(log: Phaser.GameObjects.Sprite): void {
+        const logName = log.name;
+
+        // FIX: Se A.B.I. sta parlando e la navicella è ferma sul virus,
+        // aggiorniamo il timer al tempo attuale. In questo modo il cooldown
+        // vero e proprio inizierà a scalare solo DOPO la chiusura del dialogo.
+        if (this.abi.isTalking) {
+            if (logName === 'log1') this.lastLog1Time = this.time.now;
+            else if (logName === 'log2') this.lastLog2Time = this.time.now;
+            else if (logName === 'log3') this.lastLog3Time = this.time.now;
+            return;
+        }
+
+        // Usiamo un cooldown dedicato per i log (es. 5000 ms = 5 secondi).
+        // Questo ti dà 5 secondi di tempo per spostare la navicella dallo sprite
+        // prima che il dialogo scatti di nuovo.
+        const LOG_COOLDOWN = 5000;
+
+        if (logName === 'log1') {
+            if (this.time.now > this.lastLog1Time + LOG_COOLDOWN) {
+                this.lastLog1Time = this.time.now;
+                this.abi.showDialogue("A.B.I.", this.dialogueLog1);
+            }
+        } 
+        else if (logName === 'log2') {
+            if (this.time.now > this.lastLog2Time + LOG_COOLDOWN) {
+                this.lastLog2Time = this.time.now;
+                this.abi.showDialogue("A.B.I.", this.dialogueLog2);
+            }
+        } 
+        else if (logName === 'log3') {
+            if (this.time.now > this.lastLog3Time + LOG_COOLDOWN) {
+                this.lastLog3Time = this.time.now;
+                this.abi.showDialogue("A.B.I.", this.dialogueLog3);
+            }
+        }
     }
 }

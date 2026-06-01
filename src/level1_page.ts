@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
+import { HandTrackingController } from '../src/handTracking/handTrackingController';
 
-class Level1 extends Phaser.Scene {
+export class Level1 extends Phaser.Scene {
     private virusGroup!: Phaser.Physics.Arcade.Group;
     private receptorsGroup!: Phaser.Physics.Arcade.Group;
 
@@ -14,6 +15,8 @@ class Level1 extends Phaser.Scene {
 
     private playerCart!: Phaser.Physics.Arcade.Sprite;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+
+    private backgroundImage!: Phaser.GameObjects.Image;
 
     private cartSpeed: number = 800;
 
@@ -78,12 +81,50 @@ class Level1 extends Phaser.Scene {
     }
 
     create() {
-        const bg = this.add.image(
-            this.cameras.main.width / 2,
-            this.cameras.main.height / 2,
-            'background'
-        );
-        bg.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+        this.game.canvas.style.pointerEvents = 'none';
+        
+        const bgHTML = document.getElementById('background') as HTMLImageElement;
+        if (bgHTML) {
+            bgHTML.src = '/assets/level1/background_level1.png';
+            bgHTML.style.objectFit = 'fill'; 
+        }
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+                z-index: 990 !important;
+            }
+
+            button {
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'BACK';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'phaser-dom-container';
+        wrapper.appendChild(backBtn);
+        const backBtnDom = this.add.dom(80, 40, wrapper);
+
+        backBtn.addEventListener('click', () => {
+            this.scene.start('MenuPageScene');
+        });
 
         this.receptorsGroup = this.physics.add.group();
         this.createReceptors();
@@ -141,6 +182,64 @@ class Level1 extends Phaser.Scene {
         );
 
         this.setupGame();
+
+        let previousWidth = this.cameras.main.width;
+
+        const onResize = (gameSize: Phaser.Structs.Size) => {
+            if (!this.scene.isActive() || !this.physics || !this.physics.world) return;
+
+            const newW = gameSize.width;
+            const newH = gameSize.height;
+            const newCx = newW / 2;
+
+            const scaleXRatio = newW / previousWidth;
+
+            this.physics.world.setBounds(0, 0, newW, newH);
+
+            backBtnDom.setPosition(80, 40);
+
+            this.progressBox.clear();
+            this.progressBox.fillStyle(0x2a2a2a, 0.85);
+            this.progressBox.fillRoundedRect(newCx - 200, 20, 400, 30, 6);
+            this.progressBox.lineStyle(4, 0xffffff, 1);
+            this.progressBox.strokeRoundedRect(newCx - 200, 20, 400, 30, 6);
+
+            this.progressBar.setPosition(newCx - 195, 25);
+
+            this.playerCart.setY(newH * 0.60);
+            this.playerCart.setX(Phaser.Math.Clamp(this.playerCart.x * scaleXRatio, 0, newW));
+            this.playerCart.displayWidth = newW * (this.isVaccinated ? 0.15 : 0.1);
+            this.playerCart.scaleY = this.playerCart.scaleX;
+
+            this.virusGroup.getChildren().forEach((child) => {
+                const virus = child as Phaser.Physics.Arcade.Sprite;
+                if (virus.active) {
+                    virus.setX(virus.x * scaleXRatio);
+                    virus.displayWidth = newW * 0.07;
+                    virus.scaleY = virus.scaleX;
+                    virus.refreshBody();
+                }
+            });
+
+            const receptors = this.receptorsGroup.getChildren() as Phaser.Physics.Arcade.Sprite[];
+            receptors.forEach((receptor, index) => {
+                const data = this.receptorVirusData[index];
+                receptor.setPosition(newW * data.pX, newH * data.pY);
+                receptor.displayWidth = newW * data.scale;
+                receptor.scaleY = receptor.scaleX;
+                receptor.refreshBody();
+            });
+
+            previousWidth = newW;
+        };
+
+        this.scale.on('resize', onResize);
+
+        onResize(this.scale.gameSize);
+        
+        this.events.once('shutdown', () => {
+            this.scale.off('resize', onResize);
+        });
     }
 
     update(time: number, delta: number) {
@@ -261,17 +360,43 @@ class Level1 extends Phaser.Scene {
     private handleInput() {
         if (this.isChatActive) {
             this.playerCart.setAccelerationX(0);
+            this.playerCart.setVelocityX(0);
             return;
         }
 
-        const force = 4000;
+        const inputMode = this.registry.get('inputMode');
 
-        if (this.cursors.left.isDown) {
-            this.playerCart.setAccelerationX(-force);
-        } else if (this.cursors.right.isDown) {
-            this.playerCart.setAccelerationX(force);
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
+
+            if (tracker.targetX !== -1) {
+                const targetPixelX = tracker.targetX * this.cameras.main.width;
+                const distanceX = targetPixelX - this.playerCart.x;
+
+                if (Math.abs(distanceX) > 10) { 
+                    this.playerCart.setVelocityX(distanceX * 8); 
+                } else {
+                    this.playerCart.setVelocityX(0);
+                }
+                this.playerCart.setAccelerationX(0); 
+            } else {
+                this.playerCart.setAccelerationX(0);
+                this.playerCart.setDragX(3000); 
+            }
+
         } else {
-            this.playerCart.setAccelerationX(0);
+            const force = 4000;
+
+            if (this.cursors.left.isDown) {
+                this.playerCart.setAccelerationX(-force);
+            } else if (this.cursors.right.isDown) {
+                this.playerCart.setAccelerationX(force);
+            } else {
+                this.playerCart.setAccelerationX(0);
+                if (Math.abs(this.playerCart.body!.velocity.x) > 0) {
+                     this.playerCart.setDragX(3000); 
+                }
+            }
         }
     }
 
@@ -321,27 +446,3 @@ class Level1 extends Phaser.Scene {
     }
 
 }
-
-const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO,
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1920,
-        height: 1080,
-    },
-    parent: 'game-container',
-    render: {
-        roundPixels: true
-    },
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { x: 0, y: 0 },
-            debug: false
-        }
-    },
-    scene: [Level1]
-};
-
-new Phaser.Game(config);

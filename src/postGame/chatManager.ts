@@ -13,16 +13,30 @@ export class ChatManager {
         this.onMessageSent = onMessageSent;
         this.onChatStateChange = onChatStateChange;
 
-        this.chatUi = document.getElementById('llm-chat-ui') as HTMLDivElement;
-        this.chatInput = document.getElementById('llm-chat-input') as HTMLInputElement;
-        this.chatSend = document.getElementById('llm-chat-send') as HTMLButtonElement;
+        this.chatUi = document.createElement('div');
+        this.chatUi.id = 'llm-chat-ui';
+
+        this.chatInput = document.createElement('input');
+        this.chatInput.id = 'llm-chat-input';
+        this.chatInput.type = 'text';
+        this.chatInput.placeholder = 'Type here...';
+        this.chatInput.autocomplete = 'off';
+
+        this.chatSend = document.createElement('button');
+        this.chatSend.id = 'llm-chat-send';
+        this.chatSend.innerText = 'Send';
+
+        this.chatUi.appendChild(this.chatInput);
+        this.chatUi.appendChild(this.chatSend);
+        
+        document.getElementById('app')?.appendChild(this.chatUi);
 
         Object.assign(this.chatUi.style, {
             position: 'absolute',
             top: '90%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            zIndex: '1000',
+            zIndex: '990',
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
@@ -98,5 +112,11 @@ export class ChatManager {
 
         this.hide();
         this.onMessageSent(userText);
+    }
+
+    public destroy() {
+        if (this.chatUi && this.chatUi.parentNode) {
+            this.chatUi.parentNode.removeChild(this.chatUi);
+        }
     }
 }

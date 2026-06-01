@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { HandTrackingController } from '../handTracking/handTrackingController';
 
 export default class ABI {
     private scene: Phaser.Scene;
@@ -30,9 +31,10 @@ export default class ABI {
 
     private radioTimer?: Phaser.Time.TimerEvent; //gestisce il timer per i dialoghi radio
 
-    private keepOpen: boolean = false;
-    private baseY: number = 0;         
-    private currentOffsetY: number = 0;
+    private keepOpen: boolean = false;      
+    private offsetY: number = -160;
+
+    private previousPinchState: boolean = false;    
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -44,6 +46,12 @@ export default class ABI {
         if (this.synth.onvoiceschanged !== undefined) {
             this.synth.onvoiceschanged = this.initVoice.bind(this);
         }
+
+        this.scene.events.on('update', this.update, this);
+
+        this.scene.events.once('shutdown', () => {
+            this.scene.events.off('update', this.update, this);
+        });
     }
 
     // --- METODO PER CARICARE LA VOCE ---
@@ -71,53 +79,81 @@ export default class ABI {
         this.synth.speak(utterance);
     }
 
+    private update(time: number, delta: number) {
+        const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
+        if (inputMode !== 'hand') return;
+
+        const tracker = HandTrackingController.getInstance();
+        
+        const currentPinch = tracker.isClicked; 
+
+        if (currentPinch && !this.previousPinchState) {
+            if (this.isTalking && !this.isUnskippable) {
+                this.nextDialoguePage();
+            }
+        }
+
+        this.previousPinchState = currentPinch;
+    }
+
     private createDialogueUI() {
         const screenW = this.scene.cameras.main.width;
         const screenH = this.scene.cameras.main.height;
 
-        this.uiContainer = this.scene.add.container(screenW / 2, screenH / 2);
+        this.uiContainer = this.scene.add.container(screenW / 2, screenH);
         this.uiContainer.setScrollFactor(0); 
         this.uiContainer.setDepth(100);
 
-        const offsetY = 420;
-
-        const bg = this.scene.add.rectangle(0, offsetY - 20, 1300, 240, 0x000000, 0.92);
+        const bg = this.scene.add.rectangle(0, this.offsetY, 1300, 240, 0x000000, 0.92);
         bg.setStrokeStyle(4, 0x4caf50);
 
-        this.portrait = this.scene.add.image(-530, offsetY - 20, 'ABI_standard');
+        this.portrait = this.scene.add.image(-530, this.offsetY, 'ABI_standard');
         this.portrait.setDisplaySize(250, 250);
 
-        this.dialogueName = this.scene.add.text(-380, offsetY -100, "", { 
+        this.dialogueName = this.scene.add.text(-380, this.offsetY - 80, "", { 
             fontSize: '32px', fontStyle: 'bold', color: '#4caf50' 
         });
 
-        this.dialogueText = this.scene.add.text(-380, offsetY -50, "", { 
+        this.dialogueText = this.scene.add.text(-380, this.offsetY - 30, "", { 
             fontSize: '24px', color: '#ffffff', wordWrap: { width: 1000 }
         });
 
-        this.promptText = this.scene.add.text(640, offsetY + 85, "Press SPACE ▼", { 
+        this.promptText = this.scene.add.text(640, this.offsetY + 105, "Press SPACE ▼", { 
             fontSize: '18px', color: '#aaaaaa' 
         }).setOrigin(1, 0.5);
 
         this.uiContainer.add([bg, this.portrait, this.dialogueName, this.dialogueText, this.promptText]);
         this.uiContainer.setVisible(false);
 
+        const updateContainerLayout = (width: number, height: number) => {
+            if (!this.uiContainer) return;
+
+            this.uiContainer.setPosition(width / 2, height + this.offsetY);        
+
+            const baseWidth = 1400; 
+            const scaleFactor = Math.min(1, width / baseWidth);
+            
+            this.uiContainer.setScale(scaleFactor);
+        };
+
+        updateContainerLayout(screenW, screenH);
+
         this.scene.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
-            if (this.uiContainer) {
-                this.uiContainer.setPosition(gameSize.width / 2, (gameSize.height / 2) + this.currentOffsetY);
-            }
+            updateContainerLayout(gameSize.width, gameSize.height);
         });
     }
 
     public MoveDialogueY(offsetY: number) {
         if (!this.uiContainer) return; 
 
-        this.currentOffsetY = offsetY;
-        const centerY = this.scene.cameras.main.height / 2;
+        this.offsetY = offsetY;
+        const bottomY = this.scene.cameras.main.height;
+        //TODO: fix level 3 zoom
+        //const bottomY = (this.scene.cameras.main.height / 2) + ((this.scene.cameras.main.height / 2) / this.scene.cameras.main.zoom);
 
         this.scene.tweens.add({
             targets: this.uiContainer,
-            y: centerY + offsetY,
+            y: bottomY + offsetY,
             duration: 300,
             ease: 'Power2'
         });

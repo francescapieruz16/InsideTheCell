@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
+import { HandTrackingController } from './handTracking/handTrackingController';
 
 type Point = {
     x: number;
@@ -17,9 +18,7 @@ type DuplicationZone = {
     visual: Phaser.GameObjects.Arc;
 };
 
-class Level6 extends Phaser.Scene {
-    private bg!: Phaser.GameObjects.Image;
-
+export class Level6 extends Phaser.Scene {
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private keyW!: Phaser.Input.Keyboard.Key;
     private keyA!: Phaser.Input.Keyboard.Key;
@@ -39,7 +38,6 @@ class Level6 extends Phaser.Scene {
 
     private capturedViruses = 0;
     private totalVirusesCreated = 0;
-    private captureGoal = 0;
     private levelStartTime = 0;
     private remainingTimeMs = 0;
 
@@ -55,11 +53,9 @@ class Level6 extends Phaser.Scene {
     private duplicationZones: DuplicationZone[] = [];
 
     private readonly playerSpeed = 360;
-    private readonly normalCaptureGoal = 10;
-    private readonly vaccinatedCaptureGoal = 6;
 
     private readonly normalTimeLimitMs = 15000;
-    private readonly vaccinatedTimeLimitMs = 30000;
+    private readonly vaccinatedTimeLimitMs = 60000;
 
     private readonly playerScale = 0.95;
     private readonly virusScale = 0.85;
@@ -82,6 +78,9 @@ class Level6 extends Phaser.Scene {
 
     private readonly duplicationRadiusMultiplier = 0.95;
     private readonly duplicationZoneMoveInterval = 4000;
+
+    private readonly LOGICAL_WIDTH = 1920;
+    private readonly LOGICAL_HEIGHT = 1080;
 
     private readonly directions: Direction[] = [
         { x: 1, y: 0 },
@@ -123,8 +122,6 @@ class Level6 extends Phaser.Scene {
         this.capturedViruses = 0;
         this.totalVirusesCreated = 0;
 
-        this.captureGoal = 0;
-
         this.levelStartTime = 0;
         this.remainingTimeMs = this.getTimeLimitMs();
 
@@ -142,16 +139,65 @@ class Level6 extends Phaser.Scene {
     }
 
     create() {
+        const bgHTML = document.getElementById('background') as HTMLImageElement;
+        if (bgHTML) {
+            bgHTML.src = '/assets/level6/background_level_6.png';
+            bgHTML.style.objectFit = 'fill'; 
+        }
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+            }
+
+            button {
+                pointer-events: auto !important;
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'BACK';
+        backBtn.style.pointerEvents = 'auto';
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '40px';
+        wrapper.style.left = '80px';
+        wrapper.style.transform = 'translate(-50%, -50%)';
+        wrapper.style.zIndex = '1000';
+        wrapper.style.pointerEvents = 'none';
+        wrapper.appendChild(backBtn);
+        const gameContainer = document.getElementById('app') || document.body;
+        gameContainer.appendChild(wrapper);
+
+        backBtn.addEventListener('click', () => {
+            this.scene.start('MenuPageScene');
+        });
+
         this.physics.resume();
 
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
+        const width = this.LOGICAL_WIDTH;
+        const height = this.LOGICAL_HEIGHT;
 
         this.textures.get('player_level6').setFilter(Phaser.Textures.FilterMode.NEAREST);
         this.textures.get('virus_level6').setFilter(Phaser.Textures.FilterMode.NEAREST);
         this.textures.get('wall_level6').setFilter(Phaser.Textures.FilterMode.NEAREST);
 
-        this.createBackground(width, height);
         this.createMaze(width, height);
         this.createPlayer();
         this.createViruses();
@@ -166,6 +212,32 @@ class Level6 extends Phaser.Scene {
         this.hasStartedPlaying = true;
         this.levelStartTime = this.time.now;
         this.updateHud();
+
+        const onResize = () => {
+            if (!this.scene.isActive()) return;
+
+            const newW = this.scale.width;
+            const newH = this.scale.height;
+
+            this.cameras.main.setSize(newW, newH);
+
+            const zoomX = newW / this.LOGICAL_WIDTH;
+            const zoomY = newH / this.LOGICAL_HEIGHT;
+            const zoom = Math.min(zoomX, zoomY);
+
+            this.cameras.main.setZoom(zoom);
+            this.cameras.main.centerOn(this.LOGICAL_WIDTH / 2, this.LOGICAL_HEIGHT / 2);
+        };
+
+        this.scale.on('resize', onResize);
+        onResize();
+        this.time.delayedCall(10, onResize);
+
+        this.events.once('shutdown', () => {
+            wrapper.remove();
+            this.scale.off('resize', onResize);
+            this.tweens.killAll();
+        });
     }
 
     private getVirusSpeed() {
@@ -184,22 +256,6 @@ class Level6 extends Phaser.Scene {
         return this.isVaccinated
             ? this.vaccinatedTimeLimitMs
             : this.normalTimeLimitMs;
-    }
-
-    private createBackground(width: number, height: number) {
-        this.bg = this.add.image(width / 2, height / 2, 'background_level6');
-        this.bg.setOrigin(0.5);
-        this.bg.setDepth(0);
-        this.bg.setAlpha(0.9);
-
-        const texture = this.textures.get('background_level6').getSourceImage() as HTMLImageElement;
-        const scaleX = width / texture.width;
-        const scaleY = height / texture.height;
-        const scale = Math.max(scaleX, scaleY);
-
-        this.bg.setScale(scale);
-
-        this.add.rectangle(width / 2, height / 2, width, height, 0x001020, 0.48).setDepth(1);
     }
 
     private createMaze(width: number, height: number) {
@@ -822,32 +878,64 @@ class Level6 extends Phaser.Scene {
     private updatePlayerMovement() {
         if (!this.player || !this.player.body) return;
 
-        let velocityX = 0;
-        let velocityY = 0;
-
-        const movingLeft = this.keyA.isDown || !!this.cursors.left?.isDown;
-        const movingRight = this.keyD.isDown || !!this.cursors.right?.isDown;
-        const movingUp = this.keyW.isDown || !!this.cursors.up?.isDown;
-        const movingDown = this.keyS.isDown || !!this.cursors.down?.isDown;
-
-        if (movingLeft) velocityX -= this.playerSpeed;
-        if (movingRight) velocityX += this.playerSpeed;
-        if (movingUp) velocityY -= this.playerSpeed;
-        if (movingDown) velocityY += this.playerSpeed;
-
-        if (velocityX !== 0 && velocityY !== 0) {
-            const diagonalSpeed = this.playerSpeed / Math.SQRT2;
-
-            velocityX = velocityX > 0 ? diagonalSpeed : -diagonalSpeed;
-            velocityY = velocityY > 0 ? diagonalSpeed : -diagonalSpeed;
-        }
-
         const body = this.player.body as Phaser.Physics.Arcade.Body;
+        const inputMode = this.registry.get('inputMode');
 
         body.setAcceleration(0, 0);
-        body.setMaxVelocity(this.playerSpeed, this.playerSpeed);
-        body.setVelocity(0, 0);
-        body.setVelocity(velocityX, velocityY);
+
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
+
+            if (tracker.targetX !== -1 && tracker.targetY !== -1) {
+                // Calcola i pixel sullo schermo reale
+                const pixelX = tracker.targetX * this.scale.gameSize.width;
+                const pixelY = tracker.targetY * this.scale.gameSize.height;
+
+                // Traduci nei pixel virtuali del mondo 1920x1080
+                const worldPoint = this.cameras.main.getWorldPoint(pixelX, pixelY);
+
+                // Calcola la distanza tra il giocatore e la mano
+                const distance = Phaser.Math.Distance.Between(
+                    this.player.x, 
+                    this.player.y, 
+                    worldPoint.x, 
+                    worldPoint.y
+                );
+
+                // Deadzone: se siamo abbastanza vicini alla mano, fermiamoci
+                if (distance > 20) {
+                    this.physics.moveTo(this.player, worldPoint.x, worldPoint.y, this.playerSpeed);
+                } else {
+                    body.setVelocity(0, 0);
+                }
+            } else {
+                // Se la mano viene persa dalla telecamera, fermati
+                body.setVelocity(0, 0);
+            }
+        } else {
+            // Logica Tastiera Originale
+            let velocityX = 0;
+            let velocityY = 0;
+
+            const movingLeft = this.keyA.isDown || !!this.cursors.left?.isDown;
+            const movingRight = this.keyD.isDown || !!this.cursors.right?.isDown;
+            const movingUp = this.keyW.isDown || !!this.cursors.up?.isDown;
+            const movingDown = this.keyS.isDown || !!this.cursors.down?.isDown;
+
+            if (movingLeft) velocityX -= this.playerSpeed;
+            if (movingRight) velocityX += this.playerSpeed;
+            if (movingUp) velocityY -= this.playerSpeed;
+            if (movingDown) velocityY += this.playerSpeed;
+
+            if (velocityX !== 0 && velocityY !== 0) {
+                const diagonalSpeed = this.playerSpeed / Math.SQRT2;
+                velocityX = velocityX > 0 ? diagonalSpeed : -diagonalSpeed;
+                velocityY = velocityY > 0 ? diagonalSpeed : -diagonalSpeed;
+            }
+
+            body.setMaxVelocity(this.playerSpeed, this.playerSpeed);
+            body.setVelocity(velocityX, velocityY);
+        }
     }
 
     private getActiveVirusCount() {
@@ -1052,35 +1140,3 @@ class Level6 extends Phaser.Scene {
         this.updateHud();
     }
 }
-
-const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO,
-
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1920,
-        height: 1080
-    },
-
-    parent: 'game-container',
-
-    physics: {
-        default: 'arcade',
-        arcade: {
-            debug: false,
-            gravity: {
-                x: 0,
-                y: 0
-            }
-        }
-    },
-
-    render: {
-        roundPixels: true
-    },
-
-    scene: [Level6]
-};
-
-new Phaser.Game(config);

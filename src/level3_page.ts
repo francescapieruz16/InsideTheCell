@@ -1,12 +1,15 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
+import { HandTrackingController } from '../src/handTracking/handTrackingController';
 
-class Level3 extends Phaser.Scene {
+export class Level3 extends Phaser.Scene {
     private bg!: Phaser.GameObjects.TileSprite;
     private player!: Phaser.Physics.Arcade.Sprite;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private platforms!: Phaser.Physics.Arcade.Group;
     private spikes!: Phaser.Physics.Arcade.Group;
+
+    private backgroundImage!: Phaser.GameObjects.Image;
 
     private finishFlag!: Phaser.Physics.Arcade.Image;
     private levelCompleted = false;
@@ -47,7 +50,7 @@ class Level3 extends Phaser.Scene {
         this.levelCompleted = false;
         this.gameOver = false;
 
-        this.genomeReleaseTime = this.isVaccinated ? 30000 : 15000;
+        this.genomeReleaseTime = this.isVaccinated ? 50000 : 30000;
         this.genomeTimer = data.genomeTimer ?? 0;
         this.worldScroll = 0;
     }
@@ -80,6 +83,60 @@ class Level3 extends Phaser.Scene {
     }
 
     create() {
+        this.game.canvas.style.pointerEvents = 'none';
+                
+        const bgHTML = document.getElementById('background');
+        if (bgHTML) {
+            bgHTML.removeAttribute('src'); 
+            bgHTML.style.backgroundImage = `url('/assets/level3/background_level_3.png')`;
+            bgHTML.style.backgroundSize = 'auto 100%'; 
+            bgHTML.style.backgroundRepeat = 'repeat-x'; 
+            bgHTML.style.backgroundPosition = '0px 0px'; 
+        }
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+            }
+
+            button {
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'BACK';
+        backBtn.style.padding = '15px 30px';
+        backBtn.style.fontSize = '1.5rem';  
+        backBtn.style.width = '130px';      
+        backBtn.style.height = '63px';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'phaser-dom-container';
+        //wrapper.style.setProperty('position', 'fixed', 'important');
+        //wrapper.style.setProperty('top', '-80px', 'important'); 
+        //wrapper.style.setProperty('left', '-155px', 'important');
+        wrapper.appendChild(backBtn);
+        const backBtnDom = this.add.dom(-180, -90, wrapper).setOrigin(0, 0).setScrollFactor(0);
+
+        backBtn.addEventListener('click', () => {
+            this.scene.start('MenuPageScene');
+        });
+
         const worldWidth = 10000;
         const worldHeight = 1080;
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
@@ -96,24 +153,6 @@ class Level3 extends Phaser.Scene {
         this.floorY = worldHeight - 80;
         this.startY = this.floorY - 120;
         const platformBaseY = this.floorY - 100;
-
-        this.bg = this.add.tileSprite(
-            0,
-            0,
-            width,
-            worldHeight,
-            'background_level3'
-        );
-
-        this.bg.setOrigin(0, 0);
-        this.bg.setDepth(0);
-
-        const texture = this.textures
-            .get('background_level3')
-            .getSourceImage() as HTMLImageElement;
-
-        const bgScale = worldHeight / texture.height;
-        this.bg.setTileScale(bgScale, bgScale);
 
         this.player = this.physics.add.sprite(
             this.startX,
@@ -325,14 +364,25 @@ class Level3 extends Phaser.Scene {
         this.cameras.main.startFollow(this.cameraTarget, true, 0.1, 0.1);
 
         this.cameras.main.setZoom(this.scale.height / worldHeight);
-        
-        this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
-            this.cameras.main.setZoom(gameSize.height / worldHeight);
-        });
 
         this.postGameManager = new PostGameManager(this);
 
         this.postGameManager.preparePostGame(3);
+
+        const onResize = (gameSize: Phaser.Structs.Size) => {
+            if (!this.scene.isActive()) return;
+
+            this.cameras.main.setZoom(gameSize.height / worldHeight);
+            backBtnDom.setPosition(-180, -90);
+        };
+
+        this.scale.on('resize', onResize);
+
+        onResize(this.scale.gameSize);
+
+        this.events.once('shutdown', () => {
+            this.scale.off('resize', onResize);
+        });
     }
 
     private addPlatform(
@@ -552,10 +602,11 @@ class Level3 extends Phaser.Scene {
     update(_time: number, delta: number) {
         const view = this.cameras.main.worldView;
 
-        this.bg.setPosition(view.x, view.y);
-        this.bg.setSize(view.width, view.height);
-        
-        this.bg.tilePositionX = this.cameras.main.scrollX * 0.1;
+        const bgHTML = document.getElementById('background');
+        if (bgHTML) {
+            const scrollX = this.cameras.main.scrollX * 0.1;
+            bgHTML.style.backgroundPositionX = `-${scrollX}px`;
+        }
 
         this.virus.setPosition(view.centerX, view.y + 170);
         this.genomeText.setPosition(view.centerX, view.y + 330);
@@ -578,18 +629,30 @@ class Level3 extends Phaser.Scene {
 
         this.updateVirusTimer(delta);
 
-        const leftPressed = this.cursors.left?.isDown;
-        const rightPressed = this.cursors.right?.isDown;
-        const jumpPressed = this.cursors.up?.isDown || this.cursors.space?.isDown;
+        const inputMode = this.registry.get('inputMode');
+        let leftInput = this.cursors.left?.isDown || false;
+        let rightInput = this.cursors.right?.isDown || false;
+        let jumpInput = this.cursors.up?.isDown || this.cursors.space?.isDown || false;
+
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
+            if (tracker.targetX !== -1) {
+                if (tracker.targetX < 0.4) {
+                    leftInput = true;
+                } else if (tracker.targetX > 0.6) {
+                    rightInput = true;
+                }
+            }
+        }
 
         const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
 
-        if (leftPressed) {
+        if (leftInput) {
             this.player.setVelocityX(-this.moveSpeed);
             this.player.setFlipX(true);
             this.player.anims.play('run', true);
         } 
-        else if (rightPressed) {
+        else if (rightInput) {
             this.player.setVelocityX(this.moveSpeed);
             this.player.setFlipX(false);
             this.player.anims.play('run', true);
@@ -600,8 +663,13 @@ class Level3 extends Phaser.Scene {
         }
 
         // Gestione Salto
-        if (jumpPressed && playerBody.blocked.down) {
-            this.player.setVelocityY(-this.jumpSpeed);
+        if (inputMode === 'hand') {
+            //TODO: implemenatre funzione per auto jump
+            //this.checkAutoJump(leftInput, rightInput);
+        } else {
+            if (jumpInput && playerBody.blocked.down) {
+                this.player.setVelocityY(-this.jumpSpeed);
+            }
         }
 
         // Animazione Salto in aria
@@ -610,35 +678,3 @@ class Level3 extends Phaser.Scene {
         }
     }
 }
-
-const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO,
-
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1920,
-        height: 1080,
-    },
-
-    parent: 'game-container',
-
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: {
-                x: 0,
-                y: 0
-            },
-            debug: false
-        }
-    },
-
-    render: {
-        roundPixels: true
-    },
-
-    scene: [Level3]
-};
-
-new Phaser.Game(config);

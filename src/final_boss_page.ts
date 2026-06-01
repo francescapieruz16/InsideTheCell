@@ -16,7 +16,7 @@ type QuizQuestion = {
     explanation: string;
 };
 
-class FinalBoss extends Phaser.Scene {
+export class FinalBoss extends Phaser.Scene {
     private bg!: Phaser.GameObjects.Image;
     private boss!: Phaser.GameObjects.Image;
 

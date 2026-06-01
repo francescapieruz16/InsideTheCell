@@ -6,6 +6,7 @@ import { StringOutputParser } from "@langchain/core/output_parsers";
 import ABI from '../classes/abi';
 import defaultDialogues from '../../assets/default_dialogues.json';
 import defaultAdminSettings from '../../assets/default_context_and_quizzes.json';
+import { HandTrackingController } from '../handTracking/handTrackingController';
 
 export class PostGameManager {
     private scene: Phaser.Scene;
@@ -47,6 +48,9 @@ export class PostGameManager {
     private isWaitingForLLM: boolean = false;
 
     private llm: ChatGoogleGenerativeAI | null = null;
+
+    private allInteractableButtons: Phaser.GameObjects.Container[] = [];
+    private previousPinchState: boolean = false;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -109,12 +113,22 @@ export class PostGameManager {
                     }, 50);
                 }
                 if (isChatActive) {
-                    this.abi.MoveDialogueY(-150); 
+                    this.abi.MoveDialogueY(-100); 
                 } else {
                     this.abi.MoveDialogueY(0); 
                 }
             }
         );
+
+        this.scene.events.on('update', this.update, this);
+
+        this.scene.events.once('shutdown', () => {
+            this.scene.events.off('update', this.update, this);
+            this.scene.scale.off('resize', this.handleResize, this);
+            if (this.chatManager) {
+                this.chatManager.destroy();
+            }
+        });
     }
 
     private handleResize(gameSize: Phaser.Structs.Size) {
@@ -319,7 +333,7 @@ export class PostGameManager {
     private showQuizQuestion() {
         if (this.isQuizReady) {
             this.abi.showDialogue("ABI", this.quizData.quizQuestion, undefined, true, true);
-            this.abi.MoveDialogueY(-180); 
+            this.abi.MoveDialogueY(-130); 
             this.repositionQuizButtons();
             this.quizButtons.forEach(btn => btn.setVisible(true));
         } else {
@@ -364,7 +378,7 @@ export class PostGameManager {
         const title = this.scene.add.text(0, -90, 'LEVEL COMPLETED!', { fontFamily: this.MENU_FONT, fontSize: '48px', fontStyle: 'bold', color: '#00ff00' }).setOrigin(0.5);
         const menuBtn = this.createButton(0, 110, 320, 70, 'Menu', '28px', () => {
             this.chatManager.hide();
-            window.location.href = '/pages/menu_page.html';
+            this.scene.scene.start('MenuPageScene');
         });
 
         const winContainer = this.scene.add.container(cx, cy).setDepth(120).setScrollFactor(0);
@@ -372,7 +386,7 @@ export class PostGameManager {
         if (this.nextLevel <= 6) {
             const nextBtn = this.createButton(0, 20, 320, 70, 'Next level', '28px', () => {
                 this.chatManager.hide();
-                window.location.href = '/pages/level' + this.nextLevel + '.html';
+                this.scene.scene.start('Level' + this.nextLevel);
             });
             winContainer.add([...windowUi.list, title, nextBtn, menuBtn]);
         } else {
@@ -390,13 +404,13 @@ export class PostGameManager {
 
         const windowUi = this.createWindow(820, 420);
         const title = this.scene.add.text(0, -100, 'GAME OVER', { fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#770000' }).setOrigin(0.5);
-        const retryBtn = this.createButton(0, 70, 320, 70, 'Try Again', '28px', () => {
+        const retryBtn = this.createButton(0, 20, 320, 70, 'Try Again', '28px', () => {
             this.chatManager.hide();
             this.scene.scene.restart({ vaccinated: true });
         });
-        const menuBtn = this.createButton(0, 160, 320, 70, 'Menu', '28px', () => {
+        const menuBtn = this.createButton(0, 110, 320, 70, 'Menu', '28px', () => {
             this.chatManager.hide();
-            window.location.href = '/pages/menu_page.html';
+            this.scene.scene.start('MenuPageScene');
         });
 
         const goContainer = this.scene.add.container(cx, cy, [...windowUi.list, title, retryBtn, menuBtn])
@@ -412,7 +426,7 @@ export class PostGameManager {
         const cy = this.scene.cameras.main.height / 2;
         const zoom = this.scene.cameras.main.height / 1080;
 
-        this.continueToQuizBtn = this.createButton(cx - 150, cy - 110, 260, 64, 'Go to the quiz', '28px', () => {
+        this.continueToQuizBtn = this.createButton(cx - 150, cy, 260, 64, 'Go to the quiz', '28px', () => {
             this.llmContainer.setVisible(false);
             this.chatManager.hide();
             this.proceedToQuiz();
@@ -468,8 +482,10 @@ export class PostGameManager {
         
         const camZoom = this.scene.cameras.main.zoom;
 
-        const cx = (screenW / 2) / camZoom;
-        const bottomY = screenH / camZoom;
+        const cx = screenW / 2;
+        const bottomY = screenH;
+        //TODO: fix level 3 zoom
+        //const bottomY = (screenH / 2) + ((screenH / 2) / camZoom);
         const targetUIZoom = screenH / 1080;
         const uiScale = targetUIZoom / camZoom;
 
@@ -536,6 +552,51 @@ export class PostGameManager {
         }
     }
 
+    private update(time: number, delta: number) {
+        const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
+        if (inputMode !== 'hand') return;
+
+        const tracker = HandTrackingController.getInstance();
+
+        const currentPinch = tracker.isClicked; 
+
+        if (currentPinch && !this.previousPinchState) {
+            const cursorX = tracker.targetX * this.scene.cameras.main.width;
+            const cursorY = tracker.targetY * this.scene.cameras.main.height;
+            
+            this.handlePinchClick(cursorX, cursorY);
+        }
+
+        this.previousPinchState = currentPinch;
+    }
+
+    private handlePinchClick(x: number, y: number) {
+        for (const btn of this.allInteractableButtons) {
+            let isVisible = btn.visible && btn.active;
+            
+            let parent = btn.parentContainer;
+            while (parent && isVisible) {
+                if (!parent.visible) isVisible = false;
+                parent = parent.parentContainer;
+            }
+
+            if (!isVisible) continue;
+
+            const bounds = btn.getBounds();
+
+            if (bounds.contains(x, y)) {
+                (btn as any).customOnClick();
+                
+                btn.setScale((btn as any).baseScale * 0.95);
+                setTimeout(() => {
+                    if (btn.active) btn.setScale((btn as any).baseScale * 1.05);
+                }, 150);
+                
+                break;
+            }
+        }
+    }
+
     private createWindow(width: number, height: number) {
         const container = this.scene.add.container(0, 0);
 
@@ -589,6 +650,9 @@ export class PostGameManager {
         outer.on('pointerup', () => {
             container.setScale((container as any).baseScale * 1.05);
         });
+
+        (container as any).customOnClick = onClick;
+        this.allInteractableButtons.push(container);
 
         return container;
     }

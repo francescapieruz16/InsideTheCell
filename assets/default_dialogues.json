@@ -70,12 +70,12 @@
         "minigame_3": {
             "dialogue_1": "The viral genome was released!",
             "dialogue_2": "You were not able to reach the end in time.\nThe virus opened and released its genetic material inside the cell.\nNow the viral genome can take control of the host cell machinery and start producing new viral components.\nThis is the third step of the infection.",
-            "dialogue:3": "Remember that after entering the cell, the virus releases its genetic material during a process called genome release or uncoating.\nOnce the viral genome is free inside the host cell, it can take control of the cell machinery and start producing new viral components."
+            "dialogue_3": "Remember that after entering the cell, the virus releases its genetic material during a process called genome release or uncoating.\nOnce the viral genome is free inside the host cell, it can take control of the cell machinery and start producing new viral components."
 
         },
         "minigame_4": {
             "dialogue_1": "Replication error detected!",
-            "dialogue_2": "You matched unstable genetic material.\nDuring genome replication, the virus tries to copy its genetic instructions inside the host cell.\nMutation and replication-error fragments can make the copied genome unstable.\nMutation and replication-error fragments can make the copied genome unstable.",
+            "dialogue_2": "You matched unstable genetic material.\nDuring genome replication, the virus tries to copy its genetic instructions inside the host cell.\nMutation and replication-error fragments can make the copied genome unstable.\nThis is the fourth step of the infection.",
             "dialogue_3": "Remember that after genome release, the virus must copy its genetic material.\nIn this level, the correct memory cards represent stable genome components, while the buffer cards represent mutations or replication errors."
 
         },

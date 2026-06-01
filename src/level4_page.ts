@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
+import { HandTrackingController } from '../src/handTracking/handTrackingController';
 
 type CardType = 'true' | 'false' | 'gold';
 
@@ -20,9 +21,7 @@ type CardInfo = {
     type: CardType;
 };
 
-class Level4 extends Phaser.Scene {
-    private bg!: Phaser.GameObjects.Image;
-
+export class Level4 extends Phaser.Scene {
     private cards: CardData[] = [];
     private flippedCards: CardData[] = [];
 
@@ -44,6 +43,11 @@ class Level4 extends Phaser.Scene {
 
     private isVaccinated: boolean = false;
     private hasShownQuiz: boolean = false;
+
+    private uiContainer!: Phaser.GameObjects.Container;
+    private wasClicked: boolean = false;
+
+    private currentScale: number = 1;
 
     constructor() {
         super('Level4');
@@ -116,10 +120,52 @@ class Level4 extends Phaser.Scene {
     }
 
     create() {
+        const bgHTML = document.getElementById('background') as HTMLImageElement;
+        if (bgHTML) {
+            bgHTML.src = '/assets/level4/background_level_4.png';
+            bgHTML.style.objectFit = 'fill'; 
+        }
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+            }
+
+            button {
+                pointer-events: auto !important;
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'BACK';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'phaser-dom-container';
+        wrapper.appendChild(backBtn);
+        const backBtnDom = this.add.dom(80, 40, wrapper);
+
+        backBtn.addEventListener('click', () => {
+            this.scene.start('MenuPageScene');
+        });
+
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        this.createBackground(width, height);
         this.createUi();
 
         this.createGoldCardTexture();
@@ -128,44 +174,127 @@ class Level4 extends Phaser.Scene {
 
         this.postGameManager = new PostGameManager(this);
         this.postGameManager.preparePostGame(4);
+
+        const onResize = (gameSize: Phaser.Structs.Size) => {
+            if (!this.scene.isActive()) return;
+
+            const newW = gameSize.width;
+            const newH = gameSize.height;
+
+            if (backBtnDom) {
+                backBtnDom.setPosition(80, 40);
+            }
+
+            if (this.uiContainer) {
+                this.uiContainer.setPosition(newW - 170, 60);
+            }
+
+            this.repositionCards(newW, newH);
+        };
+
+        this.scale.on('resize', onResize);
+        
+        onResize(this.scale.gameSize);
+
+        this.events.once('shutdown', () => {
+            this.scale.off('resize', onResize);
+            this.tweens.killAll();
+        });
     }
 
-    private createBackground(width: number, height: number) {
-        this.bg = this.add.image(
-            width / 2,
-            height / 2,
-            'background_level4'
-        );
+    update(time: number, delta: number) {
+        if (this.gameEnded) return;
 
-        this.bg.setOrigin(0.5);
-        this.bg.setDepth(0);
+        const inputMode = this.registry.get('inputMode');
 
-        const texture = this.textures
-            .get('background_level4')
-            .getSourceImage() as HTMLImageElement;
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
 
-        const scaleX = width / texture.width;
-        const scaleY = height / texture.height;
-        const scale = Math.max(scaleX, scaleY);
+            if (tracker.targetX !== -1) {
+                const screenX = tracker.targetX * this.cameras.main.width;
+                const screenY = tracker.targetY * this.cameras.main.height;
 
-        this.bg.setScale(scale);
+                const isClicked = tracker.isClicked;
+
+                if (isClicked && !this.wasClicked) {
+                    this.pinchCardWithHand(screenX, screenY);
+                }
+
+                this.wasClicked = isClicked;
+            } else {
+                this.wasClicked = false;
+            }
+        }
+    }
+
+    private pinchCardWithHand(x: number, y: number) {
+        if (!this.canClick || this.gameEnded) return;
+
+        for (const card of this.cards) {
+            const distance = Phaser.Math.Distance.Between(x, y, card.image.x, card.image.y);
+            
+            if (distance < 70 * this.currentScale) { 
+                this.handleCardClick(card);
+                break;
+            }
+        }
+    }
+
+    private repositionCards(width: number, height: number) {
+        if (!this.cards || this.cards.length === 0) return;
+
+        const columns = 5;
+        const rows = Math.ceil(this.cards.length / columns);
+
+        let cardW = width * 0.11; 
+        let cardH = cardW * (this.cardHeight / this.cardWidth);
+
+        const maxAllowedHeight = height * 0.65; 
+        if (cardH * rows > maxAllowedHeight) {
+            cardH = maxAllowedHeight / rows;
+            cardW = cardH * (this.cardWidth / this.cardHeight);
+        }
+
+        this.currentScale = cardW / this.cardWidth;
+
+        const gapX = cardW * 0.15; 
+        const gapY = cardH * 0.15;
+
+        const totalGridWidth = columns * cardW + (columns - 1) * gapX;
+        const totalGridHeight = rows * cardH + (rows - 1) * gapY;
+
+        const startX = width / 2 - totalGridWidth / 2 + cardW / 2;
+        const startY = height / 2 - totalGridHeight / 2 + cardH / 2;
+
+        this.cards.forEach((card, index) => {
+            this.tweens.killTweensOf(card.image);
+
+            const col = index % columns;
+            const row = Math.floor(index / columns);
+
+            const x = startX + col * (cardW + gapX);
+            const y = startY + row * (cardH + gapY);
+
+            card.image.setPosition(x, y);
+            card.image.setDisplaySize(cardW, cardH);
+        });
     }
 
     private createUi() {
+        const width = this.cameras.main.width;
+
         const movesBg = this.add.rectangle(
-            170,
-            52,
+            0,
+            0,
             280,
             60,
             0x001b1d,
             0.72
         );
 
-        movesBg.setDepth(19);
-
         this.movesText = this.add.text(
-            40,
-            24,
+            -120,
+            -20,
             `MOVES: 0/${this.maxMoves}`,
             {
                 fontSize: '36px',
@@ -176,7 +305,8 @@ class Level4 extends Phaser.Scene {
             }
         );
 
-        this.movesText.setDepth(20);
+        this.uiContainer = this.add.container(width - 170, 60, [movesBg, this.movesText]);
+        this.uiContainer.setDepth(20);
     }
 
     private createGoldCardTexture() {
@@ -230,42 +360,17 @@ class Level4 extends Phaser.Scene {
     private createCards(width: number, height: number) {
         const deck = this.createDeck();
 
-        const columns = 5;
-        const gapX = 28;
-        const gapY = 20;
-
-        const rows = Math.ceil(deck.length / columns);
-
-        const totalGridWidth =
-            columns * this.cardWidth + (columns - 1) * gapX;
-
-        const totalGridHeight =
-            rows * this.cardHeight + (rows - 1) * gapY;
-
-        const startX =
-            width / 2 - totalGridWidth / 2 + this.cardWidth / 2;
-
-        const startY =
-            height / 2 - totalGridHeight / 2 + this.cardHeight / 2 - 10;
-
         deck.forEach((cardInfo, index) => {
-            const col = index % columns;
-            const row = Math.floor(index / columns);
-
-            const x = startX + col * (this.cardWidth + gapX);
-            const y = startY + row * (this.cardHeight + gapY);
-
             const isStaticGold = this.isVaccinated && cardInfo.type === 'gold';
 
             const image = this.add.image(
-                x,
-                y,
+                0,
+                0,
                 isStaticGold ? cardInfo.key : 'card_back'
             );
 
             image.setOrigin(0.5);
             image.setDepth(10);
-            image.setDisplaySize(this.cardWidth, this.cardHeight);
 
             const card: CardData = {
                 id: index,
@@ -291,6 +396,8 @@ class Level4 extends Phaser.Scene {
 
             this.cards.push(card);
         });
+
+        this.repositionCards(width, height);
     }
 
     private createDeck(): CardInfo[] {
@@ -444,8 +551,6 @@ class Level4 extends Phaser.Scene {
     private flipCard(card: CardData) {
         card.isFlipped = true;
 
-        const currentScaleY = card.image.scaleY;
-
         this.tweens.add({
             targets: card.image,
             scaleX: 0,
@@ -453,7 +558,7 @@ class Level4 extends Phaser.Scene {
             ease: 'Power1',
             onComplete: () => {
                 card.image.setTexture(card.key);
-                card.image.setDisplaySize(this.cardWidth, this.cardHeight);
+                card.image.setDisplaySize(this.cardWidth * this.currentScale, this.cardHeight * this.currentScale);
 
                 const targetScaleX = card.image.scaleX;
                 const targetScaleY = card.image.scaleY;
@@ -469,14 +574,10 @@ class Level4 extends Phaser.Scene {
                 });
             }
         });
-
-        card.image.scaleY = currentScaleY;
     }
 
     private hideCard(card: CardData) {
         card.isFlipped = false;
-
-        const currentScaleY = card.image.scaleY;
 
         this.tweens.add({
             targets: card.image,
@@ -485,7 +586,7 @@ class Level4 extends Phaser.Scene {
             ease: 'Power1',
             onComplete: () => {
                 card.image.setTexture('card_back');
-                card.image.setDisplaySize(this.cardWidth, this.cardHeight);
+                card.image.setDisplaySize(this.cardWidth * this.currentScale, this.cardHeight * this.currentScale);
 
                 const targetScaleX = card.image.scaleX;
                 const targetScaleY = card.image.scaleY;
@@ -501,8 +602,6 @@ class Level4 extends Phaser.Scene {
                 });
             }
         });
-
-        card.image.scaleY = currentScaleY;
     }
 
     private checkPair() {
@@ -615,34 +714,3 @@ class Level4 extends Phaser.Scene {
         });
     }
 }
-
-const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO,
-
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1920,
-        height: 1080,
-    },
-    parent: 'game-container',
-
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: {
-                x: 0,
-                y: 0
-            },
-            debug: false
-        }
-    },
-
-    render: {
-        roundPixels: true
-    },
-
-    scene: [Level4]
-};
-
-new Phaser.Game(config);

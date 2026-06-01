@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
+import { HandTrackingController } from '../src/handTracking/handTrackingController';
 
 type ComponentLevel = {
     key: string;
@@ -7,9 +8,7 @@ type ComponentLevel = {
     mergeValue: number;
 };
 
-class Level5 extends Phaser.Scene {
-    private bg!: Phaser.GameObjects.Image;
-
+export class Level5 extends Phaser.Scene {
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private keyA!: Phaser.Input.Keyboard.Key;
     private keyD!: Phaser.Input.Keyboard.Key;
@@ -51,7 +50,6 @@ class Level5 extends Phaser.Scene {
     private lastVaccinatedMergeAssistCheck = 0;
 
     private readonly wallThickness = 38;
-    private readonly dangerTime = 1200;
 
     private readonly initialComponentCount = 200;
     private readonly vaccinatedFinalLevel = 4;
@@ -59,7 +57,12 @@ class Level5 extends Phaser.Scene {
     private readonly vaccinatedMergeAssistMargin = 28;
     private readonly vaccinatedMergeAssistCheckInterval = 120;
 
+    private readonly LOGICAL_WIDTH = 1920;
+    private readonly LOGICAL_HEIGHT = 1080;
+
     private isSeedingBox = false;
+
+    private wasClicked = false;
 
     private readonly mergeChain: ComponentLevel[] = [
         {
@@ -120,7 +123,19 @@ class Level5 extends Phaser.Scene {
     ];
 
     constructor() {
-        super('Level5');
+        super({
+            key: 'Level5',
+            physics: {
+                default: 'matter',
+                matter: {
+                    gravity: {
+                        x: 0,
+                        y: 6
+                    },
+                    debug: false
+                }
+            }
+        });
     }
 
     init(data: { vaccinated?: boolean } = {}) {
@@ -147,6 +162,8 @@ class Level5 extends Phaser.Scene {
         this.hasNextPreview = false;
 
         this.isSeedingBox = false;
+
+        this.wasClicked = false;
     }
 
     preload() {
@@ -217,12 +234,61 @@ class Level5 extends Phaser.Scene {
     }
 
     create() {
+        const bgHTML = document.getElementById('background') as HTMLImageElement;
+        if (bgHTML) {
+            bgHTML.src = '/assets/level5/background_level_5.png';
+            bgHTML.style.objectFit = 'fill'; 
+        }
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+            }
+
+            button {
+                pointer-events: auto !important;
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'BACK';
+        backBtn.style.pointerEvents = 'auto';
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '40px';
+        wrapper.style.left = '80px';
+        wrapper.style.transform = 'translate(-50%, -50%)';
+        wrapper.style.zIndex = '1000';
+        wrapper.style.pointerEvents = 'none';
+        wrapper.appendChild(backBtn);
+        const gameContainer = document.getElementById('app') || document.body;
+        gameContainer.appendChild(wrapper);
+
+        backBtn.addEventListener('click', () => {
+            this.scene.start('MenuPageScene');
+        });
+
         this.matter.world.resume();
 
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
+        const width = this.LOGICAL_WIDTH;
+        const height = this.LOGICAL_HEIGHT;
 
-        this.createBackground(width, height);
         this.createContainer(width, height);
         this.createControls();
         this.createCollisionHandler();
@@ -231,27 +297,34 @@ class Level5 extends Phaser.Scene {
         this.postGameManager.preparePostGame(5);
 
         this.seedInitialBox();
-    }
 
-    private createBackground(width: number, height: number) {
-        this.bg = this.add.image(
-            width / 2,
-            height / 2,
-            'background_level5'
-        );
+        const onResize = () => {
+            if (!this.scene.isActive()) return;
 
-        this.bg.setOrigin(0.5);
-        this.bg.setDepth(0);
+            const newW = this.scale.width;
+            const newH = this.scale.height;
 
-        const texture = this.textures
-            .get('background_level5')
-            .getSourceImage() as HTMLImageElement;
+            this.cameras.main.setSize(newW, newH);
 
-        const scaleX = width / texture.width;
-        const scaleY = height / texture.height;
-        const scale = Math.max(scaleX, scaleY);
+            const zoomX = newW / this.LOGICAL_WIDTH;
+            const zoomY = newH / this.LOGICAL_HEIGHT;
+            const zoom = Math.min(zoomX, zoomY);
 
-        this.bg.setScale(scale);
+            this.cameras.main.setZoom(zoom);
+            this.cameras.main.centerOn(this.LOGICAL_WIDTH / 2, this.LOGICAL_HEIGHT / 2);
+        };
+
+        this.scale.on('resize', onResize);
+        
+        onResize();
+
+        this.time.delayedCall(10, onResize);
+
+        this.events.once('shutdown', () => {
+            wrapper.remove();
+            this.scale.off('resize', onResize);
+            this.tweens.killAll();
+        });
     }
 
     private createContainer(width: number, height: number) {
@@ -617,22 +690,46 @@ class Level5 extends Phaser.Scene {
             return;
         }
 
-        const moveSpeed = 9;
+        const inputMode = this.registry.get('inputMode') || 'keyboard';
+        let shouldDrop = false;
 
-        const movingLeft =
-            this.keyA.isDown ||
-            !!this.cursors.left?.isDown;
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
 
-        const movingRight =
-            this.keyD.isDown ||
-            !!this.cursors.right?.isDown;
+            if (tracker.targetX !== -1) {
+                const pixelX = tracker.targetX * this.scale.gameSize.width;
+                const worldX = this.cameras.main.getWorldPoint(pixelX, 0).x;
+                this.dropX = Phaser.Math.Linear(this.dropX, worldX, 0.2);
+                const isClicked = tracker.isClicked;
 
-        if (movingLeft) {
-            this.dropX -= moveSpeed;
-        }
+                if (isClicked && !this.wasClicked) {
+                    shouldDrop = true;
+                }
 
-        if (movingRight) {
-            this.dropX += moveSpeed;
+                this.wasClicked = isClicked;
+            } else {
+                this.wasClicked = false;
+            }
+        } else {
+            const moveSpeed = 9;
+
+            const movingLeft = this.keyA.isDown || (this.cursors && this.cursors.left.isDown);
+            const movingRight = this.keyD.isDown || (this.cursors && this.cursors.right.isDown);
+
+            if (movingLeft) {
+                this.dropX -= moveSpeed;
+            }
+
+            if (movingRight) {
+                this.dropX += moveSpeed;
+            }
+
+            const spaceJustDown = Phaser.Input.Keyboard.JustDown(this.keySpace);
+            const downJustDown = this.cursors && Phaser.Input.Keyboard.JustDown(this.cursors.down);
+            
+            if (spaceJustDown || downJustDown) {
+                shouldDrop = true;
+            }
         }
 
         this.dropX = Phaser.Math.Clamp(
@@ -642,14 +739,7 @@ class Level5 extends Phaser.Scene {
         );
 
         this.currentPreview.x = this.dropX;
-
-        const shouldDrop =
-            Phaser.Input.Keyboard.JustDown(this.keySpace) ||
-            !!(
-                this.cursors.down &&
-                Phaser.Input.Keyboard.JustDown(this.cursors.down)
-            );
-
+    
         if (shouldDrop) {
             this.dropCurrentComponent();
         }
@@ -1195,35 +1285,3 @@ class Level5 extends Phaser.Scene {
         this.checkDangerLine();
     }
 }
-
-const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO,
-
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1920,
-        height: 1080
-    },
-
-    parent: 'game-container',
-
-    physics: {
-        default: 'matter',
-        matter: {
-            gravity: {
-                x: 0,
-                y: 6
-            },
-            debug: false
-        }
-    },
-
-    render: {
-        roundPixels: true
-    },
-
-    scene: [Level5]
-};
-
-new Phaser.Game(config);

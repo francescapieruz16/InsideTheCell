@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
 
+// Importiamo l'interfaccia per il type checking
+import { GameSettings } from '../ExploreZone_scenes/SettingsScene'; // Assicurati che il percorso sia corretto
+
 export default class ABI {
     private scene: Phaser.Scene;
     private uiContainer!: Phaser.GameObjects.Container;
@@ -13,22 +16,20 @@ export default class ABI {
     public isTalking: boolean = false;
     public isUnskippable: boolean = false;
     
-    // Questa variabile salverà l'azione speciale da fare a fine dialogo (es. cambiare scena)
     private onCloseCallback?: () => void; 
 
-    // Variabili per la sintesi vocale
     private synth: SpeechSynthesis;
     private robotVoice: SpeechSynthesisVoice | null = null;
 
-
-    // Variabili per l'effetto di digitazione
     private isTyping: boolean = false;
     private currentFullText: string = "";
     private currentVisibleText: string = "";
     private typingTimer?: Phaser.Time.TimerEvent;
-    private readonly TYPING_SPEED: number = 40; // Millisecondi tra una lettera e l'altra (regolabile)
+    
+    // Rimuoviamo il readonly per poter modificare la velocità in base ai settings
+    private TYPING_SPEED: number = 40; 
 
-    private radioTimer?: Phaser.Time.TimerEvent; //gestisce il timer per i dialoghi radio
+    private radioTimer?: Phaser.Time.TimerEvent; 
 
     private keepOpen: boolean = false;
     private baseY: number = 0;         
@@ -46,32 +47,67 @@ export default class ABI {
         }
     }
 
-    // --- METODO PER CARICARE LA VOCE ---
-    private initVoice() {
-        const voices = this.synth.getVoices();
-        // Cerca una voce italiana, altrimenti prende il fallback di sistema
-        this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;  
-      }
+    // --- NUOVO METODO HELPER PER LEGGERE I SETTINGS ---
+    private getSettings(): GameSettings {
+        const saved = localStorage.getItem('gameSettings');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        // Valori di default se non è mai stata aperta la scena Settings
+        return { textSpeed: 'Normal', masterVol: 100, voiceVol: 100, sfxVol: 100, musicVol: 100 };
+    }
 
-    // --- METODO PER SINTETIZZARE E RIPRODURRE L'AUDIO ---
+    private initVoice() {
+        const loadVoices = () => {
+            const voices = this.synth.getVoices();
+            this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;  
+        };
+
+        loadVoices();
+
+        if (this.synth.onvoiceschanged !== undefined) {
+            this.synth.onvoiceschanged = loadVoices;
+        }
+    }
+
     private speakText(text: string) {
-        // Fondamentale: cancella qualsiasi audio in coda o in riproduzione
         this.synth.cancel();
 
+        // 1. Recuperiamo i settings attuali prima di parlare
+        const settings = this.getSettings();
+
+        // 2. Calcoliamo il volume reale
+        // Esempio: se Master è 80% e Voice è 50%, il volume finale è 0.8 * 0.5 = 0.4
+        const masterRatio = settings.masterVol / 100;
+        const voiceRatio = settings.voiceVol / 100;
+        const finalVolume = masterRatio * voiceRatio;
+
+        // Se il volume è 0, non facciamo nemmeno partire la sintesi vocale
+        if (finalVolume <= 0) return;
+
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-GB'; // Imposta la lingua (puoi cambiarla in base alla voce scelta)
+        utterance.lang = 'en-GB'; 
+        
+        if (!this.robotVoice) {
+            const voices = this.synth.getVoices();
+            this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;
+        }
+
         if (this.robotVoice) {
             utterance.voice = this.robotVoice;
         }
 
-        // Parametri per l'effetto robotico
-        utterance.pitch = 1.5; // Tonalità molto bassa e piatta
-        utterance.rate = 1.5;  // Leggermente rallentato
+        utterance.pitch = 1.5; 
+        utterance.rate = 1.5;  
+
+        // 3. Applichiamo il volume calcolato
+        utterance.volume = finalVolume;
         
         this.synth.speak(utterance);
     }
 
     private createDialogueUI() {
+        // ... inalterato ...
         const screenW = this.scene.cameras.main.width;
         const screenH = this.scene.cameras.main.height;
 
@@ -110,6 +146,7 @@ export default class ABI {
     }
 
     public MoveDialogueY(offsetY: number) {
+        // ... inalterato ...
         if (!this.uiContainer) return; 
 
         this.currentOffsetY = offsetY;
@@ -123,16 +160,16 @@ export default class ABI {
         });
     }
 
-    // Nota l'aggiunta di "onClose": è una funzione opzionale!
     public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false, keepOpen: boolean = false) {
-        this.interrupt(); // Interrompe qualsiasi messaggio o dialogo precedente
+        // ... inalterato ...
+        this.interrupt(); 
 
         this.keepOpen = keepOpen;
 
         this.isTalking = true;
         this.isUnskippable = unskippable;
         this.dialogueName.setText(name);
-        this.onCloseCallback = onClose; // Salviamo l'azione da fare alla fine
+        this.onCloseCallback = onClose; 
 
         this.promptText.setVisible(!unskippable);
 
@@ -153,15 +190,26 @@ export default class ABI {
         this.dialogueText.setText("");
         this.isTyping = true;
 
-        // 1. Avvia la voce per l'intera stringa
         this.speakText(this.currentFullText);
 
-        // 2. Pulisci eventuali timer precedenti
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
 
-        // 3. Avvia l'evento ciclico di Phaser per stampare il testo
+        // --- APPLICAZIONE VELOCITÀ TESTO ---
+        const settings = this.getSettings();
+        
+        if (settings.textSpeed === 'Instant') {
+            // Se Istantaneo, mostra tutto subito senza timer
+            this.completeTyping();
+            return;
+        }
+
+        // Traduciamo le etichette in millisecondi (più basso è più veloce)
+        if (settings.textSpeed === 'Slow') this.TYPING_SPEED = 80;
+        else if (settings.textSpeed === 'Fast') this.TYPING_SPEED = 15;
+        else this.TYPING_SPEED = 40; // 'Normal'
+
         this.typingTimer = this.scene.time.addEvent({
             delay: this.TYPING_SPEED,
             callback: this.typeNextChar,
@@ -170,28 +218,27 @@ export default class ABI {
         });
     }
 
-
     private typeNextChar() {
-        // Aggiunge il carattere successivo
+        // ... inalterato ...
         this.currentVisibleText += this.currentFullText[this.currentVisibleText.length];
         this.dialogueText.setText(this.currentVisibleText);
 
-        // Controlla se abbiamo finito di scrivere l'intera pagina
         if (this.currentVisibleText.length === this.currentFullText.length) {
             this.completeTyping();
         }
     }
 
     private completeTyping() {
+        // ... inalterato ...
         this.isTyping = false;
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
-        // Assicura che tutto il testo sia mostrato
         this.dialogueText.setText(this.currentFullText);
     }
 
     private autoSplitText(text: string, maxLength: number): string[] {
+        // ... inalterato ...
         const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
         const pages: string[] = [];
         let currentPage = "";
@@ -209,11 +256,10 @@ export default class ABI {
     }
 
     public nextDialoguePage() {
+        // ... inalterato ...
         if (this.isTyping) {
-            // STATO 1: Sta scrivendo. Premendo spazio forziamo la comparsa di tutto il testo.
             this.completeTyping();
         } else {
-            // STATO 2: Ha finito di scrivere. Premendo spazio passiamo alla pagina dopo.
             if (this.currentDialoguePage < this.dialoguePages.length - 1) {
                 this.currentDialoguePage++;
                 this.updateDialogueView();
@@ -233,11 +279,11 @@ export default class ABI {
     }
 
     public hideDialogue() {
+        // ... inalterato ...
         this.isTalking = false;
         this.isUnskippable = false;
         this.uiContainer.setVisible(false);
 
-        // --- FERMA L'AUDIO ALLA CHIUSURA DEL DIALOGO ---
         this.synth.cancel();
         
         const callback = this.onCloseCallback;
@@ -248,65 +294,53 @@ export default class ABI {
         }
     }
 
-    /**
-     * Interrompe qualsiasi dialogo o messaggio radio in corso.
-     * Cancella i timer, ferma la sintesi vocale e resetta gli stati interni.
-     */
     private interrupt() {
-        // Interrompe il timer dell'effetto "macchina da scrivere" del dialogo interattivo
+        // ... inalterato ...
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
-        // Interrompe il timer del messaggio radio
         if (this.radioTimer) {
             this.radioTimer.remove();
         }
 
-        // Ferma la sintesi vocale in corso
         this.synth.cancel();
-        
-        // Resetta gli stati principali. La nuova funzione li imposterà se necessario.
         this.isTyping = false;
         this.isTalking = false;
         
-        // Annulla la callback del dialogo interrotto per evitare che venga eseguita al suo posto
         if (this.onCloseCallback) {
             this.onCloseCallback = undefined;
         }
     }
 
     public showRadioMessage(text: string, durationPerPage: number = 8000) {
-        this.interrupt(); // Interrompe qualsiasi messaggio o dialogo precedente
+        // ... inalterato ...
+        this.interrupt(); 
 
         this.uiContainer.setVisible(true);
         this.dialogueName.setText("A.B.I.");
-        this.promptText.setVisible(false); // I messaggi radio non sono interattivi
+        this.promptText.setVisible(false); 
 
         const pages = this.autoSplitText(text, 180);
         let pageIndex = 0;
 
         const showNextPage = () => {
-            // Se abbiamo finito le pagine, nascondi la UI e termina.
             if (pageIndex >= pages.length) {
-                if (!this.isTalking) { // Controlla che un dialogo normale non sia iniziato nel frattempo
+                if (!this.isTalking) { 
                     this.uiContainer.setVisible(false);
                     this.synth.cancel();
                 }
                 return;
             }
 
-            // Mostra la pagina corrente
             const pageText = pages[pageIndex];
             this.dialogueText.setText(pageText);
             this.speakText(pageText);
 
             pageIndex++;
 
-            // Imposta il timer per mostrare la pagina successiva dopo la durata specificata
             this.radioTimer = this.scene.time.delayedCall(durationPerPage, showNextPage);
         };
 
-        // Avvia il ciclo mostrando la prima pagina
         showNextPage();
     }
 }

@@ -59,7 +59,13 @@ export default class Scene3_Internal extends Phaser.Scene {
 
 
     preload() {
-        // Carichiamo l'immagine che useremo per lo sfondo scorrevole
+       
+        this.load.image('nav_front', '/assets/tutorial/navicella/Navicella_Front.png');
+        this.load.image('nav_back', '/assets/tutorial/navicella/Navicella_Back.png');
+        this.load.image('nav_left', '/assets/tutorial/navicella/Navicella_Left.png');
+        this.load.image('nav_right', '/assets/tutorial/navicella/Navicella_Right.png');
+        this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png'); 
+        
         this.load.image('background_scene3', '/assets/tutorial/sfondi/scene3_background4.png'); 
         this.load.image('organelle_lysosome', '/assets/tutorial/obstacles/lysosome4.png'); 
         this.load.image('organelle_mitochondrion', '/assets/tutorial/obstacles/mitochondrion2.png');

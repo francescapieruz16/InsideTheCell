@@ -26,7 +26,7 @@ const config: Phaser.Types.Core.GameConfig = {
     physics: {
         default: 'arcade',
         arcade: {
-            debug: true // (o true se stai ancora testando le hitbox!)
+            debug: false // (o true se stai ancora testando le hitbox!)
         }
     },
     scene: [LevelSelectScene, Scene1_External, Scene2_Membrane, Scene0_Control, PauseMenuScene, Scene3_Internal, SettingsScene]

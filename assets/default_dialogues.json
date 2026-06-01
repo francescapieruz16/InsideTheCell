@@ -45,18 +45,15 @@
             "dialogue_7_1": "We have reached the heart of the cell: the Nucleus. This organelle acts as the master vault, safely protecting the DNA from the hazards of the cytoplasm.",
             "dialogue_7_2": "Every biological process you witnessed—from energy production in the mitochondria to protein folding in the RER—is strictly regulated by instructions sent from here.",
             "dialogue_7_3": "Our data extraction is now complete, and the cellular blueprint is secure. Mission accomplished, Commander. Let's chart a course for extraction and head back home.",
-
-            "dialogueLog1_1": "Encrypted viral fragment recovered. This signature belongs to a positive-sense single-stranded RNA virus, like the common cold or SARS-CoV-2.",
-            "dialogueLog1_2": "Think of them as 'lazy hackers'. Their RNA is already formatted exactly like our own cellular mRNA.",
-            "dialogueLog1_3": "Because of this, our ribosomes will blindly read it and start manufacturing new virus copies immediately, without ever needing to breach the Nucleus.",
-
-            "dialogueLog2_1": "Viral signature analyzed. Warning: this data fragment belongs to a Retrovirus, such as HIV.",
-            "dialogueLog2_2": "These pathogens are highly insidious. They carry a special enzyme that converts their RNA payload backwards into DNA.",
-            "dialogueLog2_3": "Once converted, they sneak into the Nucleus and permanently stitch their malicious code directly into the cell's master DNA.",
-
-            "dialogueLog3_1": "Fragment decoded. This signature matches a standard DNA virus, similar to an Adenovirus.",
-            "dialogueLog3_2": "Unlike RNA viruses, these cannot replicate in the cytoplasm. Their primary target is the highly secured Nucleus.",
-            "dialogueLog3_3": "They must breach the nuclear membrane to hijack our master polymerases, using our own machinery to mass-produce their genetic material."
+            "dialogue_Log1_1": "Encrypted viral fragment recovered. This signature belongs to a positive-sense single-stranded RNA virus, like the common cold or SARS-CoV-2.",
+            "dialogue_Log1_2": "Think of them as 'lazy hackers'. Their RNA is already formatted exactly like our own cellular mRNA.",
+            "dialogue_Log1_3": "Because of this, our ribosomes will blindly read it and start manufacturing new virus copies immediately, without ever needing to breach the Nucleus.",
+            "dialogue_Log2_1": "Viral signature analyzed. Warning: this data fragment belongs to a Retrovirus, such as HIV.",
+            "dialogue_Log2_2": "These pathogens are highly insidious. They carry a special enzyme that converts their RNA payload backwards into DNA.",
+            "dialogue_Log2_3": "Once converted, they sneak into the Nucleus and permanently stitch their malicious code directly into the cell's master DNA.",
+            "dialogue_Log3_1": "Fragment decoded. This signature matches a standard DNA virus, similar to an Adenovirus.",
+            "dialogue_Log3_2": "Unlike RNA viruses, these cannot replicate in the cytoplasm. Their primary target is the highly secured Nucleus.",
+            "dialogue_Log3_3": "They must breach the nuclear membrane to hijack our master polymerases, using our own machinery to mass-produce their genetic material."
         }
     },
     "minigames": {

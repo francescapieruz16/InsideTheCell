@@ -141,7 +141,6 @@ export class AdminDashboard {
                 // STEP 1: TUTORIALS
                 // ==========================================
                 console.log("Generating tutorials...");
-                //TODO: fix prompt
                 const tutorialsPrompt = `${dataObj.game_prompt}\n
                 You are rewriting the introductory tutorials for the game.
                 I will provide the "Current Dialogues JSON" template for the tutorials.

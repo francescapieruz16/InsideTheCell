@@ -24,7 +24,9 @@ export default class Cutscene1 extends Phaser.Scene {
     private currentSlideIndex: number = 0;
     private bgImage!: Phaser.GameObjects.Image;
     private storyText!: Phaser.GameObjects.Text;
+    private uiContainer!: Phaser.GameObjects.Container;
     private isTransitioning: boolean = false;
+    private isShowingControls: boolean = false;
 
     constructor() {
         super('Cutscene1');
@@ -36,6 +38,8 @@ export default class Cutscene1 extends Phaser.Scene {
         this.load.image('intro_img_2', '/../assets/Cutscenes/Cutscene1_2.png');
         this.load.image('intro_img_3', '/../assets/Cutscenes/Cutscene1_3.png');
         this.load.image('intro_img_4', '/../assets/Cutscenes/Cutscene1_4.png');
+
+        this.load.image('icon_arrows', '/../assets/Cutscenes/Controls_Arrows_lateral.png');
     }
 
     create() {
@@ -47,7 +51,7 @@ export default class Cutscene1 extends Phaser.Scene {
         this.bgImage.setAlpha(0);
 
         const boxHeight = 250;
-        const uiContainer = this.add.container(0, height - boxHeight);
+        this.uiContainer = this.add.container(0, height - boxHeight);
         
         const textBoxBg = this.add.rectangle(0, 0, width, boxHeight, 0x000000, 0.85).setOrigin(0).setStrokeStyle(4, 0x4caf50);
 
@@ -61,7 +65,7 @@ export default class Cutscene1 extends Phaser.Scene {
 
         this.tweens.add({ targets: promptText, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
 
-        uiContainer.add([textBoxBg, this.storyText, promptText]);
+        this.uiContainer.add([textBoxBg, this.storyText, promptText]);
 
         this.input.on('pointerdown', this.advanceSlide, this);
         this.input.keyboard!.on('keydown-SPACE', this.advanceSlide, this);
@@ -71,7 +75,7 @@ export default class Cutscene1 extends Phaser.Scene {
 
     private showCurrentSlide() {
         if (this.currentSlideIndex >= this.slides.length) {
-            this.finishCutscene();
+            this.showControlsScreen();
             return;
         }
 
@@ -95,8 +99,57 @@ export default class Cutscene1 extends Phaser.Scene {
 
     private advanceSlide() {
         if (this.isTransitioning) return;
+        if (this.isShowingControls) {
+            this.finishCutscene();
+            return;
+        }
         this.currentSlideIndex++;
         this.showCurrentSlide();
+    }
+
+    private showControlsScreen() {
+        this.isTransitioning = true;
+        this.isShowingControls = true;
+
+        // 1. Nascondiamo il box dei dialoghi
+        this.uiContainer.setVisible(false);
+
+        const { width, height } = this.scale;
+
+        // 2. Creiamo un overlay nero semitrasparente per scurire l'ultima immagine
+        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0).setOrigin(0);
+
+        this.tweens.add({
+            targets: overlay,
+            fillAlpha: 0.85, // Oscuriamo l'immagine di background all'85%
+            duration: 500,
+            onComplete: () => {
+                this.drawControlsUI(width, height);
+                this.isTransitioning = false;
+            }
+        });
+    }
+
+    private drawControlsUI(width: number, height: number) {
+        // Titolo
+        this.add.text(width / 2, height / 2 - 150, 'MISSION CONTROLS', {
+            fontSize: '48px', color: '#00ffff', fontStyle: 'bold', letterSpacing: 2
+        }).setOrigin(0.5);
+
+        // Icona dei tasti direzionali
+        this.add.image(width / 2 - 180, height / 2, 'icon_arrows').setDisplaySize(120, 80);
+        
+        // Spiegazione testo
+        this.add.text(width / 2 - 80, height / 2, 'MOVE LEFT / RIGHT\nIntercept viral particles', {
+            fontSize: '28px', color: '#ffffff', align: 'left'
+        }).setOrigin(0, 0.5);
+
+        // Prompt finale lampeggiante
+        const startPrompt = this.add.text(width / 2, height - 150, 'Press SPACE to Initialize Sequence', {
+            fontSize: '26px', color: '#4caf50', fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        this.tweens.add({ targets: startPrompt, alpha: 0.2, duration: 800, yoyo: true, repeat: -1 });
     }
 
     private finishCutscene() {

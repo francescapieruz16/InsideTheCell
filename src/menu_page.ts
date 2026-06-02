@@ -129,7 +129,7 @@ export class MenuPageScene extends Phaser.Scene {
         }
 
         createHTMLButton('Tutorial Zone', 'tutorial-btn', 0, 0, () => {
-            this.scene.start('TutorialScene'); 
+            this.scene.start('ExternalScene'); 
         });
 
         createHTMLButton('OPTIONS', 'Options', 0, 0, () => {
@@ -144,7 +144,7 @@ export class MenuPageScene extends Phaser.Scene {
 
         if (finalBossUnlocked) {
             createHTMLButton('FINAL BOSS', 'final-boss-btn', 0, startOffsetY + 6 * levelSpacing, () => {
-                this.scene.start('FinalBossScene'); 
+                this.scene.start('FinalBoss'); 
             });
         }
 

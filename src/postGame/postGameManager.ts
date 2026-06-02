@@ -8,8 +8,15 @@ import defaultDialogues from '../../assets/default_dialogues.json';
 import defaultAdminSettings from '../../assets/default_context_and_quizzes.json';
 import { HandTrackingController } from '../handTracking/handTrackingController';
 
+class PostGameUIScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'PostGameUIScene' });
+    }
+}
+
 export class PostGameManager {
     private scene: Phaser.Scene;
+    private uiScene: Phaser.Scene;
     private chatManager!: ChatManager;
     private abi!: ABI;
 
@@ -54,6 +61,14 @@ export class PostGameManager {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
+
+        if (!this.scene.scene.get('PostGameUIScene')) {
+            this.scene.scene.add('PostGameUIScene', PostGameUIScene, true);
+        } else {
+            this.scene.scene.run('PostGameUIScene');
+        }
+        this.uiScene = this.scene.scene.get('PostGameUIScene');
+        this.scene.scene.bringToTop('PostGameUIScene');
 
         this.abi = new ABI(this.scene);
 
@@ -125,9 +140,18 @@ export class PostGameManager {
         this.scene.events.once('shutdown', () => {
             this.scene.events.off('update', this.update, this);
             this.scene.scale.off('resize', this.handleResize, this);
+            
             if (this.chatManager) {
                 this.chatManager.destroy();
             }
+
+            this.allUIContainers.forEach(c => c.destroy());
+            this.quizButtons.forEach(b => b.destroy());
+            if (this.loadingText) this.loadingText.destroy();
+            
+            this.allUIContainers = [];
+            this.quizButtons = [];
+            this.allInteractableButtons = [];
         });
     }
 
@@ -339,11 +363,11 @@ export class PostGameManager {
         } else {
             this.waitingForQuiz = true;
 
-            const cx = this.scene.cameras.main.width / 2;
-            const cy = this.scene.cameras.main.height / 2;
-            const zoom = this.scene.cameras.main.height / 1080;
+            const cx = this.uiScene.cameras.main.width / 2;
+            const cy = this.uiScene.cameras.main.height / 2;
+            const zoom = this.uiScene.cameras.main.height / 1080;
 
-            this.loadingText = this.scene.add.text(
+            this.loadingText = this.uiScene.add.text(
                 cx, cy, 'Loading quiz...',
                 { fontFamily: this.MENU_FONT, fontSize: '28px', color: '#ffffff' }
             )
@@ -370,18 +394,19 @@ export class PostGameManager {
     }
 
     public showWinScreen() {
-        const cx = this.scene.cameras.main.width / 2;
-        const cy = this.scene.cameras.main.height / 2;
-        const zoom = this.scene.cameras.main.height / 1080;
+        const cx = this.uiScene.cameras.main.width / 2;
+        const cy = this.uiScene.cameras.main.height / 2;
+        const zoom = this.uiScene.cameras.main.height / 1080;
 
         const windowUi = this.createWindow(820, 380);
-        const title = this.scene.add.text(0, -90, 'LEVEL COMPLETED!', { fontFamily: this.MENU_FONT, fontSize: '48px', fontStyle: 'bold', color: '#00ff00' }).setOrigin(0.5);
+        
+        const title = this.uiScene.add.text(0, -90, 'LEVEL COMPLETED!', { fontFamily: this.MENU_FONT, fontSize: '48px', fontStyle: 'bold', color: '#00ff00' }).setOrigin(0.5);
         const menuBtn = this.createButton(0, 110, 320, 70, 'Menu', '28px', () => {
             this.chatManager.hide();
             this.scene.scene.start('MenuPageScene');
         });
 
-        const winContainer = this.scene.add.container(cx, cy).setDepth(120).setScrollFactor(0);
+        const winContainer = this.uiScene.add.container(cx, cy).setDepth(120).setScrollFactor(0);
 
         if (this.nextLevel <= 6) {
             const nextBtn = this.createButton(0, 20, 320, 70, 'Next level', '28px', () => {
@@ -398,12 +423,12 @@ export class PostGameManager {
     }
 
     public showGameOverScreen() {
-        const cx = this.scene.cameras.main.width / 2;
-        const cy = this.scene.cameras.main.height / 2;
-        const zoom = this.scene.cameras.main.height / 1080;
+        const cx = this.uiScene.cameras.main.width / 2;
+        const cy = this.uiScene.cameras.main.height / 2;
+        const zoom = this.uiScene.cameras.main.height / 1080;
 
         const windowUi = this.createWindow(820, 420);
-        const title = this.scene.add.text(0, -100, 'GAME OVER', { fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#770000' }).setOrigin(0.5);
+        const title = this.uiScene.add.text(0, -100, 'GAME OVER', { fontFamily: this.MENU_FONT, fontSize: '56px', fontStyle: 'bold', color: '#770000' }).setOrigin(0.5);
         const retryBtn = this.createButton(0, 20, 320, 70, 'Try Again', '28px', () => {
             this.chatManager.hide();
             this.scene.scene.restart({ vaccinated: true });
@@ -413,7 +438,7 @@ export class PostGameManager {
             this.scene.scene.start('MenuPageScene');
         });
 
-        const goContainer = this.scene.add.container(cx, cy, [...windowUi.list, title, retryBtn, menuBtn])
+        const goContainer = this.uiScene.add.container(cx, cy, [...windowUi.list, title, retryBtn, menuBtn])
             .setDepth(120)
             .setScrollFactor(0);
 
@@ -422,9 +447,9 @@ export class PostGameManager {
     }
 
     private buildChat() {
-        const cx = this.scene.cameras.main.width / 2;
-        const cy = this.scene.cameras.main.height / 2;
-        const zoom = this.scene.cameras.main.height / 1080;
+        const cx = this.uiScene.cameras.main.width / 2;
+        const cy = this.uiScene.cameras.main.height / 2;
+        const zoom = this.uiScene.cameras.main.height / 1080;
 
         this.continueToQuizBtn = this.createButton(cx - 150, cy, 260, 64, 'Go to the quiz', '28px', () => {
             this.llmContainer.setVisible(false);
@@ -433,7 +458,7 @@ export class PostGameManager {
         });
         this.continueToQuizBtn.setVisible(false);
 
-        this.llmContainer = this.scene.add.container(cx, cy, [this.continueToQuizBtn])
+        this.llmContainer = this.uiScene.add.container(cx, cy, [this.continueToQuizBtn])
             .setDepth(100)
             .setVisible(false)
             .setScrollFactor(0);
@@ -443,8 +468,6 @@ export class PostGameManager {
     }
 
     private buildQuiz() {
-        const zoom = this.scene.cameras.main.height / 1080;
-
         const totalAnswers = this.quizData.answers.length;
         const buttonWidth = 450; 
         const buttonHeight = 150; 
@@ -477,17 +500,13 @@ export class PostGameManager {
     }
 
     private repositionQuizButtons() {
-        const screenW = this.scene.cameras.main.width;
-        const screenH = this.scene.cameras.main.height;
+        const screenW = this.uiScene.cameras.main.width;
+        const screenH = this.uiScene.cameras.main.height;
         
-        const camZoom = this.scene.cameras.main.zoom;
-
         const cx = screenW / 2;
         const bottomY = screenH;
-        //TODO: fix level 3 zoom
-        //const bottomY = (screenH / 2) + ((screenH / 2) / camZoom);
-        const targetUIZoom = screenH / 1080;
-        const uiScale = targetUIZoom / camZoom;
+        
+        const uiScale = screenH / 1080;
 
         const scaledPadding = 30 * uiScale;
         const scaledHalfHeight = 75 * uiScale; 
@@ -512,12 +531,12 @@ export class PostGameManager {
     }
 
     private buildMissingQuizScreen() {
-        const cx = this.scene.cameras.main.width / 2;
-        const cy = this.scene.cameras.main.height / 2;
-        const zoom = this.scene.cameras.main.height / 1080;
+        const cx = this.uiScene.cameras.main.width / 2;
+        const cy = this.uiScene.cameras.main.height / 2;
+        const zoom = this.uiScene.cameras.main.height / 1080;
 
         const windowUi = this.createWindow(1400, 900);
-        const message = this.scene.add.text(0, -70, `No quiz configured for level ${this.currentLevel}.\nPlease add it from the Admin Dashboard.`, {
+        const message = this.uiScene.add.text(0, -70, `No quiz configured for level ${this.currentLevel}.\nPlease add it from the Admin Dashboard.`, {
             fontFamily: this.MENU_FONT, fontSize: '30px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: 720 }
         }).setOrigin(0.5);
 
@@ -526,7 +545,7 @@ export class PostGameManager {
             window.location.href = '/pages/menu_page.html';
         });
 
-        this.finalQuizContainer = this.scene.add.container(cx, cy, [...windowUi.list, message, menuBtn])
+        this.finalQuizContainer = this.uiScene.add.container(cx, cy, [...windowUi.list, message, menuBtn])
             .setDepth(110)
             .setVisible(false)
             .setScrollFactor(0);
@@ -561,8 +580,8 @@ export class PostGameManager {
         const currentPinch = tracker.isClicked; 
 
         if (currentPinch && !this.previousPinchState) {
-            const cursorX = tracker.targetX * this.scene.cameras.main.width;
-            const cursorY = tracker.targetY * this.scene.cameras.main.height;
+            const cursorX = tracker.targetX * this.uiScene.cameras.main.width;
+            const cursorY = tracker.targetY * this.uiScene.cameras.main.height;
             
             this.handlePinchClick(cursorX, cursorY);
         }
@@ -598,23 +617,23 @@ export class PostGameManager {
     }
 
     private createWindow(width: number, height: number) {
-        const container = this.scene.add.container(0, 0);
+        const container = this.uiScene.add.container(0, 0);
 
-        const shadow = this.scene.add.rectangle(8, 8, width, height, 0x000000, 0.35);
-        const outer = this.scene.add.rectangle(0, 0, width, height, 0xff5a0a, 1).setStrokeStyle(4, 0xffffff);
-        const inner = this.scene.add.rectangle(0, 0, width - 12, height - 12, 0xd94700, 1);
+        const shadow = this.uiScene.add.rectangle(8, 8, width, height, 0x000000, 0.35);
+        const outer = this.uiScene.add.rectangle(0, 0, width, height, 0xff5a0a, 1).setStrokeStyle(4, 0xffffff);
+        const inner = this.uiScene.add.rectangle(0, 0, width - 12, height - 12, 0xd94700, 1);
 
         container.add([shadow, outer, inner]);
         return container;
     }
 
     private createButton(x: number, y: number, width: number, height: number, label: string, fontSize: string, onClick: () => void) {
-        const container = this.scene.add.container(x, y);
+        const container = this.uiScene.add.container(x, y);
         (container as any).baseScale = 1; 
 
-        const outer = this.scene.add.rectangle(0, 0, width, height, 0x3d5381, 1).setStrokeStyle(4, 0xffffff);
+        const outer = this.uiScene.add.rectangle(0, 0, width, height, 0x3d5381, 1).setStrokeStyle(4, 0xffffff);
         
-        const text = this.scene.add.text(0, 0, label, { 
+        const text = this.uiScene.add.text(0, 0, label, { 
             fontFamily: this.MENU_FONT, 
             fontSize: fontSize,
             fontStyle: 'bold', 

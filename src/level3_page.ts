@@ -121,17 +121,17 @@ export class Level3 extends Phaser.Scene {
         const backBtn = document.createElement('button');
         backBtn.className = 'Back';
         backBtn.innerText = 'BACK';
-        backBtn.style.padding = '15px 30px';
-        backBtn.style.fontSize = '1.5rem';  
-        backBtn.style.width = '130px';      
-        backBtn.style.height = '63px';
+        backBtn.style.pointerEvents = 'auto';
         const wrapper = document.createElement('div');
-        wrapper.className = 'phaser-dom-container';
-        //wrapper.style.setProperty('position', 'fixed', 'important');
-        //wrapper.style.setProperty('top', '-80px', 'important'); 
-        //wrapper.style.setProperty('left', '-155px', 'important');
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '40px';
+        wrapper.style.left = '80px';
+        wrapper.style.transform = 'translate(-50%, -50%)';
+        wrapper.style.zIndex = '1000';
+        wrapper.style.pointerEvents = 'none';
         wrapper.appendChild(backBtn);
-        const backBtnDom = this.add.dom(-180, -90, wrapper).setOrigin(0, 0).setScrollFactor(0);
+        const gameContainer = document.getElementById('app') || document.body;
+        gameContainer.appendChild(wrapper);
 
         backBtn.addEventListener('click', () => {
             this.scene.start('MenuPageScene');
@@ -373,7 +373,6 @@ export class Level3 extends Phaser.Scene {
             if (!this.scene.isActive()) return;
 
             this.cameras.main.setZoom(gameSize.height / worldHeight);
-            backBtnDom.setPosition(-180, -90);
         };
 
         this.scale.on('resize', onResize);
@@ -642,6 +641,10 @@ export class Level3 extends Phaser.Scene {
                 } else if (tracker.targetX > 0.6) {
                     rightInput = true;
                 }
+
+                if (tracker.isClicked) {
+                    jumpInput = true;
+                }
             }
         }
 
@@ -662,15 +665,9 @@ export class Level3 extends Phaser.Scene {
             this.player.anims.play('idle', true);
         }
 
-        // Gestione Salto
-        if (inputMode === 'hand') {
-            //TODO: implemenatre funzione per auto jump
-            //this.checkAutoJump(leftInput, rightInput);
-        } else {
-            if (jumpInput && playerBody.blocked.down) {
-                this.player.setVelocityY(-this.jumpSpeed);
-            }
-        }
+        if (jumpInput && playerBody.blocked.down) {
+            this.player.setVelocityY(-this.jumpSpeed);
+        } 
 
         // Animazione Salto in aria
         if (!playerBody.blocked.down) {

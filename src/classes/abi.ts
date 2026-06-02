@@ -1,8 +1,15 @@
 import Phaser from 'phaser';
 import { HandTrackingController } from '../handTracking/handTrackingController';
 
+class ABIScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'ABIScene' });
+    }
+}
+
 export default class ABI {
     private scene: Phaser.Scene;
+    private uiScene: Phaser.Scene;
     private uiContainer!: Phaser.GameObjects.Container;
     private dialogueText!: Phaser.GameObjects.Text;
     private dialogueName!: Phaser.GameObjects.Text;
@@ -14,22 +21,18 @@ export default class ABI {
     public isTalking: boolean = false;
     public isUnskippable: boolean = false;
     
-    // Questa variabile salverà l'azione speciale da fare a fine dialogo (es. cambiare scena)
     private onCloseCallback?: () => void; 
 
-    // Variabili per la sintesi vocale
     private synth: SpeechSynthesis;
     private robotVoice: SpeechSynthesisVoice | null = null;
 
-
-    // Variabili per l'effetto di digitazione
     private isTyping: boolean = false;
     private currentFullText: string = "";
     private currentVisibleText: string = "";
     private typingTimer?: Phaser.Time.TimerEvent;
-    private readonly TYPING_SPEED: number = 40; // Millisecondi tra una lettera e l'altra (regolabile)
+    private readonly TYPING_SPEED: number = 40; 
 
-    private radioTimer?: Phaser.Time.TimerEvent; //gestisce il timer per i dialoghi radio
+    private radioTimer?: Phaser.Time.TimerEvent; 
 
     private keepOpen: boolean = false;      
     private offsetY: number = -160;
@@ -38,6 +41,15 @@ export default class ABI {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
+        
+        if (!this.scene.scene.get('ABIScene')) {
+            this.scene.scene.add('ABIScene', ABIScene, true);
+        }
+        
+        this.uiScene = this.scene.scene.get('ABIScene');
+        
+        this.scene.scene.bringToTop('ABIScene');
+
         this.createDialogueUI();
 
         this.synth = window.speechSynthesis;
@@ -51,30 +63,31 @@ export default class ABI {
 
         this.scene.events.once('shutdown', () => {
             this.scene.events.off('update', this.update, this);
+
+            this.interrupt();
+            
+            if (this.uiContainer) {
+                this.uiContainer.destroy();
+            }
         });
     }
 
-    // --- METODO PER CARICARE LA VOCE ---
     private initVoice() {
         const voices = this.synth.getVoices();
-        // Cerca una voce italiana, altrimenti prende il fallback di sistema
         this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;  
-      }
+    }
 
-    // --- METODO PER SINTETIZZARE E RIPRODURRE L'AUDIO ---
     private speakText(text: string) {
-        // Fondamentale: cancella qualsiasi audio in coda o in riproduzione
         this.synth.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-GB'; // Imposta la lingua (puoi cambiarla in base alla voce scelta)
+        utterance.lang = 'en-GB'; 
         if (this.robotVoice) {
             utterance.voice = this.robotVoice;
         }
 
-        // Parametri per l'effetto robotico
-        utterance.pitch = 1.5; // Tonalità molto bassa e piatta
-        utterance.rate = 1.5;  // Leggermente rallentato
+        utterance.pitch = 1.5; 
+        utterance.rate = 1.5;  
         
         this.synth.speak(utterance);
     }
@@ -84,7 +97,6 @@ export default class ABI {
         if (inputMode !== 'hand') return;
 
         const tracker = HandTrackingController.getInstance();
-        
         const currentPinch = tracker.isClicked; 
 
         if (currentPinch && !this.previousPinchState) {
@@ -97,28 +109,28 @@ export default class ABI {
     }
 
     private createDialogueUI() {
-        const screenW = this.scene.cameras.main.width;
-        const screenH = this.scene.cameras.main.height;
+        const screenW = this.uiScene.cameras?.main?.width || this.scene.scale.width;
+        const screenH = this.uiScene.cameras?.main?.height || this.scene.scale.height;
 
-        this.uiContainer = this.scene.add.container(screenW / 2, screenH);
+        this.uiContainer = this.uiScene.add.container(screenW / 2, screenH);
         this.uiContainer.setScrollFactor(0); 
         this.uiContainer.setDepth(100);
 
-        const bg = this.scene.add.rectangle(0, this.offsetY, 1300, 240, 0x000000, 0.92);
+        const bg = this.uiScene.add.rectangle(0, this.offsetY, 1300, 240, 0x000000, 0.92);
         bg.setStrokeStyle(4, 0x4caf50);
 
-        this.portrait = this.scene.add.image(-530, this.offsetY, 'ABI_standard');
+        this.portrait = this.uiScene.add.image(-530, this.offsetY, 'ABI_standard');
         this.portrait.setDisplaySize(250, 250);
 
-        this.dialogueName = this.scene.add.text(-380, this.offsetY - 80, "", { 
+        this.dialogueName = this.uiScene.add.text(-380, this.offsetY - 80, "", { 
             fontSize: '32px', fontStyle: 'bold', color: '#4caf50' 
         });
 
-        this.dialogueText = this.scene.add.text(-380, this.offsetY - 30, "", { 
+        this.dialogueText = this.uiScene.add.text(-380, this.offsetY - 30, "", { 
             fontSize: '24px', color: '#ffffff', wordWrap: { width: 1000 }
         });
 
-        this.promptText = this.scene.add.text(640, this.offsetY + 105, "Press SPACE ▼", { 
+        this.promptText = this.uiScene.add.text(640, this.offsetY + 105, "Press SPACE ▼", { 
             fontSize: '18px', color: '#aaaaaa' 
         }).setOrigin(1, 0.5);
 
@@ -147,11 +159,10 @@ export default class ABI {
         if (!this.uiContainer) return; 
 
         this.offsetY = offsetY;
-        const bottomY = this.scene.cameras.main.height;
-        //TODO: fix level 3 zoom
-        //const bottomY = (this.scene.cameras.main.height / 2) + ((this.scene.cameras.main.height / 2) / this.scene.cameras.main.zoom);
+        
+        const bottomY = this.uiScene.cameras?.main?.height || this.scene.scale.height;
 
-        this.scene.tweens.add({
+        this.uiScene.tweens.add({
             targets: this.uiContainer,
             y: bottomY + offsetY,
             duration: 300,
@@ -159,16 +170,14 @@ export default class ABI {
         });
     }
 
-    // Nota l'aggiunta di "onClose": è una funzione opzionale!
     public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false, keepOpen: boolean = false) {
-        this.interrupt(); // Interrompe qualsiasi messaggio o dialogo precedente
+        this.interrupt(); 
 
         this.keepOpen = keepOpen;
-
         this.isTalking = true;
         this.isUnskippable = unskippable;
         this.dialogueName.setText(name);
-        this.onCloseCallback = onClose; // Salviamo l'azione da fare alla fine
+        this.onCloseCallback = onClose; 
 
         this.promptText.setVisible(!unskippable);
 
@@ -189,16 +198,13 @@ export default class ABI {
         this.dialogueText.setText("");
         this.isTyping = true;
 
-        // 1. Avvia la voce per l'intera stringa
         this.speakText(this.currentFullText);
 
-        // 2. Pulisci eventuali timer precedenti
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
 
-        // 3. Avvia l'evento ciclico di Phaser per stampare il testo
-        this.typingTimer = this.scene.time.addEvent({
+        this.typingTimer = this.uiScene.time.addEvent({
             delay: this.TYPING_SPEED,
             callback: this.typeNextChar,
             callbackScope: this,
@@ -206,13 +212,10 @@ export default class ABI {
         });
     }
 
-
     private typeNextChar() {
-        // Aggiunge il carattere successivo
         this.currentVisibleText += this.currentFullText[this.currentVisibleText.length];
         this.dialogueText.setText(this.currentVisibleText);
 
-        // Controlla se abbiamo finito di scrivere l'intera pagina
         if (this.currentVisibleText.length === this.currentFullText.length) {
             this.completeTyping();
         }
@@ -223,7 +226,6 @@ export default class ABI {
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
-        // Assicura che tutto il testo sia mostrato
         this.dialogueText.setText(this.currentFullText);
     }
 
@@ -246,10 +248,8 @@ export default class ABI {
 
     public nextDialoguePage() {
         if (this.isTyping) {
-            // STATO 1: Sta scrivendo. Premendo spazio forziamo la comparsa di tutto il testo.
             this.completeTyping();
         } else {
-            // STATO 2: Ha finito di scrivere. Premendo spazio passiamo alla pagina dopo.
             if (this.currentDialoguePage < this.dialoguePages.length - 1) {
                 this.currentDialoguePage++;
                 this.updateDialogueView();
@@ -273,7 +273,6 @@ export default class ABI {
         this.isUnskippable = false;
         this.uiContainer.setVisible(false);
 
-        // --- FERMA L'AUDIO ALLA CHIUSURA DEL DIALOGO ---
         this.synth.cancel();
         
         const callback = this.onCloseCallback;
@@ -284,65 +283,52 @@ export default class ABI {
         }
     }
 
-    /**
-     * Interrompe qualsiasi dialogo o messaggio radio in corso.
-     * Cancella i timer, ferma la sintesi vocale e resetta gli stati interni.
-     */
     private interrupt() {
-        // Interrompe il timer dell'effetto "macchina da scrivere" del dialogo interattivo
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
-        // Interrompe il timer del messaggio radio
         if (this.radioTimer) {
             this.radioTimer.remove();
         }
 
-        // Ferma la sintesi vocale in corso
         this.synth.cancel();
         
-        // Resetta gli stati principali. La nuova funzione li imposterà se necessario.
         this.isTyping = false;
         this.isTalking = false;
         
-        // Annulla la callback del dialogo interrotto per evitare che venga eseguita al suo posto
         if (this.onCloseCallback) {
             this.onCloseCallback = undefined;
         }
     }
 
     public showRadioMessage(text: string, durationPerPage: number = 8000) {
-        this.interrupt(); // Interrompe qualsiasi messaggio o dialogo precedente
+        this.interrupt(); 
 
         this.uiContainer.setVisible(true);
         this.dialogueName.setText("A.B.I.");
-        this.promptText.setVisible(false); // I messaggi radio non sono interattivi
+        this.promptText.setVisible(false); 
 
         const pages = this.autoSplitText(text, 180);
         let pageIndex = 0;
 
         const showNextPage = () => {
-            // Se abbiamo finito le pagine, nascondi la UI e termina.
             if (pageIndex >= pages.length) {
-                if (!this.isTalking) { // Controlla che un dialogo normale non sia iniziato nel frattempo
+                if (!this.isTalking) { 
                     this.uiContainer.setVisible(false);
                     this.synth.cancel();
                 }
                 return;
             }
 
-            // Mostra la pagina corrente
             const pageText = pages[pageIndex];
             this.dialogueText.setText(pageText);
             this.speakText(pageText);
 
             pageIndex++;
 
-            // Imposta il timer per mostrare la pagina successiva dopo la durata specificata
-            this.radioTimer = this.scene.time.delayedCall(durationPerPage, showNextPage);
+            this.radioTimer = this.uiScene.time.delayedCall(durationPerPage, showNextPage);
         };
 
-        // Avvia il ciclo mostrando la prima pagina
         showNextPage();
     }
 }

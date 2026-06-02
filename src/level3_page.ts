@@ -120,13 +120,13 @@ export class Level3 extends Phaser.Scene {
 
         const backBtn = document.createElement('button');
         backBtn.className = 'Back';
-        backBtn.innerText = 'BACK';
+        backBtn.innerText = 'PAUSE';
         backBtn.style.pointerEvents = 'auto';
         const wrapper = document.createElement('div');
         wrapper.style.position = 'absolute';
-        wrapper.style.top = '40px';
-        wrapper.style.left = '80px';
-        wrapper.style.transform = 'translate(-50%, -50%)';
+        wrapper.style.top = '20px';
+        wrapper.style.right = '40px';
+        wrapper.style.transform = 'none';
         wrapper.style.zIndex = '1000';
         wrapper.style.pointerEvents = 'none';
         wrapper.appendChild(backBtn);
@@ -134,7 +134,8 @@ export class Level3 extends Phaser.Scene {
         gameContainer.appendChild(wrapper);
 
         backBtn.addEventListener('click', () => {
-            this.scene.start('MenuPageScene');
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
 
         const worldWidth = 10000;

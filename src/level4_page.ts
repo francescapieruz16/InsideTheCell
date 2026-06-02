@@ -153,14 +153,15 @@ export class Level4 extends Phaser.Scene {
 
         const backBtn = document.createElement('button');
         backBtn.className = 'Back';
-        backBtn.innerText = 'BACK';
+        backBtn.innerText = 'PAUSE';
         const wrapper = document.createElement('div');
         wrapper.className = 'phaser-dom-container';
         wrapper.appendChild(backBtn);
-        const backBtnDom = this.add.dom(80, 40, wrapper);
+        const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
 
         backBtn.addEventListener('click', () => {
-            this.scene.start('MenuPageScene');
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
 
         const width = this.cameras.main.width;
@@ -182,7 +183,7 @@ export class Level4 extends Phaser.Scene {
             const newH = gameSize.height;
 
             if (backBtnDom) {
-                backBtnDom.setPosition(80, 40);
+                backBtnDom.setPosition(newW - 80, 40);
             }
 
             if (this.uiContainer) {

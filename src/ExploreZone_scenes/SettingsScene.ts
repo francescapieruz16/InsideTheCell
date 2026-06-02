@@ -101,7 +101,7 @@ export default class SettingsScene extends Phaser.Scene {
             if (this.parentSceneKey) {
                 this.scene.start('PauseMenuScene', { parentScene: this.parentSceneKey });
             } else {
-                window.location.href = '/menu_page.html';
+                this.scene.start('MenuPageScene');
             }
         });
 
@@ -130,7 +130,10 @@ export default class SettingsScene extends Phaser.Scene {
         resetBtn.on('pointerover', () => resetBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' }));
         resetBtn.on('pointerout', () => resetBtn.setStyle({ color: '#ff5555', backgroundColor: '#331111' }));
         resetBtn.on('pointerdown', () => warningPopup.setVisible(true));
-
+        
+        this.events.on('shutdown', () => {
+            this.scene.stop();
+        });
     
     }
 

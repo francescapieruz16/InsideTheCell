@@ -94,6 +94,26 @@ export default class Scene3_Internal extends Phaser.Scene {
     }
 
     create() {
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'PAUSE';
+        backBtn.style.pointerEvents = 'auto';
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '20px';
+        wrapper.style.right = '40px';
+        wrapper.style.transform = 'none';
+        wrapper.style.zIndex = '1000';
+        wrapper.style.pointerEvents = 'none';
+        wrapper.appendChild(backBtn);
+        const gameContainer = document.getElementById('app') || document.body;
+        gameContainer.appendChild(wrapper);
+
+        backBtn.addEventListener('click', () => {
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+        });
+
         const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
                 let allDialogues = null;    
                 if (savedDialogues) {
@@ -475,8 +495,10 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.fadeIn(800, 0, 0, 0); // Effetto di transizione in entrata
 
-        // 6. Inizializziamo l'assistente A.B.I.
         this.abi = new ABI(this);
+        this.abi.MoveDialogueY(0); 
+
+        const abiScene = this.scene.get('ABIScene');
 
         // INPUTS
                 if (this.input.keyboard) {
@@ -523,6 +545,10 @@ export default class Scene3_Internal extends Phaser.Scene {
 
             // Applica il nuovo zoom
             this.cameras.main.setZoom(currentZoom);
+        });
+
+        this.events.once('shutdown', () => {
+            wrapper.remove();
         });
     }
 

@@ -121,15 +121,16 @@ export class Level2 extends Phaser.Scene {
 
         const backBtn = document.createElement('button');
         backBtn.className = 'Back';
-        backBtn.innerText = 'BACK';
+        backBtn.innerText = 'PAUSE';
         const wrapper = document.createElement('div');
         wrapper.className = 'phaser-dom-container';
         wrapper.appendChild(backBtn);
-        const backBtnDom = this.add.dom(80, 40, wrapper);
+        const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
 
 
         backBtn.addEventListener('click', () => {
-            this.scene.start('MenuPageScene');
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
 
         this.viruses = this.add.group();
@@ -168,7 +169,7 @@ export class Level2 extends Phaser.Scene {
             const newW = gameSize.width;
             const newH = gameSize.height;
 
-            backBtnDom.setPosition(80, 40);
+            backBtnDom.setPosition(newW - 80, 40);
 
             if (this.scorePanel) {
                 const diffX = newW - previousWidth;

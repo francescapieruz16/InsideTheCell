@@ -18,7 +18,7 @@ export default class ControlsScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // 1. Sfondo nero con trasparenza (0.8 = 80% opaco)
-        const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.8);
+        const bg = this.add.rectangle(0, 0, width, height, 0x000000, 1);
         bg.setOrigin(0, 0); // Lo allineiamo in alto a sinistra
 
         // 2. Testo del Titolo
@@ -30,16 +30,16 @@ export default class ControlsScene extends Phaser.Scene {
 
         // 3. Testo dei Comandi
         this.add.text(width / 2, height / 2, 
-            'ARROW KEYS : Spaceship Controls\n\n' +
-            'SPACEBAR : Interact / Next Dialog\n\n' +
-            'ESC : Pause Game', {
+            'ARROW KEYS or MOVE HAND : Spaceship Controls\n\n' +
+            'SPACEBAR or PINCH : Interact / Next Dialog\n\n' +
+            'ESC or PRESS PAUSE : Pause Game', {
             fontSize: '24px',
             color: '#cccccc',
             align: 'center'
         }).setOrigin(0.5);
 
         // 4. Testo di interazione (Skippable)
-        const promptText = this.add.text(width / 2, height / 2 + 150, 'Press [Enter] to continue', {
+        const promptText = this.add.text(width / 2, height / 2 + 150, 'Press [Enter] or [Pinch] to continue', {
             fontSize: '20px',
             color: '#ffff00'
         }).setOrigin(0.5);
@@ -58,7 +58,15 @@ export default class ControlsScene extends Phaser.Scene {
             // Riattiva il livello bloccato
             this.scene.resume(this.parentSceneKey);
             // Chiudi (distruggi) questa schermata di overlay
+            this.closeScene();
+        });
+
+        this.events.on('shutdown', () => {
             this.scene.stop();
         });
+    }
+
+    private closeScene() {
+        this.scene.stop();
     }
 }

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { HandTrackingController } from '../handTracking/handTrackingController';
 
 export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
     private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -67,43 +68,67 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
 
     // Spostiamo qui la vecchia funzione handleMovement
     update() {
+        if (!this.body) return;
+        
         const body = this.body as Phaser.Physics.Arcade.Body;
         const speed = 400;
+
+        body.setVelocity(0);
+
+        const inputMode = this.scene.registry.get('inputMode');
 
         const left = this.cursors.left.isDown || this.wasd.left.isDown;
         const right = this.cursors.right.isDown || this.wasd.right.isDown;
         const up = this.cursors.up.isDown || this.wasd.up.isDown;
         const down = this.cursors.down.isDown || this.wasd.down.isDown;
 
-        // Resettiamo la velocità per fermare la navicella se non ci sono input
-        body.setVelocity(0);
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
 
-        // Gestione movimento orizzontale e texture laterali
-        if (left) {
-            body.setVelocityX(-speed);
-            this.setTexture('nav_left');
-        } else if (right) {
-            body.setVelocityX(speed);
-            this.setTexture('nav_right');
+            if (tracker.targetX !== -1 && tracker.targetY !== -1) {
+                const pixelX = tracker.targetX * this.scene.scale.gameSize.width;
+                const pixelY = tracker.targetY * this.scene.scale.gameSize.height;
+
+                const worldPoint = this.scene.cameras.main.getWorldPoint(pixelX, pixelY);
+
+                const distance = Phaser.Math.Distance.Between(this.x, this.y, worldPoint.x, worldPoint.y);
+
+                if (distance > 15) {
+                    this.scene.physics.moveTo(this, worldPoint.x, worldPoint.y, speed);
+                } else {
+                    body.setVelocity(0);
+                }
+            }
+        } else {
+            if (left) {
+                body.setVelocityX(-speed);
+            } else if (right) {
+                body.setVelocityX(speed);
+            }
+
+            // Gestione movimento verticale e texture fronte/retro
+            if (up) {
+                body.setVelocityY(-speed);
+            } else if (down) {
+                body.setVelocityY(speed);
+            }
         }
 
-        // Gestione movimento verticale e texture fronte/retro
-        if (up) {
-            body.setVelocityY(-speed);
-            // La texture verticale si imposta solo se non ci stiamo muovendo di lato
-            if (!left && !right) {
-                this.setTexture('nav_back');
+        // Se la velocità orizzontale è maggiore di quella verticale:
+        if (Math.abs(body.velocity.x) > Math.abs(body.velocity.y)) {
+            if (body.velocity.x < 0) {
+                this.setTexture('nav_left');
+            } else {
+                this.setTexture('nav_right');
             }
-        } else if (down) {
-            body.setVelocityY(speed);
-            if (!left && !right) {
+        } 
+        // Altrimenti, prevale il movimento verticale:
+        else {
+            if (body.velocity.y < 0) {
+                this.setTexture('nav_back');
+            } else {
                 this.setTexture('nav_front');
             }
         }
-
-        // Normalizziamo la velocità solo se la navicella è in movimento per evitare errori
-        if (body.velocity.length() > 0) {
-            body.velocity.normalize().scale(speed);
-        }
-    }
+}
 }

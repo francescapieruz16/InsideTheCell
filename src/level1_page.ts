@@ -117,14 +117,15 @@ export class Level1 extends Phaser.Scene {
 
         const backBtn = document.createElement('button');
         backBtn.className = 'Back';
-        backBtn.innerText = 'BACK';
+        backBtn.innerText = 'PAUSE';
         const wrapper = document.createElement('div');
         wrapper.className = 'phaser-dom-container';
         wrapper.appendChild(backBtn);
-        const backBtnDom = this.add.dom(80, 40, wrapper);
+        const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
 
         backBtn.addEventListener('click', () => {
-            this.scene.start('MenuPageScene');
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
 
         this.receptorsGroup = this.physics.add.group();
@@ -197,7 +198,7 @@ export class Level1 extends Phaser.Scene {
 
             this.physics.world.setBounds(0, 0, newW, newH);
 
-            backBtnDom.setPosition(80, 40);
+            backBtnDom.setPosition(newW -80, 40);
 
             this.progressBox.clear();
             this.progressBox.fillStyle(0x2a2a2a, 0.85);

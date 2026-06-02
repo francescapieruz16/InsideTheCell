@@ -96,7 +96,7 @@ export default class PauseMenuScene extends Phaser.Scene {
         let startY = height / 2 - 80;
 
         // Bottone: Riprendi
-        createAdvancedButton(startY, 'Resume the Game', () => {
+        createAdvancedButton(startY, 'Resume', () => {
             this.resumeGame();
         });
 
@@ -109,15 +109,21 @@ export default class PauseMenuScene extends Phaser.Scene {
         createAdvancedButton(startY + 160, 'Return to Main Menu', () => {
             this.sound.stopAll();
             this.scene.stop(this.parentSceneKey);
+            this.scene.stop('ControlsScene');
+            this.scene.stop('ABIScene');
             this.scene.stop();
-            window.location.href = '/menu_page.html'; 
+            this.scene.start('MenuPageScene');
         });
+
+        const tutorialScenes = ['ExternalScene', 'Scene2_Membrane', 'Scene3_Internal'];
 
         // --- IL BOTTONE SPECIALE "LEVEL SELECTION" ---
         // Lo distanziamo ulteriormente in basso e gli passiamo "true" per lo stile speciale
-        createAdvancedButton(startY + 280, '► LEVEL SELECTION ◄', () => {
-            this.scene.start('LevelSelectScene', { parentScene: this.parentSceneKey });
-        }, true);
+        if (tutorialScenes.includes(this.parentSceneKey)) {
+            createAdvancedButton(startY + 280, '► TUTORIAL LEVELS ◄', () => {
+                this.scene.start('LevelSelectScene', { parentScene: this.parentSceneKey });
+            }, true);
+        }
 
         // 4. Input da tastiera (ESC)
         this.input.keyboard!.on('keydown-ESC', () => {
@@ -125,6 +131,10 @@ export default class PauseMenuScene extends Phaser.Scene {
         });
 
         this.scene.bringToTop();
+
+        this.events.on('shutdown', () => {
+            this.scene.stop();
+        });
     }
 
     private resumeGame() {

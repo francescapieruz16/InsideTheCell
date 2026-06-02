@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import Cutscene1 from './Cutscenes/Cutscene1';
 import { PostGameManager } from './postGame/postGameManager';
 
 class Level1 extends Phaser.Scene {
@@ -341,7 +342,7 @@ const config: Phaser.Types.Core.GameConfig = {
             debug: false
         }
     },
-    scene: [Level1]
+    scene: [Cutscene1, Level1]
 };
 
 new Phaser.Game(config);

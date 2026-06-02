@@ -54,7 +54,14 @@ export default class ABI {
             return JSON.parse(saved);
         }
         // Valori di default se non è mai stata aperta la scena Settings
-        return { textSpeed: 'Normal', masterVol: 100, voiceVol: 100, sfxVol: 100, musicVol: 100 };
+        return { 
+            textSpeed: 'Normal', 
+            masterVol: 100, 
+            voiceVol: 100, 
+            // sfxVol: 100, 
+            musicVol: 100, 
+            previousVoiceVol: 100 
+        };
     }
 
     private initVoice() {

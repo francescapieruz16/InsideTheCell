@@ -3,8 +3,8 @@ import Phaser from 'phaser';
 export interface GameSettings {
     textSpeed: string; 
     masterVol: number; 
-    voiceVol: number;  
-    sfxVol: number;    
+    voiceVol: number;
+    // sfxVol: number;
     musicVol: number;  
     previousVoiceVol: number; // Memoria per il tasto Mute
 }
@@ -72,18 +72,18 @@ export default class SettingsScene extends Phaser.Scene {
         //Toggle per il Mute di ABI
         this.createMuteToggle(width / 2, startY + (spacingY * 3));
 
-        this.createVolumeStepper(width / 2, startY + (spacingY * 4), 'SFX Volume', 
-            () => this.settings.sfxVol, 
-            (val) => { this.settings.sfxVol = val; this.saveSettings(); }
-        );
+        // this.createVolumeStepper(width / 2, startY + (spacingY * 4), 'SFX Volume', 
+        //     () => this.settings.sfxVol, 
+        //     (val) => { this.settings.sfxVol = val; this.saveSettings(); }
+        // );
 
-        this.createVolumeStepper(width / 2, startY + (spacingY * 5), 'Music Volume', 
+        this.createVolumeStepper(width / 2, startY + (spacingY * 4), 'Music Volume', 
             () => this.settings.musicVol, 
             (val) => { this.settings.musicVol = val; this.saveSettings(); }
         );
 
         // --- NUOVO TASTO SAVE & EXIT (Centrale) ---
-        const saveBtnY = startY + (spacingY * 6.2); // Posizionato sotto i settings
+        const saveBtnY = startY + (spacingY * 5.2); // Posizionato sotto i settings
         
         const saveBtn = this.add.text(width / 2, saveBtnY, '💾 SAVE & CLOSE', {
             fontSize: '28px', 
@@ -107,7 +107,7 @@ export default class SettingsScene extends Phaser.Scene {
 
 
         // --- BOTTONI DI GESTIONE DATI (Spostati più in basso) ---
-        const dataBtnY = startY + (spacingY * 7.8); // Più in basso per fare spazio al Save
+        const dataBtnY = startY + (spacingY * 6.8); // Più in basso per fare spazio al Save
 
         // Bottone Reset Impostazioni (Default)
         const defaultBtn = this.add.text(width / 2 - 200, dataBtnY, '↻ DEFAULT SETTINGS', {
@@ -161,7 +161,7 @@ export default class SettingsScene extends Phaser.Scene {
             masterVol: 100,
             voiceVol: 100,
             previousVoiceVol: 100,
-            sfxVol: 100,
+            // sfxVol: 100,
             musicVol: 100
         };
     }

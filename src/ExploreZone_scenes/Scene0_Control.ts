@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
+import { HandTrackingController } from '../handTracking/handTrackingController';
 
 export default class ControlsScene extends Phaser.Scene {
     private parentSceneKey!: string;
+    private previousPinchState: boolean = false;
 
     constructor() {
         super('ControlsScene');
@@ -53,20 +55,27 @@ export default class ControlsScene extends Phaser.Scene {
             repeat: -1 // Ripeti all'infinito
         });
 
-        // 5. Input: ascolta il tasto INVIO una sola volta
-        this.input.keyboard!.once('keydown-ENTER', () => {
-            // Riattiva il livello bloccato
+        const handleContinue = () => {
             this.scene.resume(this.parentSceneKey);
-            // Chiudi (distruggi) questa schermata di overlay
-            this.closeScene();
-        });
+            this.scene.stop();
+        };
+
+        this.input.keyboard!.once('keydown-ENTER', handleContinue);
 
         this.events.on('shutdown', () => {
             this.scene.stop();
         });
     }
 
-    private closeScene() {
-        this.scene.stop();
+    update() {
+        const tracker = HandTrackingController.getInstance();
+        const currentPinch = tracker.isClicked;
+
+        if (currentPinch && !this.previousPinchState) {
+            this.scene.resume(this.parentSceneKey);
+            this.scene.stop();
+        }
+
+        this.previousPinchState = currentPinch;
     }
 }

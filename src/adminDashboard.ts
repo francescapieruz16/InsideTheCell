@@ -275,6 +275,7 @@ export class AdminDashboard {
         if (!confirm("Are you sure you want to reset all settings to default?")) return;
         localStorage.removeItem('GEMINI_API_KEY');
         localStorage.removeItem('ADMIN_SETTINGS_JSON');
+        this.apiKeyInput.value = "";
         this.populateUIFromJSON(defaultSettingsJSON);
         this.showToast('Settings reset to default values.', '#e74c3c', '#fdedec');
     }

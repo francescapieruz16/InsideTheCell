@@ -59,6 +59,50 @@ export default class Scene2_Membrane extends Phaser.Scene {
     }
 
     create() {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+                z-index: 990 !important;
+            }
+
+            button {
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'PAUSE';
+        backBtn.style.pointerEvents = 'auto';
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '20px';
+        wrapper.style.right = '40px';
+        wrapper.style.transform = 'none';
+        wrapper.style.zIndex = '1000';
+        wrapper.style.pointerEvents = 'none';
+        wrapper.appendChild(backBtn);
+        const gameContainer = document.getElementById('app') || document.body;
+        gameContainer.appendChild(wrapper);
+
+        backBtn.addEventListener('click', () => {
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+        });
 
         const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
         let allDialogues = null;    
@@ -265,9 +309,11 @@ export default class Scene2_Membrane extends Phaser.Scene {
         this.physics.add.collider(this.player, this.wallsGroup);
         this.physics.add.overlap(this.player, this.exitPortal, this.handleExit, undefined, this);
 
-        // ABI: Inizializziamo l'assistente e mostriamo un dialogo iniziale
         this.abi = new ABI(this);
-        // this.abi.showRadioMessage("Entering the cytoplasm. Sensors are picking up complex structures and obstacles. Stay alert, we need to find the nuclear pore to proceed.");
+    
+        this.abi.MoveDialogueY(0); 
+
+        const abiScene = this.scene.get('ABIScene');
 
         this.abi.showDialogue(
             "A.B.I.",
@@ -309,6 +355,10 @@ export default class Scene2_Membrane extends Phaser.Scene {
             this.scene.start('Scene3_Internal', { incomingTexture: this.player.texture.key });
         });
 
+        this.events.once('shutdown', () => {
+            wrapper.remove();
+        });
+
     }
 
     update() {
@@ -335,6 +385,8 @@ export default class Scene2_Membrane extends Phaser.Scene {
             return;
         }
         this.isTransitioning = true;
+
+        this.scene.stop('ABIScene');
 
         const currentProgress = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
         if (currentProgress < 3) {

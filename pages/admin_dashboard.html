@@ -194,6 +194,25 @@
             background-color: #2c3e50;
         }
 
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 12px 24px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.8);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .back-btn:hover {
+            background-color: rgba(255, 255, 255, 1);
+            transform: scale(1.05);
+        }
+
         /* Toast Notification Styling */
         #toast-notification {
             visibility: hidden;
@@ -378,6 +397,14 @@
         </div>
 
     </div> 
+
+    <button id="backBtn" class="back-btn">BACK</button>
+
+    <script>
+        document.getElementById('backBtn').addEventListener('click', () => {
+            window.location.href = '/index.html';
+        });
+    </script>
     
     <div id="toast-notification"></div>
 

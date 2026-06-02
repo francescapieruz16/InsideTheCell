@@ -1,10 +1,16 @@
 import Phaser from 'phaser';
+import { HandTrackingController } from '../handTracking/handTrackingController';
+import { GameSettings } from '../ExploreZone_scenes/SettingsScene';
 
-// Importiamo l'interfaccia per il type checking
-import { GameSettings } from '../ExploreZone_scenes/SettingsScene'; // Assicurati che il percorso sia corretto
+class ABIScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'ABIScene' });
+    }
+}
 
 export default class ABI {
     private scene: Phaser.Scene;
+    private uiScene: Phaser.Scene;
     private uiContainer!: Phaser.GameObjects.Container;
     private dialogueText!: Phaser.GameObjects.Text;
     private dialogueName!: Phaser.GameObjects.Text;
@@ -31,12 +37,22 @@ export default class ABI {
 
     private radioTimer?: Phaser.Time.TimerEvent; 
 
-    private keepOpen: boolean = false;
-    private baseY: number = 0;         
-    private currentOffsetY: number = 0;
+    private keepOpen: boolean = false;      
+    private offsetY: number = -160;
+
+    private previousPinchState: boolean = false;    
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
+        
+        if (!this.scene.scene.get('ABIScene')) {
+            this.scene.scene.add('ABIScene', ABIScene, true);
+        }
+        
+        this.uiScene = this.scene.scene.get('ABIScene');
+        
+        this.scene.scene.bringToTop('ABIScene');
+
         this.createDialogueUI();
 
         this.synth = window.speechSynthesis;
@@ -45,6 +61,18 @@ export default class ABI {
         if (this.synth.onvoiceschanged !== undefined) {
             this.synth.onvoiceschanged = this.initVoice.bind(this);
         }
+
+        this.scene.events.on('update', this.update, this);
+
+        this.scene.events.once('shutdown', () => {
+            this.scene.events.off('update', this.update, this);
+
+            this.interrupt();
+            
+            if (this.uiContainer) {
+                this.uiContainer.destroy();
+            }
+        });
     }
 
     // --- NUOVO METODO HELPER PER LEGGERE I SETTINGS ---
@@ -54,14 +82,7 @@ export default class ABI {
             return JSON.parse(saved);
         }
         // Valori di default se non è mai stata aperta la scena Settings
-        return { 
-            textSpeed: 'Normal', 
-            masterVol: 100, 
-            voiceVol: 100, 
-            // sfxVol: 100, 
-            musicVol: 100, 
-            previousVoiceVol: 100 
-        };
+        return { textSpeed: 'Normal', masterVol: 100, voiceVol: 100, previousVoiceVol: 100, sfxVol: 100, musicVol: 100 };
     }
 
     private initVoice() {
@@ -100,10 +121,6 @@ export default class ABI {
             this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;
         }
 
-        if (this.robotVoice) {
-            utterance.voice = this.robotVoice;
-        }
-
         utterance.pitch = 1.5; 
         utterance.rate = 1.5;  
 
@@ -113,42 +130,66 @@ export default class ABI {
         this.synth.speak(utterance);
     }
 
-    private createDialogueUI() {
-        // ... inalterato ...
-        const screenW = this.scene.cameras.main.width;
-        const screenH = this.scene.cameras.main.height;
+    private update(time: number, delta: number) {
+        const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
+        if (inputMode !== 'hand') return;
 
-        this.uiContainer = this.scene.add.container(screenW / 2, screenH / 2);
+        const tracker = HandTrackingController.getInstance();
+        const currentPinch = tracker.isClicked; 
+
+        if (currentPinch && !this.previousPinchState) {
+            if (this.isTalking && !this.isUnskippable) {
+                this.nextDialoguePage();
+            }
+        }
+
+        this.previousPinchState = currentPinch;
+    }
+
+    private createDialogueUI() {
+        const screenW = this.uiScene.cameras?.main?.width || this.scene.scale.width;
+        const screenH = this.uiScene.cameras?.main?.height || this.scene.scale.height;
+
+        this.uiContainer = this.uiScene.add.container(screenW / 2, screenH);
         this.uiContainer.setScrollFactor(0); 
         this.uiContainer.setDepth(100);
 
-        const offsetY = 420;
-
-        const bg = this.scene.add.rectangle(0, offsetY - 20, 1300, 240, 0x000000, 0.92);
+        const bg = this.uiScene.add.rectangle(0, this.offsetY, 1300, 240, 0x000000, 0.92);
         bg.setStrokeStyle(4, 0x4caf50);
 
-        this.portrait = this.scene.add.image(-530, offsetY - 20, 'ABI_standard');
+        this.portrait = this.uiScene.add.image(-530, this.offsetY, 'ABI_standard');
         this.portrait.setDisplaySize(250, 250);
 
-        this.dialogueName = this.scene.add.text(-380, offsetY -100, "", { 
+        this.dialogueName = this.uiScene.add.text(-380, this.offsetY - 80, "", { 
             fontSize: '32px', fontStyle: 'bold', color: '#4caf50' 
         });
 
-        this.dialogueText = this.scene.add.text(-380, offsetY -50, "", { 
+        this.dialogueText = this.uiScene.add.text(-380, this.offsetY - 30, "", { 
             fontSize: '24px', color: '#ffffff', wordWrap: { width: 1000 }
         });
 
-        this.promptText = this.scene.add.text(640, offsetY + 85, "Press SPACE ▼", { 
+        this.promptText = this.uiScene.add.text(640, this.offsetY + 105, "Press SPACE ▼", { 
             fontSize: '18px', color: '#aaaaaa' 
         }).setOrigin(1, 0.5);
 
         this.uiContainer.add([bg, this.portrait, this.dialogueName, this.dialogueText, this.promptText]);
         this.uiContainer.setVisible(false);
 
+        const updateContainerLayout = (width: number, height: number) => {
+            if (!this.uiContainer) return;
+
+            this.uiContainer.setPosition(width / 2, height + this.offsetY);        
+
+            const baseWidth = 1400; 
+            const scaleFactor = Math.min(1, width / baseWidth);
+            
+            this.uiContainer.setScale(scaleFactor);
+        };
+
+        updateContainerLayout(screenW, screenH);
+
         this.scene.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
-            if (this.uiContainer) {
-                this.uiContainer.setPosition(gameSize.width / 2, (gameSize.height / 2) + this.currentOffsetY);
-            }
+            updateContainerLayout(gameSize.width, gameSize.height);
         });
     }
 
@@ -156,23 +197,22 @@ export default class ABI {
         // ... inalterato ...
         if (!this.uiContainer) return; 
 
-        this.currentOffsetY = offsetY;
-        const centerY = this.scene.cameras.main.height / 2;
+        this.offsetY = offsetY;
+        
+        const bottomY = this.uiScene.cameras?.main?.height || this.scene.scale.height;
 
-        this.scene.tweens.add({
+        this.uiScene.tweens.add({
             targets: this.uiContainer,
-            y: centerY + offsetY,
+            y: bottomY + offsetY,
             duration: 300,
             ease: 'Power2'
         });
     }
 
     public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false, keepOpen: boolean = false) {
-        // ... inalterato ...
         this.interrupt(); 
 
         this.keepOpen = keepOpen;
-
         this.isTalking = true;
         this.isUnskippable = unskippable;
         this.dialogueName.setText(name);
@@ -217,7 +257,7 @@ export default class ABI {
         else if (settings.textSpeed === 'Fast') this.TYPING_SPEED = 15;
         else this.TYPING_SPEED = 40; // 'Normal'
 
-        this.typingTimer = this.scene.time.addEvent({
+        this.typingTimer = this.uiScene.time.addEvent({
             delay: this.TYPING_SPEED,
             callback: this.typeNextChar,
             callbackScope: this,
@@ -226,7 +266,6 @@ export default class ABI {
     }
 
     private typeNextChar() {
-        // ... inalterato ...
         this.currentVisibleText += this.currentFullText[this.currentVisibleText.length];
         this.dialogueText.setText(this.currentVisibleText);
 
@@ -302,7 +341,6 @@ export default class ABI {
     }
 
     private interrupt() {
-        // ... inalterato ...
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
@@ -311,6 +349,7 @@ export default class ABI {
         }
 
         this.synth.cancel();
+        
         this.isTyping = false;
         this.isTalking = false;
         
@@ -320,11 +359,11 @@ export default class ABI {
     }
 
     public showRadioMessage(text: string, durationPerPage: number = 8000) {
-        // ... inalterato ...
         this.interrupt(); 
 
         this.uiContainer.setVisible(true);
         this.dialogueName.setText("A.B.I.");
+        this.promptText.setVisible(false); 
         this.promptText.setVisible(false); 
 
         const pages = this.autoSplitText(text, 180);
@@ -345,7 +384,7 @@ export default class ABI {
 
             pageIndex++;
 
-            this.radioTimer = this.scene.time.delayedCall(durationPerPage, showNextPage);
+            this.radioTimer = this.uiScene.time.delayedCall(durationPerPage, showNextPage);
         };
 
         showNextPage();

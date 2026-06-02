@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import ABI from './classes/abi';
+import { HandTrackingController } from '../src/handTracking/handTrackingController';
 
 import defaultDialogues from '../assets/default_dialogues.json';
 import defaultContent from '../assets/default_context_and_quizzes.json';
@@ -16,8 +17,7 @@ type QuizQuestion = {
     explanation: string;
 };
 
-class FinalBoss extends Phaser.Scene {
-    private bg!: Phaser.GameObjects.Image;
+export class FinalBoss extends Phaser.Scene {
     private boss!: Phaser.GameObjects.Image;
 
     private bossFloatingTween?: Phaser.Tweens.Tween;
@@ -58,6 +58,9 @@ class FinalBoss extends Phaser.Scene {
     private endScreenContainer?: Phaser.GameObjects.Container;
     private readonly menuFont = 'Arial';
 
+    private previousPinchState = false;
+    private allInteractableButtons: Phaser.GameObjects.Container[] = [];
+
     constructor() {
         super('FinalBoss');
     }
@@ -90,6 +93,57 @@ class FinalBoss extends Phaser.Scene {
     }
 
     create() {
+        const bgHTML = document.getElementById('background') as HTMLImageElement;
+        if (bgHTML) {
+            bgHTML.src = '/assets/finale/background_final_game.png';
+            bgHTML.style.objectFit = 'fill'; 
+        }
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+            }
+
+            button {
+                pointer-events: auto !important;
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'PAUSE';
+        backBtn.style.pointerEvents = 'auto';
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'absolute';
+        wrapper.style.top = '20px';
+        wrapper.style.right = '40px';
+        wrapper.style.transform = 'none';
+        wrapper.style.zIndex = '1000';
+        wrapper.style.pointerEvents = 'none';
+        wrapper.appendChild(backBtn);
+        const gameContainer = document.getElementById('app') || document.body;
+        gameContainer.appendChild(wrapper);
+
+        backBtn.addEventListener('click', () => {
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+        });
+
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
@@ -102,7 +156,6 @@ class FinalBoss extends Phaser.Scene {
         this.loadDialogues();
         this.loadQuizzes();
 
-        this.createBackground(width, height);
         this.createBoss(width, height);
         this.createHud(width);
 
@@ -115,6 +168,72 @@ class FinalBoss extends Phaser.Scene {
         }
 
         this.showAbiIntro();
+
+        this.scale.on('resize', this.onResize, this);
+        
+        this.onResize();
+        this.time.delayedCall(10, () => this.onResize());
+
+        this.events.once('shutdown', () => {
+            this.scale.off('resize', this.onResize, this);
+            this.allInteractableButtons = [];
+        });
+    }
+
+    private onResize() {
+        if (!this.scene.isActive()) return;
+
+        const width = this.scale.width;
+        const height = this.scale.height;
+
+        this.cameras.main.setSize(width, height);
+
+        const cx = width / 2;
+        const uiScale = height / 1080; 
+
+        if (this.boss && this.boss.active) {
+            this.boss.setPosition(cx, height * 0.40);
+            const bossSize = Math.min(width, height) * 0.31;
+            const multiplier = this.getBossCurrentScaleMultiplier();
+            this.boss.setDisplaySize(bossSize * multiplier, bossSize * multiplier);
+        }
+
+        if (this.hudPanel && this.hudPanel.active) {
+            this.hudPanel.setPosition(cx, 54 * uiScale);
+            this.hudPanel.setSize((width * 0.72) / uiScale, 78);
+            this.hudPanel.setScale(uiScale);
+        }
+        if (this.hudText && this.hudText.active) {
+            this.hudText.setPosition(cx, 35 * uiScale);
+            this.hudText.setScale(uiScale);
+        }
+
+        if (this.answerButtons && this.answerButtons.length > 0) {
+            const buttonWidth = 450;
+            const spacing = 40;
+            const totalAnswers = this.answerButtons.length;
+            
+            const totalWidth = (buttonWidth * totalAnswers) + (spacing * (totalAnswers - 1));
+            const startX = -(totalWidth / 2) + (buttonWidth / 2);
+            
+            const scaledPadding = 35 * uiScale;
+            const scaledHalfHeight = 60 * uiScale; 
+            const fixedY = height - scaledHalfHeight - scaledPadding;
+
+            this.answerButtons.forEach((btn, index) => {
+                const xOffset = startX + index * (buttonWidth + spacing);
+                
+                btn.setScale(uiScale);
+                (btn as any).baseScale = uiScale; 
+                
+                btn.setPosition(cx + (xOffset * uiScale), fixedY);
+            });
+        }
+
+        if (this.endScreenContainer && this.endScreenContainer.active) {
+            this.endScreenContainer.setPosition(cx, height / 2);
+            this.endScreenContainer.setScale(uiScale);
+        }
     }
 
     private loadDialogues() {
@@ -237,36 +356,6 @@ class FinalBoss extends Phaser.Scene {
         };
     }
 
-    private createBackground(width: number, height: number) {
-        this.bg = this.add.image(
-            width / 2,
-            height / 2,
-            'final_boss_background'
-        );
-
-        this.bg.setOrigin(0.5);
-        this.bg.setDepth(0);
-
-        const texture = this.textures
-            .get('final_boss_background')
-            .getSourceImage() as HTMLImageElement;
-
-        const scaleX = width / texture.width;
-        const scaleY = height / texture.height;
-        const scale = Math.max(scaleX, scaleY);
-
-        this.bg.setScale(scale);
-
-        this.add.rectangle(
-            width / 2,
-            height / 2,
-            width,
-            height,
-            0x001b12,
-            0.08
-        ).setDepth(1);
-    }
-
     private createBoss(width: number, height: number) {
         this.boss = this.add.image(
             width / 2,
@@ -387,7 +476,7 @@ class FinalBoss extends Phaser.Scene {
         this.canAnswer = true;
         this.isQuestionDisplayed = true;
 
-        this.abi.MoveDialogueY(-180);
+        this.abi.MoveDialogueY(-100);
 
         this.abi.showDialogue(
             'ABI',
@@ -438,6 +527,8 @@ class FinalBoss extends Phaser.Scene {
             button.setDepth(120);
             this.answerButtons.push(button);
         });
+
+        this.onResize();
     }
 
     private handleAnswer(answer: QuizAnswer) {
@@ -692,6 +783,8 @@ class FinalBoss extends Phaser.Scene {
         container.setScale(zoom);
 
         this.endScreenContainer = container;
+
+        this.onResize();
     }
 
     private createPostGameWindow(width: number, height: number) {
@@ -814,6 +907,10 @@ class FinalBoss extends Phaser.Scene {
             callback();
         });
 
+        (container as any).baseScale = 1; 
+        (container as any).customOnClick = callback;
+        this.allInteractableButtons.push(container);
+
         return container;
     }
 
@@ -908,48 +1005,55 @@ class FinalBoss extends Phaser.Scene {
     }
 
     update() {
+        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const tracker = HandTrackingController.getInstance();
+        const currentPinch = inputMode === 'hand' ? tracker.isClicked : false;
+
         if (this.abi && this.abi.isTalking) {
-            if (
-                !this.isQuestionDisplayed &&
-                this.interactKey &&
-                Phaser.Input.Keyboard.JustDown(this.interactKey)
-            ) {
+            const justPinched = currentPinch && !this.previousPinchState;
+            const spaceJustDown = this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey);
+
+            if (!this.isQuestionDisplayed && (spaceJustDown || justPinched)) {
                 this.abi.nextDialoguePage();
             }
+        }
 
-            return;
+        if (inputMode === 'hand') {
+            if (currentPinch && !this.previousPinchState && this.isQuestionDisplayed) {
+                const cursorX = tracker.targetX * this.cameras.main.width;
+                const cursorY = tracker.targetY * this.cameras.main.height;
+                
+                this.handlePinchClick(cursorX, cursorY);
+            }
+            this.previousPinchState = currentPinch;
+        }
+    }
+
+    private handlePinchClick(x: number, y: number) {
+        for (const btn of this.allInteractableButtons) {
+            let isVisible = btn.visible && btn.active;
+            
+            let parent = btn.parentContainer;
+            while (parent && isVisible) {
+                if (!parent.visible) isVisible = false;
+                parent = parent.parentContainer;
+            }
+
+            if (!isVisible) continue;
+
+            const bounds = btn.getBounds();
+
+            if (bounds.contains(x, y)) {
+                (btn as any).customOnClick();
+                
+                const baseScale = (btn as any).baseScale || 1;
+                btn.setScale(baseScale * 0.95);
+                setTimeout(() => {
+                    if (btn.active) btn.setScale(baseScale * 1.05);
+                }, 150);
+                
+                break;
+            }
         }
     }
 }
-
-const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO,
-
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1920,
-        height: 1080
-    },
-
-    parent: 'game-container',
-
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: {
-                x: 0,
-                y: 0
-            },
-            debug: false
-        }
-    },
-
-    render: {
-        roundPixels: true
-    },
-
-    scene: [FinalBoss]
-};
-
-new Phaser.Game(config);

@@ -1,17 +1,21 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
+import { HandTrackingController } from '../src/handTracking/handTrackingController';
 
-class Level2 extends Phaser.Scene {
+export class Level2 extends Phaser.Scene {
     private readonly MENU_FONT = 'Arial';
 
     private paths: Phaser.Curves.Path[] = [];
     private crosshair!: Phaser.GameObjects.Image;
     private viruses!: Phaser.GameObjects.Group;
 
+    private backgroundImage!: Phaser.GameObjects.Image;
+
     private score: number = 0;
     private targetScore: number = 20;
     private scoreText!: Phaser.GameObjects.Text;
     private escapedText!: Phaser.GameObjects.Text;
+    private scorePanel!: Phaser.GameObjects.Container;
 
     private escapedViruses: number = 0;
     private maxEscapedViruses: number = 3;
@@ -28,7 +32,7 @@ class Level2 extends Phaser.Scene {
     private spawnDelayNonVaccinated: number = 650;
     private spawnDelayVaccinated: number = 1500;
 
-    private virusDurationNonVaccinated: number = 4300;
+    private virusDurationNonVaccinated: number = 3300;
     private virusDurationVaccinated: number = 7000;
 
     private postGameManager!: PostGameManager;
@@ -70,12 +74,64 @@ class Level2 extends Phaser.Scene {
     }
 
     create() {
+        this.game.canvas.style.pointerEvents = 'auto';
+        this.game.canvas.style.position = 'relative';
+        this.game.canvas.style.zIndex = '999';
+
+        this.registry.set('hideGlobalCursor', true);
+
+        if (this.game.domContainer) {
+            this.game.domContainer.style.zIndex = '9999';
+            this.game.domContainer.style.pointerEvents = 'none';
+        }
+
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        const bg = this.add.image(width / 2, height / 2, 'background_level_2');
-        bg.setDisplaySize(width, height);
-        bg.setDepth(0);
+        const bgHTML = document.getElementById('background') as HTMLImageElement;
+        if (bgHTML) {
+            bgHTML.src = '/assets/level2/background_level_2.png';
+            bgHTML.style.objectFit = 'fill'; 
+        }
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+            }
+
+            button {
+                pointer-events: auto !important;
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'Back';
+        backBtn.innerText = 'PAUSE';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'phaser-dom-container';
+        wrapper.appendChild(backBtn);
+        const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
+
+
+        backBtn.addEventListener('click', () => {
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+        });
 
         this.viruses = this.add.group();
 
@@ -103,6 +159,80 @@ class Level2 extends Phaser.Scene {
         this.postGameManager.preparePostGame(
             2
         );
+
+        let previousWidth = width;
+        let previousHeight = height;
+
+        const onResize = (gameSize: Phaser.Structs.Size) => {
+            if (!this.scene.isActive()) return;
+
+            const newW = gameSize.width;
+            const newH = gameSize.height;
+
+            backBtnDom.setPosition(newW - 80, 40);
+
+            if (this.scorePanel) {
+                const diffX = newW - previousWidth;
+                this.scorePanel.x += diffX;
+            }
+
+            this.createPaths(newW, newH);
+
+            this.tweens.killAll();
+
+            if (this.viruses) {
+                this.viruses.clear(true, true);
+            }
+
+            if (this.scoreText) {
+                this.scoreText.setScale(1);
+            }
+
+            previousWidth = newW;
+            previousHeight = newH;
+        };
+
+        this.scale.on('resize', onResize);
+
+        onResize(this.scale.gameSize);
+
+        this.events.once('shutdown', () => {
+            this.registry.set('hideGlobalCursor', false);
+            this.scale.off('resize', onResize);
+        });
+    }
+
+    update(time: number, delta: number) {
+        if (this.isGameOver || this.isWin || this.isChatActive) return;
+
+        const inputMode = this.registry.get('inputMode');
+
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
+
+            if (tracker.targetX !== -1) {
+                const screenX = tracker.targetX * this.cameras.main.width;
+                const screenY = tracker.targetY * this.cameras.main.height;
+
+                const distToBackBtn = Phaser.Math.Distance.Between(screenX, screenY, 80, 40);
+
+                // cursor near back button -> show hand cursor
+                if (distToBackBtn < 150) {
+                    this.registry.set('hideGlobalCursor', false);
+                    this.crosshair.setVisible(false);  
+                //curson in game -> show crosshair   
+                } else {
+                    
+                    this.registry.set('hideGlobalCursor', true);
+                    this.crosshair.setVisible(true);
+                    this.crosshair.setPosition(screenX, screenY);
+
+                    this.shootVirus(screenX, screenY);
+                }
+            } else {
+                this.crosshair.setVisible(false);
+            }
+        }
     }
 
     private createScoreUI() {
@@ -137,14 +267,13 @@ class Level2 extends Phaser.Scene {
             }
         );
 
-    const scorePanel = this.add.container(0, 0, [
-        panelBg,
-        title,
-        this.scoreText,
-        this.escapedText
-    ]);
-
-        scorePanel.setDepth(300);
+        this.scorePanel = this.add.container(0, 0, [
+            panelBg,
+            title,
+            this.scoreText,
+            this.escapedText
+        ]);
+        this.scorePanel.setDepth(300);
     }
 
     private createCrosshair() {
@@ -156,11 +285,13 @@ class Level2 extends Phaser.Scene {
 
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
             if (this.isGameOver || this.isWin || this.isChatActive) return;
+            if (this.registry.get('inputMode') === 'hand') return;
             this.crosshair.setPosition(pointer.x, pointer.y);
         });
 
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             if (this.isGameOver || this.isWin || this.isChatActive) return;
+            if (this.registry.get('inputMode') === 'hand') return;
             this.crosshair.setPosition(pointer.x, pointer.y);
             this.shootVirus(pointer.x, pointer.y);
         });
@@ -172,7 +303,7 @@ class Level2 extends Phaser.Scene {
         for (const virus of virusList) {
             const distance = Phaser.Math.Distance.Between(x, y, virus.x, virus.y);
 
-            if (distance < 28) {
+            if (distance < 35 ) {
                 this.createExplosion(virus.x, virus.y);
                 virus.destroy();
                 this.addScore(1);
@@ -237,6 +368,8 @@ class Level2 extends Phaser.Scene {
         this.crosshair.setVisible(false);
         this.input.setDefaultCursor('default');
 
+        this.registry.set('hideGlobalCursor', false);
+
         if (this.isVaccinated) {
             this.postGameManager.showGameOverScreen();
         } else if (!this.hasShownQuiz) {
@@ -254,6 +387,8 @@ class Level2 extends Phaser.Scene {
 
         this.crosshair.setVisible(false);
         this.input.setDefaultCursor('default');
+
+        this.registry.set('hideGlobalCursor', false);
 
         this.postGameManager.showWinScreen();
     }
@@ -338,7 +473,7 @@ class Level2 extends Phaser.Scene {
         const virusKey = Phaser.Utils.Array.GetRandom(this.virusKeys);
 
         const virus = this.add.sprite(0, 0, virusKey);
-        virus.setDisplaySize(40, 40);
+        virus.setDisplaySize(55, 55);
         virus.setDepth(10);
 
         this.viruses.add(virus);
@@ -369,20 +504,3 @@ class Level2 extends Phaser.Scene {
         });
     }
 }
-
-const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO,
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1920,
-        height: 1080,
-    },
-    parent: 'game-container',
-    render: {
-        roundPixels: true
-    },
-    scene: [Level2]
-};
-
-new Phaser.Game(config);

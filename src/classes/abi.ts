@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HandTrackingController } from '../handTracking/handTrackingController';
+import { GameSettings } from '../ExploreZone_scenes/SettingsScene';
 
 class ABIScene extends Phaser.Scene {
     constructor() {
@@ -30,7 +31,9 @@ export default class ABI {
     private currentFullText: string = "";
     private currentVisibleText: string = "";
     private typingTimer?: Phaser.Time.TimerEvent;
-    private readonly TYPING_SPEED: number = 40; 
+    
+    // Rimuoviamo il readonly per poter modificare la velocità in base ai settings
+    private TYPING_SPEED: number = 40; 
 
     private radioTimer?: Phaser.Time.TimerEvent; 
 
@@ -72,22 +75,57 @@ export default class ABI {
         });
     }
 
+    // --- NUOVO METODO HELPER PER LEGGERE I SETTINGS ---
+    private getSettings(): GameSettings {
+        const saved = localStorage.getItem('gameSettings');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        // Valori di default se non è mai stata aperta la scena Settings
+        return { textSpeed: 'Normal', masterVol: 100, voiceVol: 100, previousVoiceVol: 100, sfxVol: 100, musicVol: 100 };
+    }
+
     private initVoice() {
-        const voices = this.synth.getVoices();
-        this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;  
+        const loadVoices = () => {
+            const voices = this.synth.getVoices();
+            this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;  
+        };
+
+        loadVoices();
+
+        if (this.synth.onvoiceschanged !== undefined) {
+            this.synth.onvoiceschanged = loadVoices;
+        }
     }
 
     private speakText(text: string) {
         this.synth.cancel();
 
+        // 1. Recuperiamo i settings attuali prima di parlare
+        const settings = this.getSettings();
+
+        // 2. Calcoliamo il volume reale
+        // Esempio: se Master è 80% e Voice è 50%, il volume finale è 0.8 * 0.5 = 0.4
+        const masterRatio = settings.masterVol / 100;
+        const voiceRatio = settings.voiceVol / 100;
+        const finalVolume = masterRatio * voiceRatio;
+
+        // Se il volume è 0, non facciamo nemmeno partire la sintesi vocale
+        if (finalVolume <= 0) return;
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-GB'; 
-        if (this.robotVoice) {
-            utterance.voice = this.robotVoice;
+        
+        if (!this.robotVoice) {
+            const voices = this.synth.getVoices();
+            this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;
         }
 
         utterance.pitch = 1.5; 
         utterance.rate = 1.5;  
+
+        // 3. Applichiamo il volume calcolato
+        utterance.volume = finalVolume;
         
         this.synth.speak(utterance);
     }
@@ -156,6 +194,7 @@ export default class ABI {
     }
 
     public MoveDialogueY(offsetY: number) {
+        // ... inalterato ...
         if (!this.uiContainer) return; 
 
         this.offsetY = offsetY;
@@ -204,6 +243,20 @@ export default class ABI {
             this.typingTimer.remove();
         }
 
+        // --- APPLICAZIONE VELOCITÀ TESTO ---
+        const settings = this.getSettings();
+        
+        if (settings.textSpeed === 'Instant') {
+            // Se Istantaneo, mostra tutto subito senza timer
+            this.completeTyping();
+            return;
+        }
+
+        // Traduciamo le etichette in millisecondi (più basso è più veloce)
+        if (settings.textSpeed === 'Slow') this.TYPING_SPEED = 80;
+        else if (settings.textSpeed === 'Fast') this.TYPING_SPEED = 15;
+        else this.TYPING_SPEED = 40; // 'Normal'
+
         this.typingTimer = this.uiScene.time.addEvent({
             delay: this.TYPING_SPEED,
             callback: this.typeNextChar,
@@ -222,6 +275,7 @@ export default class ABI {
     }
 
     private completeTyping() {
+        // ... inalterato ...
         this.isTyping = false;
         if (this.typingTimer) {
             this.typingTimer.remove();
@@ -230,6 +284,7 @@ export default class ABI {
     }
 
     private autoSplitText(text: string, maxLength: number): string[] {
+        // ... inalterato ...
         const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
         const pages: string[] = [];
         let currentPage = "";
@@ -247,6 +302,7 @@ export default class ABI {
     }
 
     public nextDialoguePage() {
+        // ... inalterato ...
         if (this.isTyping) {
             this.completeTyping();
         } else {
@@ -269,6 +325,7 @@ export default class ABI {
     }
 
     public hideDialogue() {
+        // ... inalterato ...
         this.isTalking = false;
         this.isUnskippable = false;
         this.uiContainer.setVisible(false);
@@ -306,6 +363,7 @@ export default class ABI {
 
         this.uiContainer.setVisible(true);
         this.dialogueName.setText("A.B.I.");
+        this.promptText.setVisible(false); 
         this.promptText.setVisible(false); 
 
         const pages = this.autoSplitText(text, 180);

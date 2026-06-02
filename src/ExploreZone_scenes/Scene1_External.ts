@@ -344,6 +344,11 @@ export default class Scene1_External extends Phaser.Scene {
         // Assicuriamoci che il giocatore resti fermo durante il nero
         (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
 
+        const currentProgress = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
+        if (currentProgress < 2) {
+            localStorage.setItem('maxUnlockedLevel', '2');
+        }
+
         this.cameras.main.fadeOut(1500, 0, 0, 0);
         
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {

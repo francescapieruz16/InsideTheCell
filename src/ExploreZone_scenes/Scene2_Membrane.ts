@@ -30,8 +30,13 @@ export default class Scene2_Membrane extends Phaser.Scene {
     private dialogue4: string = ""; 
 
     preload() {
+
+        this.load.image('nav_front', '/assets/tutorial/navicella/Navicella_Front.png');
+        this.load.image('nav_back', '/assets/tutorial/navicella/Navicella_Back.png');
+        this.load.image('nav_left', '/assets/tutorial/navicella/Navicella_Left.png');
+        this.load.image('nav_right', '/assets/tutorial/navicella/Navicella_Right.png');
+        this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png'); 
      
-        //this.load.image('wall_cytoskeleton', '/assets/tutorial/sfondi/wall_labyrinth2.png');        // Ipotetico filamento del citoscheletro o organello che fa da muro
         this.load.image('background_scene2', '/assets/tutorial/sfondi/scene2_background.png'); 
         this.load.image('exit_portal', '/assets/tutorial/sfondi/exit_labyrinth3.png') 
         this.load.image('viral_wreck', '/assets/tutorial/obstacles/viral_wreck.png');
@@ -330,6 +335,11 @@ export default class Scene2_Membrane extends Phaser.Scene {
             return;
         }
         this.isTransitioning = true;
+
+        const currentProgress = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
+        if (currentProgress < 3) {
+            localStorage.setItem('maxUnlockedLevel', '3');
+        }
 
         // Ferma il giocatore
         (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);

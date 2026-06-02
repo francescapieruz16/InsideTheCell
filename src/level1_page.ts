@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import Cutscene1 from './Cutscenes/Cutscene1';
 import { PostGameManager } from './postGame/postGameManager';
 import { HandTrackingController } from '../src/handTracking/handTrackingController';
 

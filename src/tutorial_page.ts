@@ -5,6 +5,8 @@ import Scene0_Control from './ExploreZone_scenes/Scene0_Control';
 import Scene1_External from './ExploreZone_scenes/Scene1_External';
 import Scene3_Internal from './ExploreZone_scenes/Scene3_Internal'; 
 import Scene2_Membrane from './ExploreZone_scenes/Scene2_Membrane';
+import LevelSelectScene from './ExploreZone_scenes/LevelSelectionScene';
+import SettingsScene from './ExploreZone_scenes/SettingsScene';
 
 
 
@@ -27,7 +29,7 @@ const config: Phaser.Types.Core.GameConfig = {
             debug: false // (o true se stai ancora testando le hitbox!)
         }
     },
-    scene: [Scene1_External, Scene2_Membrane, Scene0_Control, PauseMenuScene, Scene3_Internal]
+    scene: [LevelSelectScene, Scene1_External, Scene2_Membrane, Scene0_Control, PauseMenuScene, Scene3_Internal, SettingsScene]
 };
 
 const game = new Phaser.Game(config);

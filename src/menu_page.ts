@@ -140,7 +140,7 @@ export class MenuPageScene extends Phaser.Scene {
             this.scene.start('TitleScene'); 
         });
 
-        const finalBossUnlocked = localStorage.getItem('FINAL_BOSS_UNLOCKED') === 'false';
+        const finalBossUnlocked = localStorage.getItem('FINAL_BOSS_UNLOCKED') === 'true';
 
         if (finalBossUnlocked) {
             createHTMLButton('FINAL BOSS', 'final-boss-btn', 0, startOffsetY + 6 * levelSpacing, () => {

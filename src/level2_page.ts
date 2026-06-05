@@ -35,6 +35,7 @@ export class Level2 extends Phaser.Scene {
     private virusDurationNonVaccinated: number = 3300;
     private virusDurationVaccinated: number = 7000;
 
+    private spawnEvent!: Phaser.Time.TimerEvent;
     private postGameManager!: PostGameManager;
     
 
@@ -147,6 +148,12 @@ export class Level2 extends Phaser.Scene {
         const spawnDelay = this.isVaccinated
             ? this.spawnDelayVaccinated
             : this.spawnDelayNonVaccinated;
+
+        this.spawnEvent = this.time.addEvent({
+            delay: spawnDelay,
+            loop: true,
+            callback: () => this.spawnVirus()
+        });
 
         this.time.addEvent({
             delay: spawnDelay,
@@ -362,8 +369,10 @@ export class Level2 extends Phaser.Scene {
     private triggerGameOver() {
         this.isGameOver = true;
 
-        this.time.removeAllEvents();
-        this.tweens.killAll();
+        if (this.spawnEvent) {
+            this.spawnEvent.remove(false);
+        }
+
         this.viruses.clear(true, true);
 
         this.crosshair.setVisible(false);
@@ -382,8 +391,10 @@ export class Level2 extends Phaser.Scene {
     private triggerWin() {
         this.isWin = true;
 
-        this.time.removeAllEvents();
-        this.tweens.killAll();
+        if (this.spawnEvent) {
+            this.spawnEvent.remove(false);
+        }
+        
         this.viruses.clear(true, true);
 
         this.crosshair.setVisible(false);

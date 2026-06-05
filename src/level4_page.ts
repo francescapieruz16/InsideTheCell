@@ -178,7 +178,6 @@ export class Level4 extends Phaser.Scene {
 
         const onResize = (gameSize: Phaser.Structs.Size) => {
             if (!this.scene.isActive() && !this.scene.isPaused()) return;
-            if (!this.physics || !this.physics.world) return;
 
             const newW = gameSize.width;
             const newH = gameSize.height;

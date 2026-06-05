@@ -1122,10 +1122,12 @@ export class Level6 extends Phaser.Scene {
         this.physics.pause();
         this.clearLevelObjects();
 
+        this.time.removeAllEvents(); 
+
         this.time.delayedCall(400, () => {
             if (this.isVaccinated) {
                 this.postGameManager.showGameOverScreen();
-            } else if (!this.hasShownQuiz) {
+            } else {
                 this.hasShownQuiz = true;
                 this.postGameManager.showLearningPhase();
             }

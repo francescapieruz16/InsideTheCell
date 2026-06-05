@@ -7,6 +7,6 @@ export default class Cutscene2 extends Phaser.Scene {
     }
 
     create() {
-        this.scene.start('LevelFinalBoss');
+        this.scene.start('FinalBoss');
     }
 }

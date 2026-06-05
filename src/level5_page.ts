@@ -1260,7 +1260,11 @@ export class Level5 extends Phaser.Scene {
             this.currentPreview = null;
         }
 
-        this.matter.world.pause();
+        this.activeComponents.forEach(component => {
+            if (component.body) {
+                component.setStatic(true);
+            }
+        });
 
         this.time.delayedCall(400, () => {
             if (this.isVaccinated) {

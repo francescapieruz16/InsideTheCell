@@ -139,7 +139,7 @@ export default class SettingsScene extends Phaser.Scene {
 
         // --- RESIZE LOGIC ---
         const onResize = (gameSize: Phaser.Structs.Size) => {
-            if (!this.scene.isActive() && !this.scene.isPaused()) return;
+            if (!this.sys || !this.sys.isActive() && !this.scene.isPaused()) return;
 
             const newW = gameSize.width;
             const newH = gameSize.height;
@@ -357,13 +357,18 @@ export default class SettingsScene extends Phaser.Scene {
     }
 
     private createWarningPopup() {
+        // 1. Recupera le dimensioni dello schermo fin da subito
+        const { width, height } = this.scale.gameSize;
+
         this.warningPopup = this.add.container(0, 0);
         this.warningPopup.setDepth(100);
         this.warningPopup.setVisible(false); 
 
-        this.warningOverlay = this.add.rectangle(0, 0, 1920, 1080, 0x000000, 0.8).setOrigin(0).setInteractive(); 
+        // 2. Imposta l'overlay a schermo intero dinamico
+        this.warningOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive(); 
         
-        this.warningBoxContainer = this.add.container(0, 0);
+        // 3. FONDAMENTALE: Inizializza il box già al centro esatto!
+        this.warningBoxContainer = this.add.container(width / 2, height / 2);
 
         const box = this.add.rectangle(0, 0, 500, 300, 0x220000).setStrokeStyle(4, 0xff0000);
         const title = this.add.text(0, -80, 'WARNING', { fontSize: '36px', color: '#ff0000', fontStyle: 'bold' }).setOrigin(0.5);

@@ -464,13 +464,12 @@ export default class Scene3_Internal extends Phaser.Scene {
             log1.refreshBody();
             log2.refreshBody(); 
             log3.refreshBody(); 
-            log.setTint(0xff5555); // Una leggera tinta rossa/allarme per farli risaltare
-            
+
             // Effetto fluttuante per indicare che si può interagire
             this.tweens.add({
                 targets: log,
                 y: log.y - 15,
-                alpha: 0.7,
+                alpha: 0.6,
                 duration: 1500,
                 yoyo: true,
                 repeat: -1,

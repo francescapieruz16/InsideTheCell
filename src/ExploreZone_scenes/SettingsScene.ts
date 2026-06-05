@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { HandTrackingController } from '../handTracking/handTrackingController';
 
 export interface GameSettings {
     textSpeed: string; 
@@ -6,12 +7,30 @@ export interface GameSettings {
     voiceVol: number;
     sfxVol: number;
     musicVol: number;  
-    previousVoiceVol: number; // Memoria per il tasto Mute
+    previousVoiceVol: number;
+}
+
+interface InteractiveElement {
+    obj: Phaser.GameObjects.GameObject & { getBounds: () => Phaser.Geom.Rectangle };
+    isHovered: boolean;
+    simulateOver: () => void;
+    simulateOut: () => void;
+    simulateDown: () => void;
 }
 
 export default class SettingsScene extends Phaser.Scene {
     private parentSceneKey: string | null = null;
     private settings!: GameSettings;
+
+    private bgRect!: Phaser.GameObjects.Rectangle;
+    private mainContainer!: Phaser.GameObjects.Container;
+    
+    private warningPopup!: Phaser.GameObjects.Container;
+    private warningBoxContainer!: Phaser.GameObjects.Container;
+    private warningOverlay!: Phaser.GameObjects.Rectangle;
+
+    private interactables: InteractiveElement[] = [];
+    private previousPinchState: boolean = false;
 
     constructor() {
         super('SettingsScene');
@@ -19,136 +38,212 @@ export default class SettingsScene extends Phaser.Scene {
 
     init(data: any) {
         this.parentSceneKey = data.parentScene || null;
+        this.interactables = [];
     }
 
     create() {
         this.scene.bringToTop();
-        const { width, height } = this.scale;
+        const { width, height } = this.scale.gameSize;
 
-        this.add.rectangle(0, 0, width, height, 0x000000, 0.95).setOrigin(0);
+        this.bgRect = this.add.rectangle(0, 0, width, height, 0x000000, 0.95).setOrigin(0);
 
-        this.add.text(width / 2, 80, 'SYSTEM SETTINGS', {
-            fontSize: '46px',
-            color: '#00ffff',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 6,
+        this.mainContainer = this.add.container(width / 2, height / 2);
+
+        const title = this.add.text(0, -380, 'SYSTEM SETTINGS', {
+            fontSize: '46px', color: '#00ffff', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 6,
             shadow: { offsetX: 0, offsetY: 0, color: '#00ffff', blur: 15, fill: true }
         }).setOrigin(0.5);
+        this.mainContainer.add(title);
 
-        // --- CARICAMENTO IMPOSTAZIONI ---
         this.loadSettings();
 
-        // --- GENERATORE DI STEPPER E TOGGLE ( UI ) ---
-        let startY = 200;
+        // --- GENERATORE DI STEPPER E TOGGLE ---
+        let startY = -250;
         const spacingY = 75;
         
         const speedOptions = ['Slow', 'Normal', 'Fast', 'Instant'];
-        this.createStepper(width / 2, startY, 'Text Speed', speedOptions, 
+        this.createStepper(startY, 'Text Speed', speedOptions, 
             () => this.settings.textSpeed, 
             (val) => { this.settings.textSpeed = val; this.saveSettings(); }
         );
 
-        this.createVolumeStepper(width / 2, startY + spacingY, 'Master Volume', 
+        this.createVolumeStepper(startY + spacingY, 'Master Volume', 
             () => this.settings.masterVol, 
             (val) => { this.settings.masterVol = val; this.saveSettings(); }
         );
 
-        this.createVolumeStepper(width / 2, startY + (spacingY * 2), 'A.B.I. Voice Vol', 
+        this.createVolumeStepper(startY + (spacingY * 2), 'A.B.I. Voice Vol', 
             () => this.settings.voiceVol, 
             (val) => { 
                 this.settings.voiceVol = val; 
-                // Se modifico manualmente il volume a > 0, aggiorno la memoria del mute
                 if (val > 0) this.settings.previousVoiceVol = val;
                 this.saveSettings(); 
                 
-                // Se tocco lo stepper e arriva a 0 o sale da 0, ricarico per aggiornare il tasto Mute
                 if (val === 0 || (val === 10 && this.settings.voiceVol > 0)) {
                     this.scene.restart({ parentScene: this.parentSceneKey });
                 }
             }
         );
 
-        //Toggle per il Mute di ABI
-        this.createMuteToggle(width / 2, startY + (spacingY * 3));
+        this.createMuteToggle(startY + (spacingY * 3));
 
-        // this.createVolumeStepper(width / 2, startY + (spacingY * 4), 'SFX Volume', 
-        //     () => this.settings.sfxVol, 
-        //     (val) => { this.settings.sfxVol = val; this.saveSettings(); }
-        // );
-
-        this.createVolumeStepper(width / 2, startY + (spacingY * 4), 'Music Volume', 
+        this.createVolumeStepper(startY + (spacingY * 4), 'Music Volume', 
             () => this.settings.musicVol, 
             (val) => { this.settings.musicVol = val; this.saveSettings(); }
         );
 
-        // --- NUOVO TASTO SAVE & EXIT (Centrale) ---
-        const saveBtnY = startY + (spacingY * 5.2); // Posizionato sotto i settings
+        // --- BOTTONI PRINCIPALI ---
+        const saveBtnY = startY + (spacingY * 5.2);
         
-        const saveBtn = this.add.text(width / 2, saveBtnY, '💾 SAVE & CLOSE', {
-            fontSize: '28px', 
-            color: '#000000', 
-            backgroundColor: '#4caf50', 
-            padding: { x: 40, y: 15 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        // Effetto hover sul tasto Save
-        saveBtn.on('pointerover', () => saveBtn.setStyle({ backgroundColor: '#81c784', color: '#ffffff' }));
-        saveBtn.on('pointerout', () => saveBtn.setStyle({ backgroundColor: '#4caf50', color: '#000000' }));
+        const saveBtn = this.add.text(0, saveBtnY, '💾 SAVE & CLOSE', {
+            fontSize: '28px', color: '#000000', backgroundColor: '#4caf50', padding: { x: 40, y: 15 }
+        }).setOrigin(0.5);
         
-        // Al click, esce dalla schermata (i dati sono già salvati dinamicamente)
-        saveBtn.on('pointerdown', () => {
-            if (this.parentSceneKey) {
-                this.scene.start('PauseMenuScene', { parentScene: this.parentSceneKey });
-            } else {
-                this.scene.start('MenuPageScene');
+        this.makeInteractive(saveBtn, 
+            () => saveBtn.setStyle({ backgroundColor: '#81c784', color: '#ffffff' }).setScale(1.05),
+            () => saveBtn.setStyle({ backgroundColor: '#4caf50', color: '#000000' }).setScale(1),
+            () => {
+                if (this.parentSceneKey) this.scene.start('PauseMenuScene', { parentScene: this.parentSceneKey });
+                else this.scene.start('MenuPageScene');
             }
-        });
+        );
+        this.mainContainer.add(saveBtn);
 
+        // --- BOTTONI DI GESTIONE DATI ---
+        const dataBtnY = startY + (spacingY * 6.8);
 
-        // --- BOTTONI DI GESTIONE DATI (Spostati più in basso) ---
-        const dataBtnY = startY + (spacingY * 6.8); // Più in basso per fare spazio al Save
-
-        // Bottone Reset Impostazioni (Default)
-        const defaultBtn = this.add.text(width / 2 - 200, dataBtnY, '↻ DEFAULT SETTINGS', {
+        const defaultBtn = this.add.text(-200, dataBtnY, '↻ DEFAULT SETTINGS', {
             fontSize: '24px', color: '#000000', backgroundColor: '#00ffff', padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        }).setOrigin(0.5);
 
-        defaultBtn.on('pointerover', () => defaultBtn.setStyle({ backgroundColor: '#ffffff' }));
-        defaultBtn.on('pointerout', () => defaultBtn.setStyle({ backgroundColor: '#00ffff' }));
-        defaultBtn.on('pointerdown', () => {
-            this.resetSettingsToDefault();
-        });
+        this.makeInteractive(defaultBtn,
+            () => defaultBtn.setStyle({ backgroundColor: '#ffffff' }).setScale(1.05),
+            () => defaultBtn.setStyle({ backgroundColor: '#00ffff' }).setScale(1),
+            () => this.resetSettingsToDefault()
+        );
+        this.mainContainer.add(defaultBtn);
 
-        // Bottone Reset Progressi
-        const resetBtn = this.add.text(width / 2 + 200, dataBtnY, '⚠ RESET PROGRESS', {
+        const resetBtn = this.add.text(200, dataBtnY, '⚠ RESET PROGRESS', {
             fontSize: '24px', color: '#ff5555', backgroundColor: '#331111', padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        }).setOrigin(0.5);
 
-        const warningPopup = this.createWarningPopup(width, height);
+        this.createWarningPopup();
 
-        resetBtn.on('pointerover', () => resetBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' }));
-        resetBtn.on('pointerout', () => resetBtn.setStyle({ color: '#ff5555', backgroundColor: '#331111' }));
-        resetBtn.on('pointerdown', () => warningPopup.setVisible(true));
-        
+        this.makeInteractive(resetBtn,
+            () => resetBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' }).setScale(1.05),
+            () => resetBtn.setStyle({ color: '#ff5555', backgroundColor: '#331111' }).setScale(1),
+            () => this.warningPopup.setVisible(true)
+        );
+        this.mainContainer.add(resetBtn);
+
+        // --- RESIZE LOGIC ---
+        const onResize = (gameSize: Phaser.Structs.Size) => {
+            if (!this.scene.isActive() && !this.scene.isPaused()) return;
+
+            const newW = gameSize.width;
+            const newH = gameSize.height;
+
+            this.cameras.main.setSize(newW, newH);
+            this.bgRect.setSize(newW, newH);
+
+            const scaleFactor = newW / 1920;
+            const uiScale = Phaser.Math.Clamp(scaleFactor, 0.6, 1.3);
+
+            this.mainContainer.setPosition(newW / 2, newH / 2);
+            this.mainContainer.setScale(uiScale);
+
+            this.warningOverlay.setPosition(0, 0);
+            this.warningOverlay.setSize(newW, newH);
+
+            this.warningBoxContainer.setPosition(newW / 2, newH / 2);
+            this.warningBoxContainer.setScale(uiScale);
+        };
+
+        this.scale.on('resize', onResize);
+        onResize(this.scale.gameSize);
+
         this.events.on('shutdown', () => {
-            this.scene.stop();
+            this.scale.off('resize', onResize);
+            this.tweens.killAll();
         });
-    
+    }
+
+    update(time: number, delta: number) {
+        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+
+        if (inputMode === 'hand') {
+
+            const tracker = HandTrackingController.getInstance();
+            const px = tracker.targetX * this.scale.gameSize.width;
+            const py = tracker.targetY * this.scale.gameSize.height;
+            const currentPinch = tracker.isClicked;
+
+            let hoveredElement: InteractiveElement | null = null;
+            const isPopupOpen = this.warningPopup && this.warningPopup.visible;
+
+            this.interactables.forEach(el => {
+                const isElementInPopup = el.obj.parentContainer === this.warningBoxContainer;
+                if ((isPopupOpen && !isElementInPopup) || (!isPopupOpen && isElementInPopup)) {
+                    if (el.isHovered) {
+                        el.isHovered = false;
+                        el.simulateOut();
+                    }
+                    return;
+                }
+
+                const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
+                const isHovering = Phaser.Geom.Rectangle.Contains(bounds, px, py);
+
+                if (isHovering && !el.isHovered) {
+                    el.isHovered = true;
+                    el.simulateOver();
+                } else if (!isHovering && el.isHovered) {
+                    el.isHovered = false;
+                    el.simulateOut();
+                }
+
+                if (isHovering) hoveredElement = el;
+            });
+
+            if (currentPinch && !this.previousPinchState) {
+                if (hoveredElement) {
+                    (hoveredElement as InteractiveElement).simulateDown();
+                }
+            }
+
+            this.previousPinchState = currentPinch;
+        }
     }
 
     // =========================================================
-    // --- METODI LOGICI ---
+    // --- HELPER LOGICA E INTERAZIONE ---
     // =========================================================
+
+    private makeInteractive(
+        obj: Phaser.GameObjects.GameObject & { getBounds: () => Phaser.Geom.Rectangle },
+        onOver: () => void,
+        onOut: () => void,
+        onDown: () => void
+    ) {
+        obj.setInteractive({ useHandCursor: true });
+        
+        const interactable: InteractiveElement = {
+            obj, isHovered: false, simulateOver: onOver, simulateOut: onOut, simulateDown: onDown
+        };
+
+        obj.on('pointerover', () => { interactable.isHovered = true; onOver(); });
+        obj.on('pointerout', () => { interactable.isHovered = false; onOut(); });
+        obj.on('pointerdown', () => { onDown(); }); 
+
+        this.interactables.push(interactable);
+    }
 
     private loadSettings() {
         const saved = localStorage.getItem('gameSettings');
         if (saved) {
             this.settings = JSON.parse(saved);
-            // Retrocompatibilità: se il vecchio salvataggio non aveva previousVoiceVol, lo aggiungiamo
-            if (this.settings.previousVoiceVol === undefined) {
-                this.settings.previousVoiceVol = 100;
-            }
+            if (this.settings.previousVoiceVol === undefined) this.settings.previousVoiceVol = 100;
         } else {
             this.applyDefaultSettings();
         }
@@ -159,20 +254,12 @@ export default class SettingsScene extends Phaser.Scene {
     }
 
     private applyDefaultSettings() {
-        this.settings = {
-            textSpeed: 'Normal',
-            masterVol: 100,
-            voiceVol: 100,
-            previousVoiceVol: 100,
-            sfxVol: 100,
-            musicVol: 100
-        };
+        this.settings = { textSpeed: 'Normal', masterVol: 100, voiceVol: 100, previousVoiceVol: 100, sfxVol: 100, musicVol: 100 };
     }
 
     private resetSettingsToDefault() {
         this.applyDefaultSettings();
         this.saveSettings();
-        // Riavvia la scena per ridisegnare tutti i testi e gli stepper con i valori di default
         this.scene.restart({ parentScene: this.parentSceneKey });
     }
 
@@ -180,111 +267,121 @@ export default class SettingsScene extends Phaser.Scene {
     // --- COSTRUTTORI UI ---
     // =========================================================
 
-    private createMuteToggle(x: number, y: number) {
-        this.add.text(x - 250, y, 'Mute A.B.I.', { fontSize: '24px', color: '#aaaaaa' }).setOrigin(0, 0.5);
-
-        const isMuted = this.settings.voiceVol === 0;
-        
-        // Checkbox visiva
-        const boxColor = isMuted ? 0xff5555 : 0x333333;
-        const box = this.add.rectangle(x + 150, y, 40, 40, boxColor).setStrokeStyle(2, 0xffffff).setInteractive({ useHandCursor: true });
-        
-        const checkMark = this.add.text(x + 150, y, isMuted ? 'X' : '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-
-        box.on('pointerdown', () => {
-            if (isMuted) {
-                // Togli il muto: ripristina il volume precedente (o 100 se era 0)
-                this.settings.voiceVol = this.settings.previousVoiceVol > 0 ? this.settings.previousVoiceVol : 100;
-            } else {
-                // Metti il muto: salva il volume attuale e porta a 0
-                this.settings.previousVoiceVol = this.settings.voiceVol;
-                this.settings.voiceVol = 0;
-            }
-            this.saveSettings();
-            // Riavvia la scena per sincronizzare lo stepper del Voice Vol con la casella del Mute
-            this.scene.restart({ parentScene: this.parentSceneKey });
-        });
-    }
-
-    private createStepper(x: number, y: number, label: string, options: string[], getVal: () => string, setVal: (val: string) => void) {
-        this.add.text(x - 250, y, label, { fontSize: '24px', color: '#aaaaaa' }).setOrigin(0, 0.5);
-
+    private createStepper(y: number, label: string, options: string[], getVal: () => string, setVal: (val: string) => void) {
+        const lblText = this.add.text(-250, y, label, { fontSize: '24px', color: '#aaaaaa' }).setOrigin(0, 0.5);
         let currentIndex = options.indexOf(getVal());
-        const valueText = this.add.text(x + 150, y, options[currentIndex], { fontSize: '24px', color: '#ffffff' }).setOrigin(0.5);
+        const valText = this.add.text(150, y, options[currentIndex], { fontSize: '24px', color: '#ffffff' }).setOrigin(0.5);
 
-        const leftBtn = this.add.text(x + 50, y, '<', { fontSize: '28px', color: '#00ffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        const rightBtn = this.add.text(x + 250, y, '>', { fontSize: '28px', color: '#00ffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const leftBtn = this.add.text(50, y, '<', { fontSize: '28px', color: '#00ffff' }).setOrigin(0.5);
+        const rightBtn = this.add.text(250, y, '>', { fontSize: '28px', color: '#00ffff' }).setOrigin(0.5);
 
         const updateDisplay = () => {
-            valueText.setText(options[currentIndex]);
+            valText.setText(options[currentIndex]);
             setVal(options[currentIndex]);
         };
 
-        leftBtn.on('pointerdown', () => {
-            currentIndex = (currentIndex - 1 + options.length) % options.length;
-            updateDisplay();
-        });
+        this.makeInteractive(leftBtn, 
+            () => leftBtn.setColor('#ffffff').setScale(1.2), 
+            () => leftBtn.setColor('#00ffff').setScale(1), 
+            () => { currentIndex = (currentIndex - 1 + options.length) % options.length; updateDisplay(); }
+        );
 
-        rightBtn.on('pointerdown', () => {
-            currentIndex = (currentIndex + 1) % options.length;
-            updateDisplay();
-        });
+        this.makeInteractive(rightBtn, 
+            () => rightBtn.setColor('#ffffff').setScale(1.2), 
+            () => rightBtn.setColor('#00ffff').setScale(1), 
+            () => { currentIndex = (currentIndex + 1) % options.length; updateDisplay(); }
+        );
+
+        this.mainContainer.add([lblText, valText, leftBtn, rightBtn]);
     }
 
-    private createVolumeStepper(x: number, y: number, label: string, getVal: () => number, setVal: (val: number) => void) {
-        this.add.text(x - 250, y, label, { fontSize: '24px', color: '#aaaaaa' }).setOrigin(0, 0.5);
-
+    private createVolumeStepper(y: number, label: string, getVal: () => number, setVal: (val: number) => void) {
+        const lblText = this.add.text(-250, y, label, { fontSize: '24px', color: '#aaaaaa' }).setOrigin(0, 0.5);
         let currentVol = getVal();
-        const valueText = this.add.text(x + 150, y, `${currentVol}%`, { fontSize: '24px', color: '#ffffff' }).setOrigin(0.5);
+        const valText = this.add.text(150, y, `${currentVol}%`, { fontSize: '24px', color: '#ffffff' }).setOrigin(0.5);
 
-        const leftBtn = this.add.text(x + 50, y, '<', { fontSize: '28px', color: '#00ffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        const rightBtn = this.add.text(x + 250, y, '>', { fontSize: '28px', color: '#00ffff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const leftBtn = this.add.text(50, y, '<', { fontSize: '28px', color: '#00ffff' }).setOrigin(0.5);
+        const rightBtn = this.add.text(250, y, '>', { fontSize: '28px', color: '#00ffff' }).setOrigin(0.5);
 
         const updateDisplay = () => {
-            valueText.setText(`${currentVol}%`);
+            valText.setText(`${currentVol}%`);
             setVal(currentVol);
         };
 
-        leftBtn.on('pointerdown', () => {
-            if (currentVol > 0) currentVol -= 10;
-            updateDisplay();
-        });
+        this.makeInteractive(leftBtn, 
+            () => leftBtn.setColor('#ffffff').setScale(1.2), 
+            () => leftBtn.setColor('#00ffff').setScale(1), 
+            () => { if (currentVol > 0) currentVol -= 10; updateDisplay(); }
+        );
 
-        rightBtn.on('pointerdown', () => {
-            if (currentVol < 100) currentVol += 10;
-            updateDisplay();
-        });
+        this.makeInteractive(rightBtn, 
+            () => rightBtn.setColor('#ffffff').setScale(1.2), 
+            () => rightBtn.setColor('#00ffff').setScale(1), 
+            () => { if (currentVol < 100) currentVol += 10; updateDisplay(); }
+        );
+
+        this.mainContainer.add([lblText, valText, leftBtn, rightBtn]);
     }
 
-    private createWarningPopup(width: number, height: number): Phaser.GameObjects.Container {
-        const popupContainer = this.add.container(width / 2, height / 2);
-        popupContainer.setDepth(100);
-        popupContainer.setVisible(false); 
+    private createMuteToggle(y: number) {
+        const lblText = this.add.text(-250, y, 'Mute A.B.I.', { fontSize: '24px', color: '#aaaaaa' }).setOrigin(0, 0.5);
 
-        const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setInteractive(); 
-        const box = this.add.rectangle(0, 0, 500, 300, 0x220000).setStrokeStyle(4, 0xff0000);
+        const isMuted = this.settings.voiceVol === 0;
+        const boxColor = isMuted ? 0xff5555 : 0x333333;
         
+        const box = this.add.rectangle(150, y, 40, 40, boxColor).setStrokeStyle(2, 0xffffff);
+        const checkMark = this.add.text(150, y, isMuted ? 'X' : '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        this.makeInteractive(box,
+            () => box.setStrokeStyle(4, 0x00ffff),
+            () => box.setStrokeStyle(2, 0xffffff),
+            () => {
+                if (isMuted) this.settings.voiceVol = this.settings.previousVoiceVol > 0 ? this.settings.previousVoiceVol : 100;
+                else {
+                    this.settings.previousVoiceVol = this.settings.voiceVol;
+                    this.settings.voiceVol = 0;
+                }
+                this.saveSettings();
+                this.scene.restart({ parentScene: this.parentSceneKey });
+            }
+        );
+
+        this.mainContainer.add([lblText, box, checkMark]);
+    }
+
+    private createWarningPopup() {
+        this.warningPopup = this.add.container(0, 0);
+        this.warningPopup.setDepth(100);
+        this.warningPopup.setVisible(false); 
+
+        this.warningOverlay = this.add.rectangle(0, 0, 1920, 1080, 0x000000, 0.8).setOrigin(0).setInteractive(); 
+        
+        this.warningBoxContainer = this.add.container(0, 0);
+
+        const box = this.add.rectangle(0, 0, 500, 300, 0x220000).setStrokeStyle(4, 0xff0000);
         const title = this.add.text(0, -80, 'WARNING', { fontSize: '36px', color: '#ff0000', fontStyle: 'bold' }).setOrigin(0.5);
         const msg = this.add.text(0, -10, 'This will permanently delete all\nyour unlocked levels. Are you sure?', { fontSize: '20px', color: '#ffffff', align: 'center' }).setOrigin(0.5);
 
-        const yesBtn = this.add.text(-100, 80, 'YES, DELETE', { fontSize: '22px', color: '#000000', backgroundColor: '#ff5555', padding: { x: 15, y: 10 } })
-            .setOrigin(0.5).setInteractive({ useHandCursor: true });
-            
-        yesBtn.on('pointerdown', () => {
-            localStorage.removeItem('maxUnlockedLevel');
-            popupContainer.setVisible(false);
-            msg.setText('Progress erased.');
-            setTimeout(() => msg.setText('This will permanently delete all\nyour unlocked levels. Are you sure?'), 2000);
-        });
+        const yesBtn = this.add.text(-100, 80, 'YES, DELETE', { fontSize: '22px', color: '#000000', backgroundColor: '#ff5555', padding: { x: 15, y: 10 } }).setOrigin(0.5);
+        this.makeInteractive(yesBtn,
+            () => yesBtn.setStyle({ backgroundColor: '#ff0000', color: '#ffffff' }).setScale(1.05),
+            () => yesBtn.setStyle({ backgroundColor: '#ff5555', color: '#000000' }).setScale(1),
+            () => {
+                localStorage.removeItem('maxUnlockedLevel');
+                this.warningPopup.setVisible(false);
+                msg.setText('Progress erased.');
+                setTimeout(() => msg.setText('This will permanently delete all\nyour unlocked levels. Are you sure?'), 2000);
+            }
+        );
 
-        const noBtn = this.add.text(100, 80, 'CANCEL', { fontSize: '22px', color: '#ffffff', backgroundColor: '#444444', padding: { x: 15, y: 10 } })
-            .setOrigin(0.5).setInteractive({ useHandCursor: true });
-            
-        noBtn.on('pointerdown', () => {
-            popupContainer.setVisible(false);
-        });
-
-        popupContainer.add([overlay, box, title, msg, yesBtn, noBtn]);
-        return popupContainer;
+        const noBtn = this.add.text(100, 80, 'CANCEL', { fontSize: '22px', color: '#ffffff', backgroundColor: '#444444', padding: { x: 15, y: 10 } }).setOrigin(0.5);
+        this.makeInteractive(noBtn,
+            () => noBtn.setStyle({ backgroundColor: '#888888', color: '#ffffff' }).setScale(1.05),
+            () => noBtn.setStyle({ backgroundColor: '#444444', color: '#ffffff' }).setScale(1),
+            () => this.warningPopup.setVisible(false)
+        );
+        
+        this.warningBoxContainer.add([box, title, msg, yesBtn, noBtn]);
+        this.warningPopup.add([this.warningOverlay, this.warningBoxContainer]);
     }
 }

@@ -371,7 +371,8 @@ export class Level3 extends Phaser.Scene {
         this.postGameManager.preparePostGame(3);
 
         const onResize = (gameSize: Phaser.Structs.Size) => {
-            if (!this.scene.isActive()) return;
+            if (!this.scene.isActive() && !this.scene.isPaused()) return;
+            if (!this.physics || !this.physics.world) return;
 
             this.cameras.main.setZoom(gameSize.height / worldHeight);
         };

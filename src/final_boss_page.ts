@@ -181,7 +181,8 @@ export class FinalBoss extends Phaser.Scene {
     }
 
     private onResize() {
-        if (!this.scene.isActive()) return;
+        if (!this.scene.isActive() && !this.scene.isPaused()) return;
+        if (!this.physics || !this.physics.world) return;
 
         const width = this.scale.width;
         const height = this.scale.height;

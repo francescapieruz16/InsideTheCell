@@ -124,7 +124,7 @@ export class MenuPageScene extends Phaser.Scene {
             const offsetY = startOffsetY + ((i - 1) * levelSpacing);
 
             createHTMLButton(`Level ${i}`, 'level-btn', 0, offsetY, () => {
-                this.scene.start(`Level${i}`);
+                this.scene.start(`Cutscene${i}`);
             });
         }
 
@@ -144,7 +144,7 @@ export class MenuPageScene extends Phaser.Scene {
 
         if (finalBossUnlocked) {
             createHTMLButton('FINAL BOSS', 'final-boss-btn', 0, startOffsetY + 6 * levelSpacing, () => {
-                this.scene.start('FinalBoss'); 
+                this.scene.start('CutsceneFinalBoss'); 
             });
         }
 

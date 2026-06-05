@@ -215,7 +215,8 @@ export class Level6 extends Phaser.Scene {
         this.updateHud();
 
         const onResize = () => {
-            if (!this.scene.isActive()) return;
+            if (!this.scene.isActive() && !this.scene.isPaused()) return;
+            if (!this.physics || !this.physics.world) return;
 
             const newW = this.scale.width;
             const newH = this.scale.height;

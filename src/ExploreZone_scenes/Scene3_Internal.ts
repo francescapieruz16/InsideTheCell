@@ -10,6 +10,7 @@ export default class Scene3_Internal extends Phaser.Scene {
 
     private player!: Spaceship;
     private interactKey!: Phaser.Input.Keyboard.Key;
+    private isTransitioning: boolean = false;
 
     private startingTexture: string = 'nav_front';
 

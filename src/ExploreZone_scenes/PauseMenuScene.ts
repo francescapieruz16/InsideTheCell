@@ -5,13 +5,13 @@ interface MenuButton {
     container: Phaser.GameObjects.Container;
     bg: Phaser.GameObjects.Rectangle;
     baseYOffset: number;
-    isHovered: boolean;
+    isMouseHovered: boolean;
+    isHandHovered: boolean; 
     simulateOver: () => void;
     simulateOut: () => void;
     simulateDown: () => void;
     setCurrentScale: (scale: number) => void;
 }
-
 export default class PauseMenuScene extends Phaser.Scene {
     private parentSceneKey!: string;
 
@@ -73,58 +73,58 @@ export default class PauseMenuScene extends Phaser.Scene {
 
             let currentBaseScale = 1;
 
+            // --- FUNZIONI DI SIMULAZIONE (Pura animazione, senza logica di stato) ---
             const simulateOver = () => {
                 bg.setFillStyle(hoverFill, 0.9);
                 bg.setStrokeStyle(3, hoverStroke);
                 txt.setColor('#ffffff');
-                this.tweens.add({ targets: btnContainer, scaleX: currentBaseScale * 1.1, scaleY: currentBaseScale * 1.1, duration: 150, ease: 'Power2' });
+                this.tweens.killTweensOf(btnContainer); 
+                this.tweens.add({ targets: btnContainer, scaleX: currentBaseScale * 1.15, scaleY: currentBaseScale * 1.15, duration: 150, ease: 'Power2' });
             };
 
             const simulateOut = () => {
                 bg.setFillStyle(baseFill, 0.7);
                 bg.setStrokeStyle(2, baseStroke);
                 txt.setColor(isSpecial ? '#00ffff' : '#ffffff');
+                this.tweens.killTweensOf(btnContainer); 
                 this.tweens.add({ targets: btnContainer, scaleX: currentBaseScale, scaleY: currentBaseScale, duration: 150, ease: 'Power2' });
             };
 
             const simulateDown = () => {
+                this.tweens.killTweensOf(btnContainer);
                 this.tweens.add({
-                    targets: btnContainer, 
-                    scaleX: currentBaseScale * 0.95, 
-                    scaleY: currentBaseScale * 0.95, 
-                    duration: 50, 
-                    yoyo: true,
-                    onComplete: callback
+                    targets: btnContainer, scaleX: currentBaseScale * 0.95, scaleY: currentBaseScale * 0.95, duration: 50, yoyo: true
                 });
+                this.time.delayedCall(50, callback);
             };
 
             const btnObj: MenuButton = {
                 container: btnContainer,
                 bg: bg,
                 baseYOffset: baseYOffset,
-                isHovered: false,
+                isMouseHovered: false, // <--- Aggiornato
+                isHandHovered: false,  // <--- Aggiornato
                 simulateOver,
                 simulateOut,
                 simulateDown,
                 setCurrentScale: (scale: number) => {
                     currentBaseScale = scale;
-                    btnContainer.setScale(btnObj.isHovered ? scale * 1.1 : scale);
+                    const isHovered = btnObj.isMouseHovered || btnObj.isHandHovered;
+                    btnContainer.setScale(isHovered ? scale * 1.15 : scale);
                 }
             };
 
-            const isHandMode = () => (this.registry.get('inputMode') || localStorage.getItem('inputMode')) === 'hand';
-
+            // --- EVENTI MOUSE INTELLIGENTI ---
             bg.on('pointerover', () => { 
-                if (!isHandMode()) { 
-                    btnObj.isHovered = true;
-                    simulateOver(); 
-                } 
+                btnObj.isMouseHovered = true;
+                // Si ingrandisce solo se non era già ingrandito dalla mano
+                if (!btnObj.isHandHovered) simulateOver(); 
             });
+            
             bg.on('pointerout', () => { 
-                if (!isHandMode()) { 
-                    btnObj.isHovered = false;
-                    simulateOut(); 
-                } 
+                btnObj.isMouseHovered = false;
+                // Si rimpicciolisce solo se anche la mano è lontana
+                if (!btnObj.isHandHovered) simulateOut(); 
             });
             
             bg.on('pointerdown', () => { 
@@ -202,17 +202,21 @@ export default class PauseMenuScene extends Phaser.Scene {
 
             this.buttons.forEach(btn => {
                 const bounds = btn.bg.getBounds();
-                const isHovering = bounds.contains(px, py);
+                const isHandHovering = bounds.contains(px, py);
 
-                if (isHovering && !btn.isHovered) {
-                    btn.isHovered = true;
-                    btn.simulateOver();
-                } else if (!isHovering && btn.isHovered) {
-                    btn.isHovered = false;
-                    btn.simulateOut();
+                // Se la MANO entra nel bottone
+                if (isHandHovering && !btn.isHandHovered) {
+                    btn.isHandHovered = true;
+                    if (!btn.isMouseHovered) btn.simulateOver();
+                } 
+                // Se la MANO esce dal bottone
+                else if (!isHandHovering && btn.isHandHovered) {
+                    btn.isHandHovered = false;
+                    if (!btn.isMouseHovered) btn.simulateOut();
                 }
 
-                if (isHovering) {
+                // Consideriamo il bottone "puntato" se c'è sopra il mouse o la mano
+                if (isHandHovering || btn.isMouseHovered) {
                     hoveredButton = btn;
                 }
             });

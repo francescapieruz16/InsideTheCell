@@ -10,6 +10,7 @@ import { Level4 } from './level4_page';
 import { Level5 } from './level5_page';
 import { Level6 } from './level6_page';
 import { FinalBoss } from './final_boss_page';
+import JournalScene from './ExploreZone_scenes/JournalScene';
 import PauseMenuScene from './ExploreZone_scenes/PauseMenuScene';
 import ControlsScene from './ExploreZone_scenes/Scene0_Control';
 import ExternalScene from './ExploreZone_scenes/Scene1_External';
@@ -46,7 +47,7 @@ const config: Phaser.Types.Core.GameConfig = {
         TitleScene, OptionsScene, MenuPageScene, HandCursorScene, 
         Cutscene1, Cutscene2, Cutscene3, Cutscene4, Cutscene5, Cutscene6, CutsceneFinalBoss,  
         Level1, Level2, Level3, Level4, Level5, Level6, FinalBoss, 
-        ExternalScene, Scene2_Membrane, Scene3_Internal, PauseMenuScene, ControlsScene, SettingsScene, LevelSelectScene] 
+        ExternalScene, Scene2_Membrane, Scene3_Internal, PauseMenuScene, ControlsScene, SettingsScene, LevelSelectScene, JournalScene] 
 };
 
 new Phaser.Game(config);

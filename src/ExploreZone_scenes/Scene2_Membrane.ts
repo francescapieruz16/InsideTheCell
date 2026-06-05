@@ -3,6 +3,9 @@ import Phaser from 'phaser';
 import ABI from '../classes/abi';
 import Spaceship from '../classes/spaceship'; // Assicurati che il percorso sia corretto
 import defaultDialogues from '../../assets/default_dialogues.json';
+import JournalScene from './JournalScene';
+import { JournalItem } from './JournalScene';
+
 
 export default class Scene2_Membrane extends Phaser.Scene {
     private player!: Spaceship;
@@ -28,6 +31,12 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
     private dialogue1: string = "";
     private dialogue4: string = ""; 
+
+    private levelDiscoverables: JournalItem[] = [
+        { id: 'viral_wreck', name: 'Viral Wreck', texture: 'viral_wreck' },
+        { id: 'lipid_iceberg', name: 'Lipid Iceberg', texture: 'lipid_iceberg' },
+        { id: 'exit_portal', name: 'Exit Portal', texture: 'exit_portal' }
+    ];
 
     preload() {
 
@@ -289,19 +298,33 @@ export default class Scene2_Membrane extends Phaser.Scene {
             }
         }
 
-        // INPUTS
+       // INPUTS
         if (this.input.keyboard) {
-            // this.cursors = this.input.keyboard.createCursorKeys();
             this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
             this.input.keyboard.on('keydown-ESC', () => {
-                // Se A.B.I. sta parlando, potresti voler bloccare la pausa per evitare conflitti grafici
                 if (!this.abi.isTalking) {
                     this.scene.pause();
                     this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
                 }
             });
+
+            this.input.keyboard.on('keydown-I', () => {
+                if (this.isTransitioning || this.abi.isTalking) return;
+
+                this.physics.world.pause(); 
+                this.scene.pause(); 
+
+                this.scene.launch('JournalScene', { 
+                    parentScene: this.scene.key, 
+                    items: this.levelDiscoverables 
+                });
+            });
         }
+
+        this.events.on('resume', () => {
+            this.physics.world.resume();
+        });
 
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
@@ -323,6 +346,11 @@ export default class Scene2_Membrane extends Phaser.Scene {
         // L'Overlap fa scattare l'evento appena la navicella tocca lo sprite dell'oggetto
         this.physics.add.overlap(this.player, this.loreItemsGroup, (player, item) => {
             const loreItem = item as Phaser.Physics.Arcade.Sprite;
+
+            const itemDef = this.levelDiscoverables.find(i => i.texture === loreItem.texture.key);
+            if (itemDef) {
+                JournalScene.unlockItem(this, itemDef.id, this.levelDiscoverables);
+            }
 
             // Se l'oggetto NON è stato scansionato e A.B.I. è libero
             if (!loreItem.getData('hasBeenScanned') && !this.abi.isTalking) {
@@ -384,6 +412,8 @@ export default class Scene2_Membrane extends Phaser.Scene {
         if (this.isTransitioning || this.abi.isTalking) {
             return;
         }
+
+        JournalScene.unlockItem(this, 'exit_portal', this.levelDiscoverables);
         this.isTransitioning = true;
 
         this.scene.stop('ABIScene');

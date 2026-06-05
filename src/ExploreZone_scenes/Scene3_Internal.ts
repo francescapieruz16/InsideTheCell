@@ -3,6 +3,8 @@ import Phaser from 'phaser';
 import ABI from '../classes/abi';
 import Spaceship from '../classes/spaceship';
 import defaultDialogues from '../../assets/default_dialogues.json';
+import JournalScene from './JournalScene';
+import { JournalItem } from './JournalScene';
 
 export default class Scene3_Internal extends Phaser.Scene {
 
@@ -24,6 +26,17 @@ export default class Scene3_Internal extends Phaser.Scene {
 
     private relTriggerGroup!: Phaser.Physics.Arcade.StaticGroup;
     private rerTriggerGroup!: Phaser.Physics.Arcade.StaticGroup;
+
+    private levelDiscoverables: JournalItem[] = [
+        { id: 'lysosome', name: 'Lysosome', texture: 'organelle_lysosome' },
+        { id: 'mitochondrion', name: 'Mitochondrion', texture: 'organelle_mitochondrion' },
+        { id: 'golgi_apparatus', name: 'Golgi Apparatus', texture: 'organelle_golgi' },
+        { id: 'nucleo', name: 'Nucleus', texture: 'nucleo' },
+        { id: 'virus_debris1', name: 'RNA Virus', texture: 'virus_debris_1' },
+        { id: 'virus_debris2', name: 'Retrovirus', texture: 'virus_debris_2' },
+        { id: 'virus_debris3', name: 'DNA Virus', texture: 'virus_debris_3' }
+    ];
+
 
     //dialoghi
     private dialogue1: string = "";
@@ -502,19 +515,39 @@ export default class Scene3_Internal extends Phaser.Scene {
 
         const abiScene = this.scene.get('ABIScene');
 
-        // INPUTS
-                if (this.input.keyboard) {
-                    // this.cursors = this.input.keyboard.createCursorKeys();
+        if (this.input.keyboard) {
                     this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         
                     this.input.keyboard.on('keydown-ESC', () => {
-                        // Se A.B.I. sta parlando, potresti voler bloccare la pausa per evitare conflitti grafici
                         if (!this.abi.isTalking) {
                             this.scene.pause();
                             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
                         }
                     });
+        
+                    // --- NUOVO: Tasto 'I' per aprire il Data Log ---
+                    this.input.keyboard.on('keydown-I', () => {
+                        // Impedisce di aprire il diario durante un dialogo o una transizione
+                        if (this.isTransitioning || this.abi.isTalking) return;
+        
+                        // Mette in pausa la fisica (ferma la navicella e i detriti)
+                        this.physics.world.pause(); 
+                        
+                        // Mette in pausa l'update di questa scena
+                        this.scene.pause(); 
+        
+                        // Lancia la scena del Journal passando gli oggetti scopribili di QUESTO livello
+                        this.scene.launch('JournalScene', { 
+                            parentScene: this.scene.key, 
+                            items: this.levelDiscoverables 
+                        });
+                    });
                 }
+
+        this.events.on('resume', () => {
+            this.physics.world.resume();
+        });
+            
 
         // Messaggio di benvenuto da A.B.I.
         this.abi.showDialogue(
@@ -635,6 +668,7 @@ export default class Scene3_Internal extends Phaser.Scene {
         // Controlla se il tempo trascorso è maggiore del cooldown
         if (this.time.now > this.lastMitoDialogueTime + this.DIALOGUE_COOLDOWN) {
             this.lastMitoDialogueTime = this.time.now;
+            JournalScene.unlockItem(this, 'mitochondrion', this.levelDiscoverables);
             this.abi.showDialogue("A.B.I.", this.dialogue2);
         }
     }
@@ -644,6 +678,7 @@ export default class Scene3_Internal extends Phaser.Scene {
 
         if (this.time.now > this.lastLysoDialogueTime + this.DIALOGUE_COOLDOWN) {
             this.lastLysoDialogueTime = this.time.now;
+            JournalScene.unlockItem(this, 'lysosome', this.levelDiscoverables);
             this.abi.showDialogue("A.B.I.", this.dialogue3);
         }
     }
@@ -653,6 +688,7 @@ export default class Scene3_Internal extends Phaser.Scene {
 
         if (this.time.now > this.lastGolgiDialogueTime + this.DIALOGUE_COOLDOWN) {
             this.lastGolgiDialogueTime = this.time.now;
+            JournalScene.unlockItem(this, 'golgi_apparatus', this.levelDiscoverables);
             this.abi.showDialogue("A.B.I.", this.dialogue4);
         }
     }
@@ -663,6 +699,7 @@ export default class Scene3_Internal extends Phaser.Scene {
         // Comportamento a cooldown come gli altri organuli fisici
         if (this.time.now > this.lastNucleusDialogueTime + this.DIALOGUE_COOLDOWN) {
             this.lastNucleusDialogueTime = this.time.now;
+            JournalScene.unlockItem(this, 'nucleo', this.levelDiscoverables);
             this.abi.showDialogue("A.B.I.", this.dialogue7);
         }
     }
@@ -705,18 +742,21 @@ export default class Scene3_Internal extends Phaser.Scene {
         if (logName === 'log1') {
             if (this.time.now > this.lastLog1Time + LOG_COOLDOWN) {
                 this.lastLog1Time = this.time.now;
+                JournalScene.unlockItem(this, 'virus_debris1', this.levelDiscoverables);
                 this.abi.showDialogue("A.B.I.", this.dialogueLog1);
             }
         } 
         else if (logName === 'log2') {
             if (this.time.now > this.lastLog2Time + LOG_COOLDOWN) {
                 this.lastLog2Time = this.time.now;
+                JournalScene.unlockItem(this, 'virus_debris2', this.levelDiscoverables);
                 this.abi.showDialogue("A.B.I.", this.dialogueLog2);
             }
         } 
         else if (logName === 'log3') {
             if (this.time.now > this.lastLog3Time + LOG_COOLDOWN) {
                 this.lastLog3Time = this.time.now;
+                JournalScene.unlockItem(this, 'virus_debris3', this.levelDiscoverables);
                 this.abi.showDialogue("A.B.I.", this.dialogueLog3);
             }
         }

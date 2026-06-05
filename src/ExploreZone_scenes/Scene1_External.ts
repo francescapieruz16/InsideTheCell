@@ -3,12 +3,16 @@ import Phaser from 'phaser';
 import ABI from '../classes/abi';
 import Spaceship from '../classes/spaceship';
 import defaultDialogues from '../../assets/default_dialogues.json';
+import JournalScene from './JournalScene';
+import { JournalItem } from './JournalScene';
 
 export default class Scene1_External extends Phaser.Scene {
     private static hasShownControls = false;
     private interactKey!: Phaser.Input.Keyboard.Key;
     private portal!: Phaser.GameObjects.Sprite;
     private isTransitioning: boolean = false;
+
+    private debrisList: Phaser.GameObjects.Sprite[] = [];
 
     private gameState: 'EXPLORING' | 'TALKING' = 'EXPLORING';
     private hasSeenIntro: boolean = false;
@@ -29,6 +33,14 @@ export default class Scene1_External extends Phaser.Scene {
 
     private player!: Spaceship;
     private abi!: ABI;;
+
+    private levelDiscoverables: JournalItem[] = [
+        { id: 'virus_debris1', name: 'Green Virus', texture: 'virus_debris_1' },
+        { id: 'virus_debris2', name: 'Yellow Virus', texture: 'virus_debris_2' },
+        { id: 'virus_debris3', name: 'Purple Virus', texture: 'virus_debris_3' },
+        { id: 'receptor_fake', name: 'Generic Receptor', texture: 'receptor_fake1' },
+        { id: 'receptor_ace2', name: 'ACE2 Receptor', texture: 'receptor_ace2' }
+    ];
 
     private initialDialogues: any = [];
     private dialogue2: string = "";
@@ -157,6 +169,8 @@ export default class Scene1_External extends Phaser.Scene {
             let debris = this.add.sprite(data.x, data.y, data.key);
             debris.setScale(0.2)
             this.physics.add.existing(debris);
+
+            this.debrisList.push(debris);
             
             this.physics.add.overlap(this.player, debris, () => {
                 this.extractSpikePart(debris, data.hasPart);
@@ -184,6 +198,7 @@ export default class Scene1_External extends Phaser.Scene {
             
             this.physics.add.collider(this.player, fakeReceptor, () => {
                 this.hitWrongReceptor();
+                JournalScene.unlockItem(this, 'receptor_fake', this.levelDiscoverables);
             });
         });
 
@@ -195,23 +210,45 @@ export default class Scene1_External extends Phaser.Scene {
        
         this.physics.add.collider(this.player, this.portal, () => {
             this.tryEnterACE2();
+            JournalScene.unlockItem(this, 'receptor_ace2', this.levelDiscoverables);
         });
 
 
-        // INPUTS
+       // INPUTS
         if (this.input.keyboard) {
-            // this.cursors = this.input.keyboard.createCursorKeys();
             this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
             this.input.keyboard.on('keydown-ESC', () => {
-                // Se A.B.I. sta parlando, potresti voler bloccare la pausa per evitare conflitti grafici
                 if (!this.abi.isTalking) {
                     this.scene.pause();
                     this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
                 }
             });
+
+            // --- NUOVO: Tasto 'I' per aprire il Data Log ---
+            this.input.keyboard.on('keydown-I', () => {
+                // Impedisce di aprire il diario durante un dialogo o una transizione
+                if (this.isTransitioning || this.abi.isTalking) return;
+
+                // Mette in pausa la fisica (ferma la navicella e i detriti)
+                this.physics.world.pause(); 
+                
+                // Mette in pausa l'update di questa scena
+                this.scene.pause(); 
+
+                // Lancia la scena del Journal passando gli oggetti scopribili di QUESTO livello
+                this.scene.launch('JournalScene', { 
+                    parentScene: this.scene.key, 
+                    items: this.levelDiscoverables 
+                });
+            });
         }
 
+        // --- NUOVO: Riattiva la fisica quando chiudi il diario ---
+        // Questo evento scatta automaticamente quando JournalScene chiama this.scene.resume()
+        this.events.on('resume', () => {
+            this.physics.world.resume();
+        });
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.fadeIn(500, 0, 0, 0);
 
@@ -333,6 +370,7 @@ export default class Scene1_External extends Phaser.Scene {
             this.lipidOcean.tilePositionY += 0.05;
         }
 
+
     }
 
     private startTransitionToInside() {
@@ -442,6 +480,13 @@ export default class Scene1_External extends Phaser.Scene {
     private extractSpikePart(debris: Phaser.GameObjects.GameObject, hasPart: boolean) {
         // 1. Usiamo this.abi.isTalking invece del vecchio gameState!
         if (this.abi.isTalking || this.isTransitioning) return;
+
+        const sprite = debris as Phaser.GameObjects.Sprite;
+        const itemDef = this.levelDiscoverables.find(i => i.texture === sprite.texture.key);
+        
+        if (itemDef) {
+            JournalScene.unlockItem(this, itemDef.id, this.levelDiscoverables);
+        }
         
         if (!this.hasFoundACE2) {
             // 2. Controllo Anti-Spam
@@ -521,4 +566,6 @@ export default class Scene1_External extends Phaser.Scene {
             });
         }
     }
+
+    
 }

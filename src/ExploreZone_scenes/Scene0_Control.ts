@@ -34,6 +34,7 @@ export default class ControlsScene extends Phaser.Scene {
         this.add.text(width / 2, height / 2, 
             'ARROW KEYS or MOVE HAND : Spaceship Controls\n\n' +
             'SPACEBAR or PINCH : Interact / Next Dialog\n\n' +
+            'I : Open BioLog\n\n' +
             'ESC or PRESS PAUSE : Pause Game', {
             fontSize: '24px',
             color: '#cccccc',

@@ -114,20 +114,24 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Se la velocità orizzontale è maggiore di quella verticale:
-        if (Math.abs(body.velocity.x) > Math.abs(body.velocity.y)) {
-            if (body.velocity.x < 0) {
-                this.setTexture('nav_left');
-            } else {
-                this.setTexture('nav_right');
-            }
-        } 
-        // Altrimenti, prevale il movimento verticale:
-        else {
-            if (body.velocity.y < 0) {
-                this.setTexture('nav_back');
-            } else {
-                this.setTexture('nav_front');
+        const isMoving = body.velocity.x !== 0 || body.velocity.y !== 0;
+
+        if (isMoving) {
+            // Se la velocità orizzontale è maggiore di quella verticale:
+            if (Math.abs(body.velocity.x) > Math.abs(body.velocity.y)) {
+                if (body.velocity.x < 0) {
+                    this.setTexture('nav_left');
+                } else {
+                    this.setTexture('nav_right');
+                }
+            } 
+            // Altrimenti, prevale il movimento verticale:
+            else {
+                if (body.velocity.y < 0) {
+                    this.setTexture('nav_back');
+                } else {
+                    this.setTexture('nav_front');
+                }
             }
         }
 }

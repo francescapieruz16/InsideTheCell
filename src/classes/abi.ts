@@ -120,6 +120,10 @@ export default class ABI {
             const voices = this.synth.getVoices();
             this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;
         }
+        
+        if (this.robotVoice) {
+            utterance.voice = this.robotVoice;
+        }
 
         utterance.pitch = 1.5; 
         utterance.rate = 1.5;  

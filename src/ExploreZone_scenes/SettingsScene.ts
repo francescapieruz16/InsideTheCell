@@ -101,7 +101,7 @@ export default class SettingsScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         this.makeInteractive(saveBtn, 
-            () => saveBtn.setStyle({ backgroundColor: '#81c784', color: '#ffffff' }).setScale(1.05),
+            () => saveBtn.setStyle({ backgroundColor: '#81c784', color: '#ffffff' }).setScale(1.1),
             () => saveBtn.setStyle({ backgroundColor: '#4caf50', color: '#000000' }).setScale(1),
             () => {
                 if (this.parentSceneKey) this.scene.start('PauseMenuScene', { parentScene: this.parentSceneKey });
@@ -118,7 +118,7 @@ export default class SettingsScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         this.makeInteractive(defaultBtn,
-            () => defaultBtn.setStyle({ backgroundColor: '#ffffff' }).setScale(1.05),
+            () => defaultBtn.setStyle({ backgroundColor: '#ffffff' }).setScale(1.1),
             () => defaultBtn.setStyle({ backgroundColor: '#00ffff' }).setScale(1),
             () => this.resetSettingsToDefault()
         );
@@ -131,7 +131,7 @@ export default class SettingsScene extends Phaser.Scene {
         this.createWarningPopup();
 
         this.makeInteractive(resetBtn,
-            () => resetBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' }).setScale(1.05),
+            () => resetBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' }).setScale(1.1),
             () => resetBtn.setStyle({ color: '#ff5555', backgroundColor: '#331111' }).setScale(1),
             () => this.warningPopup.setVisible(true)
         );
@@ -333,10 +333,17 @@ export default class SettingsScene extends Phaser.Scene {
         const checkMark = this.add.text(150, y, isMuted ? 'X' : '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
 
         this.makeInteractive(box,
-            () => box.setStrokeStyle(4, 0x00ffff),
-            () => box.setStrokeStyle(2, 0xffffff),
             () => {
-                if (isMuted) this.settings.voiceVol = this.settings.previousVoiceVol > 0 ? this.settings.previousVoiceVol : 100;
+                box.setStrokeStyle(4, 0x00ffff).setScale(1.1);
+                checkMark.setScale(1.1);
+            },
+            () => {
+                box.setStrokeStyle(2, 0xffffff).setScale(1);
+                checkMark.setScale(1);
+            },
+            () => {
+                const isCurrentlyMuted = this.settings.voiceVol === 0;
+                if (isCurrentlyMuted) this.settings.voiceVol = this.settings.previousVoiceVol > 0 ? this.settings.previousVoiceVol : 100;
                 else {
                     this.settings.previousVoiceVol = this.settings.voiceVol;
                     this.settings.voiceVol = 0;
@@ -364,7 +371,7 @@ export default class SettingsScene extends Phaser.Scene {
 
         const yesBtn = this.add.text(-100, 80, 'YES, DELETE', { fontSize: '22px', color: '#000000', backgroundColor: '#ff5555', padding: { x: 15, y: 10 } }).setOrigin(0.5);
         this.makeInteractive(yesBtn,
-            () => yesBtn.setStyle({ backgroundColor: '#ff0000', color: '#ffffff' }).setScale(1.05),
+            () => yesBtn.setStyle({ backgroundColor: '#ff0000', color: '#ffffff' }).setScale(1.1),
             () => yesBtn.setStyle({ backgroundColor: '#ff5555', color: '#000000' }).setScale(1),
             () => {
                 localStorage.removeItem('maxUnlockedLevel');
@@ -376,7 +383,7 @@ export default class SettingsScene extends Phaser.Scene {
 
         const noBtn = this.add.text(100, 80, 'CANCEL', { fontSize: '22px', color: '#ffffff', backgroundColor: '#444444', padding: { x: 15, y: 10 } }).setOrigin(0.5);
         this.makeInteractive(noBtn,
-            () => noBtn.setStyle({ backgroundColor: '#888888', color: '#ffffff' }).setScale(1.05),
+            () => noBtn.setStyle({ backgroundColor: '#888888', color: '#ffffff' }).setScale(1.1),
             () => noBtn.setStyle({ backgroundColor: '#444444', color: '#ffffff' }).setScale(1),
             () => this.warningPopup.setVisible(false)
         );

@@ -77,7 +77,7 @@ export default class PauseMenuScene extends Phaser.Scene {
                 bg.setFillStyle(hoverFill, 0.9);
                 bg.setStrokeStyle(3, hoverStroke);
                 txt.setColor('#ffffff');
-                this.tweens.add({ targets: btnContainer, scaleX: currentBaseScale * 1.05, scaleY: currentBaseScale * 1.05, duration: 150, ease: 'Power2' });
+                this.tweens.add({ targets: btnContainer, scaleX: currentBaseScale * 1.1, scaleY: currentBaseScale * 1.1, duration: 150, ease: 'Power2' });
             };
 
             const simulateOut = () => {
@@ -108,7 +108,7 @@ export default class PauseMenuScene extends Phaser.Scene {
                 simulateDown,
                 setCurrentScale: (scale: number) => {
                     currentBaseScale = scale;
-                    btnContainer.setScale(btnObj.isHovered ? scale * 1.05 : scale);
+                    btnContainer.setScale(btnObj.isHovered ? scale * 1.1 : scale);
                 }
             };
 

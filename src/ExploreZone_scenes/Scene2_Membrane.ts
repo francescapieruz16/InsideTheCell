@@ -16,7 +16,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
     // Elementi della scena
     private wallsGroup!: Phaser.Physics.Arcade.StaticGroup;
-    private exitPortal!: Phaser.GameObjects.Sprite;
+    private exitPortal!: Phaser.Physics.Arcade.Sprite;
     private loreItemsGroup!: Phaser.Physics.Arcade.StaticGroup; // Per relitti e iceberg
 
     private abi!: ABI;
@@ -234,9 +234,9 @@ export default class Scene2_Membrane extends Phaser.Scene {
                 }
                 else if (cellValue === 3) {
                     // È l'uscita: creiamo il portale del nucleo
-                    this.exitPortal = this.add.sprite(posX, posY, 'exit_portal');
+                    this.exitPortal = this.physics.add.staticSprite(posX, posY, 'exit_portal');
                     this.exitPortal.setScale(0.2);
-                    this.physics.add.existing(this.exitPortal, true);
+                    this.exitPortal.refreshBody();
                 }
                 else if (cellValue === 4) {
                     let wreck = this.loreItemsGroup.create(posX, posY, 'viral_wreck');
@@ -416,8 +416,6 @@ export default class Scene2_Membrane extends Phaser.Scene {
         JournalScene.unlockItem(this, 'exit_portal', this.levelDiscoverables);
         this.isTransitioning = true;
 
-        this.scene.stop('ABIScene');
-
         const currentProgress = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
         if (currentProgress < 3) {
             localStorage.setItem('maxUnlockedLevel', '3');
@@ -429,8 +427,9 @@ export default class Scene2_Membrane extends Phaser.Scene {
         // Mostra il dialogo e, alla chiusura, avvia la transizione di scena
         this.abi.showDialogue(
             "A.B.I.",
-            "Nuclear pore complex breached. We are proceeding into the cytoplasm. Brace for environmental shift.",
+            this.dialogue4,
             () => { // Questa è la funzione di callback che viene eseguita alla fine del dialogo
+                this.scene.stop('ABIScene');
                 this.cameras.main.fadeOut(800, 0, 0, 0);
                 this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
                     this.scene.start('Scene3_Internal', { incomingTexture: this.player.texture.key });

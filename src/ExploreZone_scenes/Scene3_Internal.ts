@@ -514,6 +514,7 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.abi.MoveDialogueY(0); 
 
         const abiScene = this.scene.get('ABIScene');
+        this.scene.launch('ABIScene');
 
         if (this.input.keyboard) {
                     this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);

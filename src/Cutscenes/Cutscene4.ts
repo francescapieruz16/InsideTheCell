@@ -1,33 +1,32 @@
 import Phaser from 'phaser';
 import { HandTrackingController } from '../handTracking/handTrackingController';
+import ABI from '../classes/abi';
+import defaultDialogues from '../../assets/default_dialogues.json';
 
 export default class Cutscene4 extends Phaser.Scene {
+    private abi!: ABI;
+
     private slides = [
         {
             imagePath: '/assets/Cutscenes/Cutscene4_1.png',
-            text: "A new challenge begins inside the cell. The viral replication process is unstable, and hidden biological signals must be identified."
+            text: ""
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene4_4.png',
-            text: "Some cards represent genetic bases: Adenine, Cytosine, Guanine, and Uracil. These are part of the information carried by genetic material."
+            text: ""
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene4_2.png',
-            text: "Other cards show key replication elements, such as Polymerase and Viral RNA. These help the virus copy and spread its genetic instructions."
+            text: ""
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene4_3.png',
-            text: "Be careful: Genome Mutation and Replication Error are dangerous signals. Match the cards and reveal the hidden patterns before your moves run out."
+            text: ""
         }
     ];
 
     private currentSlideIndex: number = 0;
     private bgHTML!: HTMLImageElement;
-
-    private storyText!: Phaser.GameObjects.Text;
-    private uiContainer!: Phaser.GameObjects.Container;
-    private textBoxBg!: Phaser.GameObjects.Rectangle;
-    private promptText!: Phaser.GameObjects.Text;
 
     private fadeOverlay!: Phaser.GameObjects.Rectangle;
     private overlay!: Phaser.GameObjects.Rectangle;
@@ -40,18 +39,42 @@ export default class Cutscene4 extends Phaser.Scene {
     private isShowingControls: boolean = false;
     private previousPinchState: boolean = false;
 
-    private readonly boxHeight = 250;
-
     constructor() {
         super('Cutscene4');
     }
 
     preload() {
-        // Non servono icone in questa cutscene:
-        // il memory si controlla con mouse/touchpad o pinch.
+        this.load.image(
+            'ABI_standard',
+            '/assets/tutorial/ABI/ABI_standard.png'
+        );
     }
 
     create() {
+        this.currentSlideIndex = 0;
+        this.isTransitioning = false;
+        this.isShowingControls = false;
+        this.previousPinchState = false;
+
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+        let allDialogues: any = null;
+
+        if (savedDialogues) {
+            try {
+                allDialogues = JSON.parse(savedDialogues);
+            } catch (e) {
+                console.warn("Error reading saved dialogues. Using defaults.", e);
+                allDialogues = defaultDialogues;
+            }
+        } else {
+            allDialogues = defaultDialogues;
+        }
+
+        this.slides[0].text = allDialogues.cutscenes.cutscene_4.dialogue_1;
+        this.slides[1].text = allDialogues.cutscenes.cutscene_4.dialogue_2;
+        this.slides[2].text = allDialogues.cutscenes.cutscene_4.dialogue_3;
+        this.slides[3].text = allDialogues.cutscenes.cutscene_4.dialogue_4;
+
         const style = document.createElement('style');
         style.innerHTML = `
             .phaser-dom-container {
@@ -85,56 +108,48 @@ export default class Cutscene4 extends Phaser.Scene {
         wrapper.className = 'phaser-dom-container';
         wrapper.appendChild(backBtn);
 
-        const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
+        const backBtnDom = this.add.dom(
+            this.scale.gameSize.width - 80,
+            40,
+            wrapper
+        );
 
         backBtn.addEventListener('click', () => {
             this.scene.pause();
-            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+            this.scene.launch('PauseMenuScene', {
+                parentScene: this.scene.key
+            });
         });
 
         const { width, height } = this.scale.gameSize;
 
         this.bgHTML = document.getElementById('background') as HTMLImageElement;
+
         if (this.bgHTML) {
             this.bgHTML.src = this.slides[0].imagePath;
             this.bgHTML.style.objectFit = 'fill';
         }
 
-        this.fadeOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 1).setOrigin(0);
+        this.fadeOverlay = this.add
+            .rectangle(0, 0, width, height, 0x000000, 1)
+            .setOrigin(0);
+
         this.fadeOverlay.setDepth(0);
 
-        this.uiContainer = this.add.container(0, height - this.boxHeight);
-        this.uiContainer.setDepth(10);
+        this.textures.get('ABI_standard').setFilter(
+            Phaser.Textures.FilterMode.NEAREST
+        );
 
-        this.textBoxBg = this.add
-            .rectangle(0, 0, width, this.boxHeight, 0x000000, 0.85)
-            .setOrigin(0)
-            .setStrokeStyle(4, 0x00ffff);
+        this.abi = new ABI(this);
+        this.abi.MoveDialogueY(0);
 
-        this.storyText = this.add.text(width / 2, this.boxHeight / 2 - 20, '', {
-            fontSize: '32px',
-            color: '#ffffff',
-            align: 'center',
-            wordWrap: { width: width - 200 }
-        }).setOrigin(0.5);
+        this.input.on('pointerdown', this.handleContinueInput, this);
 
-        this.promptText = this.add.text(width - 50, this.boxHeight - 40, 'Press SPACE or PINCH to continue ►', {
-            fontSize: '20px',
-            color: '#aaaaaa'
-        }).setOrigin(1, 0.5);
-
-        this.tweens.add({
-            targets: this.promptText,
-            alpha: 0.3,
-            duration: 800,
-            yoyo: true,
-            repeat: -1
-        });
-
-        this.uiContainer.add([this.textBoxBg, this.storyText, this.promptText]);
-
-        this.input.on('pointerdown', this.advanceSlide, this);
-        this.input.keyboard!.on('keydown-SPACE', this.advanceSlide, this);
+        this.input.keyboard!.on(
+            'keydown-SPACE',
+            this.handleContinueInput,
+            this
+        );
 
         this.showCurrentSlide();
 
@@ -149,31 +164,10 @@ export default class Cutscene4 extends Phaser.Scene {
             const scaleFactor = newW / 1920;
             const uiScale = Phaser.Math.Clamp(scaleFactor, 0.75, 1.3);
 
-            const currentBoxHeight = Math.max(140, 250 * uiScale);
-
             backBtnDom.setPosition(newW - 80, 40);
 
             if (this.fadeOverlay) {
                 this.fadeOverlay.setSize(newW, newH);
-            }
-
-            if (this.uiContainer) {
-                this.uiContainer.setPosition(0, newH - currentBoxHeight);
-            }
-
-            if (this.textBoxBg) {
-                this.textBoxBg.setSize(newW, currentBoxHeight);
-            }
-
-            if (this.storyText) {
-                this.storyText.setPosition(newW / 2, currentBoxHeight / 2 - 20);
-                this.storyText.setWordWrapWidth((newW - 200) / uiScale);
-                this.storyText.setScale(uiScale);
-            }
-
-            if (this.promptText) {
-                this.promptText.setPosition(newW - 50, currentBoxHeight - 40);
-                this.promptText.setScale(uiScale);
             }
 
             if (this.overlay) {
@@ -181,17 +175,29 @@ export default class Cutscene4 extends Phaser.Scene {
             }
 
             if (this.controlsTitle) {
-                this.controlsTitle.setPosition(newW / 2, newH / 2 - (150 * uiScale));
+                this.controlsTitle.setPosition(
+                    newW / 2,
+                    newH / 2 - 150 * uiScale
+                );
+
                 this.controlsTitle.setScale(uiScale);
             }
 
             if (this.controlsText) {
-                this.controlsText.setPosition(newW / 2, newH / 2);
+                this.controlsText.setPosition(
+                    newW / 2,
+                    newH / 2
+                );
+
                 this.controlsText.setScale(uiScale);
             }
 
             if (this.controlsPrompt) {
-                this.controlsPrompt.setPosition(newW / 2, newH - (150 * uiScale));
+                this.controlsPrompt.setPosition(
+                    newW / 2,
+                    newH - 150 * uiScale
+                );
+
                 this.controlsPrompt.setScale(uiScale);
             }
         };
@@ -206,18 +212,22 @@ export default class Cutscene4 extends Phaser.Scene {
     }
 
     update() {
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode =
+            this.registry.get('inputMode') ||
+            localStorage.getItem('inputMode');
 
-        if (inputMode === 'hand') {
-            const tracker = HandTrackingController.getInstance();
-            const currentPinch = tracker.isClicked;
+        if (inputMode !== 'hand') return;
 
-            if (currentPinch && !this.previousPinchState) {
-                this.advanceSlide();
+        const tracker = HandTrackingController.getInstance();
+        const currentPinch = tracker.isClicked;
+
+        if (currentPinch && !this.previousPinchState) {
+            if (this.isShowingControls) {
+                this.finishCutscene();
             }
-
-            this.previousPinchState = currentPinch;
         }
+
+        this.previousPinchState = currentPinch;
     }
 
     private showCurrentSlide() {
@@ -227,7 +237,6 @@ export default class Cutscene4 extends Phaser.Scene {
         }
 
         const currentSlide = this.slides[this.currentSlideIndex];
-        this.storyText.setText(currentSlide.text);
 
         this.isTransitioning = true;
 
@@ -246,13 +255,22 @@ export default class Cutscene4 extends Phaser.Scene {
                     duration: 300,
                     onComplete: () => {
                         this.isTransitioning = false;
+
+                        this.abi.showDialogue(
+                            'ABI',
+                            currentSlide.text,
+                            () => {
+                                this.currentSlideIndex++;
+                                this.showCurrentSlide();
+                            }
+                        );
                     }
                 });
             }
         });
     }
 
-    private advanceSlide() {
+    private handleContinueInput() {
         if (this.isTransitioning) return;
 
         if (this.isShowingControls) {
@@ -260,15 +278,16 @@ export default class Cutscene4 extends Phaser.Scene {
             return;
         }
 
-        this.currentSlideIndex++;
-        this.showCurrentSlide();
+        if (this.abi && this.abi.isTalking) {
+            this.abi.nextDialoguePage();
+        }
     }
 
     private showControlsScreen() {
         this.isTransitioning = true;
         this.isShowingControls = true;
 
-        this.uiContainer.setVisible(false);
+        this.abi.hideDialogue();
 
         const { width, height } = this.scale.gameSize;
 
@@ -282,7 +301,11 @@ export default class Cutscene4 extends Phaser.Scene {
             fillAlpha: 0.85,
             duration: 500,
             onComplete: () => {
-                this.drawControlsUI(this.scale.gameSize.width, this.scale.gameSize.height);
+                this.drawControlsUI(
+                    this.scale.gameSize.width,
+                    this.scale.gameSize.height
+                );
+
                 this.isTransitioning = false;
             }
         });
@@ -292,30 +315,60 @@ export default class Cutscene4 extends Phaser.Scene {
         const scaleFactor = width / 1920;
         const uiScale = Phaser.Math.Clamp(scaleFactor, 0.75, 1.3);
 
-        this.controlsTitle = this.add.text(width / 2, height / 2 - (150 * uiScale), 'MISSION CONTROLS', {
-            fontSize: '48px',
-            color: '#00ffff',
-            fontStyle: 'bold',
-            letterSpacing: 2
-        }).setOrigin(0.5).setScale(uiScale).setDepth(10);
+        this.controlsTitle = this.add
+            .text(
+                width / 2,
+                height / 2 - 150 * uiScale,
+                'MISSION CONTROLS',
+                {
+                    fontSize: '48px',
+                    color: '#00ffff',
+                    fontStyle: 'bold',
+                    letterSpacing: 2
+                }
+            )
+            .setOrigin(0.5)
+            .setScale(uiScale)
+            .setDepth(10);
 
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode =
+            this.registry.get('inputMode') ||
+            localStorage.getItem('inputMode');
 
-        const commands = inputMode === 'hand'
-            ? 'Move YOUR HAND over a card\nPINCH to flip it'
-            : 'Use the MOUSE or TOUCHPAD to select cards\nCLICK to flip a card';
+        const commands =
+            inputMode === 'hand'
+                ? 'Move YOUR HAND over a card\nPINCH to flip it'
+                : 'Use the MOUSE or TOUCHPAD to select cards\nCLICK to flip a card';
 
-        this.controlsText = this.add.text(width / 2, height / 2, commands + '\n\nFlip two cards at a time\nFind all matching pairs before your moves run out', {
-            fontSize: '28px',
-            color: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5).setScale(uiScale).setDepth(10);
+        this.controlsText = this.add
+            .text(
+                width / 2,
+                height / 2,
+                commands + '\n\nFlip two cards at a time\nFind all matching pairs before your moves run out',
+                {
+                    fontSize: '28px',
+                    color: '#ffffff',
+                    align: 'center'
+                }
+            )
+            .setOrigin(0.5)
+            .setScale(uiScale)
+            .setDepth(10);
 
-        this.controlsPrompt = this.add.text(width / 2, height - (150 * uiScale), 'Press SPACE or PINCH to start the memory challenge', {
-            fontSize: '26px',
-            color: '#4caf50',
-            fontStyle: 'bold'
-        }).setOrigin(0.5).setScale(uiScale).setDepth(10);
+        this.controlsPrompt = this.add
+            .text(
+                width / 2,
+                height - 150 * uiScale,
+                'Press SPACE or PINCH to start the memory challenge',
+                {
+                    fontSize: '26px',
+                    color: '#4caf50',
+                    fontStyle: 'bold'
+                }
+            )
+            .setOrigin(0.5)
+            .setScale(uiScale)
+            .setDepth(10);
 
         this.tweens.add({
             targets: this.controlsPrompt,
@@ -327,6 +380,8 @@ export default class Cutscene4 extends Phaser.Scene {
     }
 
     private finishCutscene() {
+        if (this.isTransitioning) return;
+
         this.isTransitioning = true;
 
         this.tweens.add({

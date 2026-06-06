@@ -1,38 +1,36 @@
 import Phaser from 'phaser';
 import { HandTrackingController } from '../handTracking/handTrackingController';
+import ABI from '../classes/abi';
 import defaultDialogues from '../../assets/default_dialogues.json';
 
 export default class Cutscene1 extends Phaser.Scene {
     private slides = [
         {
             imagePath: '/assets/Cutscenes/Cutscene1_1.png',
-            text: ""
+            text: ''
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene1_2.png',
-            text: ""
+            text: ''
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene1_3.png',
-            text: ""
+            text: ''
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene1_4.png',
-            text: ""
+            text: ''
         }
     ];
-    
+
     private currentSlideIndex: number = 0;
     private bgHTML!: HTMLImageElement;
-    
-    private storyText!: Phaser.GameObjects.Text;
-    private uiContainer!: Phaser.GameObjects.Container;
-    private textBoxBg!: Phaser.GameObjects.Rectangle;
-    private promptText!: Phaser.GameObjects.Text;
-    
+
+    private abi!: ABI;
+
     private fadeOverlay!: Phaser.GameObjects.Rectangle;
     private overlay!: Phaser.GameObjects.Rectangle;
-    
+
     private controlsTitle!: Phaser.GameObjects.Text;
     private controlsIcon!: Phaser.GameObjects.Image;
     private controlsText!: Phaser.GameObjects.Text;
@@ -42,24 +40,36 @@ export default class Cutscene1 extends Phaser.Scene {
     private isShowingControls: boolean = false;
     private previousPinchState: boolean = false;
 
-    private readonly boxHeight = 250;
-
     constructor() {
         super('Cutscene1');
     }
 
     preload() {
-        this.load.image('icon_arrows', '/../assets/Cutscenes/Controls_Arrows_lateral.png');
+        this.load.image(
+            'icon_arrows',
+            '/../assets/Cutscenes/Controls_Arrows_lateral.png'
+        );
+
+        this.load.image(
+            'ABI_standard',
+            '/assets/tutorial/ABI/ABI_standard.png'
+        );
     }
 
     create() {
+        this.currentSlideIndex = 0;
+        this.isTransitioning = false;
+        this.isShowingControls = false;
+        this.previousPinchState = false;
+
         const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
-        let allDialogues = null;    
+        let allDialogues: any = null;
+
         if (savedDialogues) {
             try {
                 allDialogues = JSON.parse(savedDialogues);
             } catch (e) {
-                console.warn("Error reading saved dialogues. Using defaults.", e);
+                console.warn('Error reading saved dialogues. Using defaults.', e);
                 allDialogues = defaultDialogues;
             }
         } else {
@@ -99,46 +109,49 @@ export default class Cutscene1 extends Phaser.Scene {
         const backBtn = document.createElement('button');
         backBtn.className = 'Back';
         backBtn.innerText = 'PAUSE';
+
         const wrapper = document.createElement('div');
         wrapper.className = 'phaser-dom-container';
         wrapper.appendChild(backBtn);
-        const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
+
+        const backBtnDom = this.add.dom(
+            this.scale.gameSize.width - 80,
+            40,
+            wrapper
+        );
 
         backBtn.addEventListener('click', () => {
             this.scene.pause();
-            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+            this.scene.launch('PauseMenuScene', {
+                parentScene: this.scene.key
+            });
         });
 
         const { width, height } = this.scale.gameSize;
-        
+
         this.bgHTML = document.getElementById('background') as HTMLImageElement;
+
         if (this.bgHTML) {
             this.bgHTML.src = this.slides[0].imagePath;
-            this.bgHTML.style.objectFit = 'fill'; 
+            this.bgHTML.style.objectFit = 'fill';
         }
 
-        this.fadeOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 1).setOrigin(0);
+        this.fadeOverlay = this.add
+            .rectangle(0, 0, width, height, 0x000000, 1)
+            .setOrigin(0);
+
         this.fadeOverlay.setDepth(0);
 
-        this.uiContainer = this.add.container(0, height - this.boxHeight);
-        this.uiContainer.setDepth(10);
-        
-        this.textBoxBg = this.add.rectangle(0, 0, width, this.boxHeight, 0x000000, 0.85).setOrigin(0).setStrokeStyle(4, 0x4caf50);
+        this.abi = new ABI(this);
+        this.abi.MoveDialogueY(0);
 
-        this.storyText = this.add.text(width / 2, this.boxHeight / 2 - 20, '', {
-            fontSize: '32px', color: '#ffffff', align: 'center', wordWrap: { width: width - 200 }
-        }).setOrigin(0.5);
+        this.input.on('pointerdown', this.handleContinueInput, this);
 
-        this.promptText = this.add.text(width - 50, this.boxHeight - 40, 'Press SPACE or PINCH to continue ►', {
-            fontSize: '20px', color: '#aaaaaa'
-        }).setOrigin(1, 0.5);
-
-        this.tweens.add({ targets: this.promptText, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
-
-        this.uiContainer.add([this.textBoxBg, this.storyText, this.promptText]);
-
-        this.input.on('pointerdown', this.advanceSlide, this);
-        this.input.keyboard!.on('keydown-SPACE', this.advanceSlide, this);
+        this.input.keyboard!.on(
+            'keydown-SPACE',
+            this.handleContinueInput,
+            this
+        );
 
         this.showCurrentSlide();
 
@@ -153,47 +166,52 @@ export default class Cutscene1 extends Phaser.Scene {
             const scaleFactor = newW / 1920;
             const uiScale = Phaser.Math.Clamp(scaleFactor, 0.75, 1.3);
 
-            const currentBoxHeight = Math.max(140, 250 * uiScale);
-
             backBtnDom.setPosition(newW - 80, 40);
 
             if (this.fadeOverlay) {
                 this.fadeOverlay.setSize(newW, newH);
             }
 
-            if (this.uiContainer) {
-                this.uiContainer.setPosition(0, newH - currentBoxHeight);
-            }
-            if (this.textBoxBg) {
-                this.textBoxBg.setSize(newW, currentBoxHeight);
-            }
-            if (this.storyText) {
-                this.storyText.setPosition(newW / 2, currentBoxHeight / 2 - 20);
-                this.storyText.setWordWrapWidth((newW - 200) / uiScale);
-                this.storyText.setScale(uiScale);
-            }
-            if (this.promptText) {
-                this.promptText.setPosition(newW - 50, currentBoxHeight - 40);
-                this.promptText.setScale(uiScale);
-            }
-
             if (this.overlay) {
                 this.overlay.setSize(newW, newH);
             }
+
             if (this.controlsTitle) {
-                this.controlsTitle.setPosition(newW / 2, newH / 2 - (150 * uiScale));
+                this.controlsTitle.setPosition(
+                    newW / 2,
+                    newH / 2 - 150 * uiScale
+                );
+
                 this.controlsTitle.setScale(uiScale);
             }
+
             if (this.controlsIcon) {
-                this.controlsIcon.setPosition(newW / 2 - (180 * uiScale), newH / 2);
-                this.controlsIcon.setDisplaySize(120 * uiScale, 80 * uiScale);
+                this.controlsIcon.setPosition(
+                    newW / 2 - 180 * uiScale,
+                    newH / 2
+                );
+
+                this.controlsIcon.setDisplaySize(
+                    120 * uiScale,
+                    80 * uiScale
+                );
             }
+
             if (this.controlsText) {
-                this.controlsText.setPosition(newW / 2 - (80 * uiScale), newH / 2);
+                this.controlsText.setPosition(
+                    newW / 2 - 80 * uiScale,
+                    newH / 2
+                );
+
                 this.controlsText.setScale(uiScale);
             }
+
             if (this.controlsPrompt) {
-                this.controlsPrompt.setPosition(newW / 2, newH - (150 * uiScale));
+                this.controlsPrompt.setPosition(
+                    newW / 2,
+                    newH - 150 * uiScale
+                );
+
                 this.controlsPrompt.setScale(uiScale);
             }
         };
@@ -207,19 +225,23 @@ export default class Cutscene1 extends Phaser.Scene {
         });
     }
 
-    update(time: number, delta: number) {
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
-        
-        if (inputMode === 'hand') {
-            const tracker = HandTrackingController.getInstance();
-            const currentPinch = tracker.isClicked; 
+    update() {
+        const inputMode =
+            this.registry.get('inputMode') ||
+            localStorage.getItem('inputMode');
 
-            if (currentPinch && !this.previousPinchState) {
-                this.advanceSlide();
+        if (inputMode !== 'hand') return;
+
+        const tracker = HandTrackingController.getInstance();
+        const currentPinch = tracker.isClicked;
+
+        if (currentPinch && !this.previousPinchState) {
+            if (this.isShowingControls) {
+                this.finishCutscene();
             }
-
-            this.previousPinchState = currentPinch;
         }
+
+        this.previousPinchState = currentPinch;
     }
 
     private showCurrentSlide() {
@@ -229,7 +251,6 @@ export default class Cutscene1 extends Phaser.Scene {
         }
 
         const currentSlide = this.slides[this.currentSlideIndex];
-        this.storyText.setText(currentSlide.text);
 
         this.isTransitioning = true;
 
@@ -241,43 +262,64 @@ export default class Cutscene1 extends Phaser.Scene {
                 if (this.bgHTML) {
                     this.bgHTML.src = currentSlide.imagePath;
                 }
-                
+
                 this.tweens.add({
-                    targets: this.fadeOverlay, 
-                    alpha: 0, 
-                    duration: 300, 
-                    onComplete: () => { this.isTransitioning = false; }
+                    targets: this.fadeOverlay,
+                    alpha: 0,
+                    duration: 300,
+                    onComplete: () => {
+                        this.isTransitioning = false;
+
+                        this.abi.showDialogue(
+                            'ABI',
+                            currentSlide.text,
+                            () => {
+                                this.currentSlideIndex++;
+                                this.showCurrentSlide();
+                            }
+                        );
+                    }
                 });
             }
         });
     }
 
-    private advanceSlide() {
+    private handleContinueInput() {
         if (this.isTransitioning) return;
+
         if (this.isShowingControls) {
             this.finishCutscene();
             return;
         }
-        this.currentSlideIndex++;
-        this.showCurrentSlide();
+
+        if (this.abi && this.abi.isTalking) {
+            this.abi.nextDialoguePage();
+        }
     }
 
     private showControlsScreen() {
         this.isTransitioning = true;
         this.isShowingControls = true;
 
-        this.uiContainer.setVisible(false);
+        this.abi.hideDialogue();
 
         const { width, height } = this.scale.gameSize;
 
-        this.overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0).setOrigin(0).setDepth(5);
+        this.overlay = this.add
+            .rectangle(0, 0, width, height, 0x000000, 0)
+            .setOrigin(0)
+            .setDepth(5);
 
         this.tweens.add({
             targets: this.overlay,
-            fillAlpha: 0.85, 
+            fillAlpha: 0.85,
             duration: 500,
             onComplete: () => {
-                this.drawControlsUI(this.scale.gameSize.width, this.scale.gameSize.height);
+                this.drawControlsUI(
+                    this.scale.gameSize.width,
+                    this.scale.gameSize.height
+                );
+
                 this.isTransitioning = false;
             }
         });
@@ -287,29 +329,88 @@ export default class Cutscene1 extends Phaser.Scene {
         const scaleFactor = width / 1920;
         const uiScale = Phaser.Math.Clamp(scaleFactor, 0.75, 1.3);
 
-        this.controlsTitle = this.add.text(width / 2, height / 2 - (150 * uiScale), 'MISSION CONTROLS', {
-            fontSize: '48px', color: '#00ffff', fontStyle: 'bold', letterSpacing: 2
-        }).setOrigin(0.5).setScale(uiScale).setDepth(10);
+        this.controlsTitle = this.add
+            .text(
+                width / 2,
+                height / 2 - 150 * uiScale,
+                'MISSION CONTROLS',
+                {
+                    fontSize: '48px',
+                    color: '#00ffff',
+                    fontStyle: 'bold',
+                    letterSpacing: 2
+                }
+            )
+            .setOrigin(0.5)
+            .setScale(uiScale)
+            .setDepth(10);
 
-        this.controlsIcon = this.add.image(width / 2 - (180 * uiScale), height / 2, 'icon_arrows').setDepth(10);
-        this.controlsIcon.setDisplaySize(120 * uiScale, 80 * uiScale);
-        
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
-        let commands = inputMode === 'hand' ? 'Move YOUR HAND LEFT/RIGHT' : 'Press LEFT/RIGHT ARROW KEY';
-        
-        this.controlsText = this.add.text(width / 2 - (80 * uiScale), height / 2, commands + '\nto intercept viral particles', {
-            fontSize: '28px', color: '#ffffff', align: 'left'
-        }).setOrigin(0, 0.5).setScale(uiScale).setDepth(10);
+        this.controlsIcon = this.add
+            .image(
+                width / 2 - 180 * uiScale,
+                height / 2,
+                'icon_arrows'
+            )
+            .setDepth(10);
 
-        this.controlsPrompt = this.add.text(width / 2, height - (150 * uiScale), 'Press SPACE or PINCH to initialize sequence', {
-            fontSize: '26px', color: '#4caf50', fontStyle: 'bold'
-        }).setOrigin(0.5).setScale(uiScale).setDepth(10);
+        this.controlsIcon.setDisplaySize(
+            120 * uiScale,
+            80 * uiScale
+        );
 
-        this.tweens.add({ targets: this.controlsPrompt, alpha: 0.2, duration: 800, yoyo: true, repeat: -1 });
+        const inputMode =
+            this.registry.get('inputMode') ||
+            localStorage.getItem('inputMode');
+
+        const commands =
+            inputMode === 'hand'
+                ? 'Move YOUR HAND LEFT/RIGHT'
+                : 'Press LEFT/RIGHT ARROW KEY';
+
+        this.controlsText = this.add
+            .text(
+                width / 2 - 80 * uiScale,
+                height / 2,
+                commands + '\nto intercept viral particles',
+                {
+                    fontSize: '28px',
+                    color: '#ffffff',
+                    align: 'left'
+                }
+            )
+            .setOrigin(0, 0.5)
+            .setScale(uiScale)
+            .setDepth(10);
+
+        this.controlsPrompt = this.add
+            .text(
+                width / 2,
+                height - 150 * uiScale,
+                'Press SPACE or PINCH to initialize sequence',
+                {
+                    fontSize: '26px',
+                    color: '#4caf50',
+                    fontStyle: 'bold'
+                }
+            )
+            .setOrigin(0.5)
+            .setScale(uiScale)
+            .setDepth(10);
+
+        this.tweens.add({
+            targets: this.controlsPrompt,
+            alpha: 0.2,
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
     }
 
     private finishCutscene() {
+        if (this.isTransitioning) return;
+
         this.isTransitioning = true;
+
         this.tweens.add({
             targets: this.fadeOverlay,
             alpha: 1,

@@ -57,7 +57,7 @@ export class Level6 extends Phaser.Scene {
     private readonly normalTimeLimitMs = 15000;
     private readonly vaccinatedTimeLimitMs = 60000;
 
-    private readonly playerScale = 0.95;
+    private readonly playerScale = 0.75;
     private readonly virusScale = 0.85;
 
     private readonly playerCollisionScale = 0.92;

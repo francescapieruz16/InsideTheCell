@@ -274,7 +274,22 @@ export default class SettingsScene extends Phaser.Scene {
     }
 
     private applyDefaultSettings() {
-        this.settings = { textSpeed: 'Normal', masterVol: 100, voiceVol: 100, previousVoiceVol: 100, sfxVol: 100, musicVol: 100, previousMusicVol: 100 };
+        this.settings = { 
+            textSpeed: 'Normal', 
+            masterVol: 100, 
+            voiceVol: 100, 
+            previousVoiceVol: 100, 
+            sfxVol: 100, 
+            musicVol: 100, 
+            previousMusicVol: 100 
+        };
+        
+        this.saveSettings();
+
+        const music = this.sound.get('bg_music');
+        if (music) {
+            (music as any).setVolume(1); 
+        }
     }
 
     private resetSettingsToDefault() {

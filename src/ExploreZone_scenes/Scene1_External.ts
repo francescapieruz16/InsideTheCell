@@ -72,9 +72,18 @@ export default class Scene1_External extends Phaser.Scene {
         this.load.image('receptor_fake2', '/assets/level1/receptor_square.png');
         this.load.image('receptor_fake3', '/assets/level1/receptor_triangle.png');
         this.load.image('receptor_ace2', '/assets/level1/receptor_hexagon.png');
+
+        this.load.audio('bg_music', '/assets/tutorial/music/cell_exploration1.mp3');
     }
 
     create() {
+
+        const savedSettings = localStorage.getItem('gameSettings');
+        const volume = savedSettings ? JSON.parse(savedSettings).musicVol / 100 : 1;
+
+        const music = this.sound.add('bg_music', { loop: true, volume: volume });
+        music.play();
+
         const style = document.createElement('style');
         style.innerHTML = `
             .phaser-dom-container {
@@ -368,6 +377,16 @@ export default class Scene1_External extends Phaser.Scene {
         this.dialogue9 = allDialogues.tutorials.tutorial_1.dialogue_15;
         this.dialogue10 = allDialogues.tutorials.tutorial_1.dialogue_16;
         this.dialogue11 = allDialogues.tutorials.tutorial_1.dialogue_17;
+
+
+
+        if (!this.sound.get('bg_music')) {
+        const music = this.sound.add('bg_music', {
+            loop: true,
+            volume: 0.5 // Puoi collegarlo ai tuoi settings!
+        });
+        music.play();
+        }
 
         this.events.once('shutdown', () => {
             if (wrapper) wrapper.remove();

@@ -268,6 +268,15 @@ export default class ABI {
         this.currentDialoguePage = 0;
         this.updateDialogueView();
         this.uiContainer.setVisible(true);
+
+        const music = this.scene.sound.get('bg_music');
+        if (music) {
+            this.scene.tweens.add({
+                targets: music,
+                volume: 0.1, // Abbassa il volume quando parla
+                duration: 500
+            });
+        }
     }
 
     private updateDialogueView() {
@@ -373,6 +382,16 @@ export default class ABI {
         
         const callback = this.onCloseCallback;
         this.onCloseCallback = undefined; 
+
+        const music = this.scene.sound.get('bg_music');
+        if (music) {
+            const settings = this.getSettings(); // Recupera le impostazioni
+            this.scene.tweens.add({
+                targets: music,
+                volume: settings.musicVol / 100, // Usa il volume delle impostazioni
+                duration: 500
+            });
+        }
         
         if (callback) {
             callback();
@@ -380,6 +399,7 @@ export default class ABI {
     }
 
     private interrupt() {
+        // 1. Fermiamo i timer attivi
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
@@ -387,13 +407,25 @@ export default class ABI {
             this.radioTimer.remove();
         }
 
+        // 2. Fermiamo la voce
         this.synth.cancel();
         
+        // 3. Reset dello stato
         this.isTyping = false;
         this.isTalking = false;
         
         if (this.onCloseCallback) {
             this.onCloseCallback = undefined;
+        }
+
+        const music = this.scene.sound.get('bg_music');
+        if (music) {
+            const settings = this.getSettings(); // Recupera le impostazioni
+            this.scene.tweens.add({ 
+                targets: music, 
+                volume: settings.musicVol / 100, // Usa il volume delle impostazioni
+                duration: 500 
+            });
         }
     }
 
@@ -411,11 +443,29 @@ export default class ABI {
         this.promptText.setVisible(false); 
         this.promptText.setVisible(false); 
 
+        const music = this.scene.sound.get('bg_music');
+        if (music) {
+                    const settings = this.getSettings(); // Recupera le impostazioni
+                    this.scene.tweens.add({
+                        targets: music,
+                        volume: settings.musicVol / 100, // Usa il volume delle impostazioni
+                        duration: 500
+                    });
+                }
+
         const pages = this.autoSplitText(text, 180);
         let pageIndex = 0;
 
         const showNextPage = () => {
             if (pageIndex >= pages.length) {
+                if (music) {
+                    this.scene.tweens.add({
+                        targets: music,
+                        volume: 0.5, // Imposta il tuo volume standard
+                        duration: 500
+                    });
+                }
+
                 if (!this.isTalking) { 
                     this.uiContainer.setVisible(false);
                     this.synth.cancel();

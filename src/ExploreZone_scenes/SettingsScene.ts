@@ -8,6 +8,7 @@ export interface GameSettings {
     sfxVol: number;
     musicVol: number;  
     previousVoiceVol: number;
+    previousMusicVol: number;
 }
 
 interface InteractiveElement {
@@ -62,18 +63,15 @@ export default class SettingsScene extends Phaser.Scene {
         let startY = -250;
         const spacingY = 75;
         
+        // 1. Velocità Testo
         const speedOptions = ['Slow', 'Normal', 'Fast', 'Instant'];
         this.createStepper(startY, 'Text Speed', speedOptions, 
             () => this.settings.textSpeed, 
             (val) => { this.settings.textSpeed = val; this.saveSettings(); }
         );
 
-        this.createVolumeStepper(startY + spacingY, 'Master Volume', 
-            () => this.settings.masterVol, 
-            (val) => { this.settings.masterVol = val; this.saveSettings(); }
-        );
-
-        this.createVolumeStepper(startY + (spacingY * 2), 'A.B.I. Voice Vol', 
+        // 2. Volume Voce A.B.I.
+        this.createVolumeStepper(startY + (spacingY * 1), 'A.B.I. Voice Vol', 
             () => this.settings.voiceVol, 
             (val) => { 
                 this.settings.voiceVol = val; 
@@ -86,15 +84,36 @@ export default class SettingsScene extends Phaser.Scene {
             }
         );
 
-        this.createMuteToggle(startY + (spacingY * 3));
+        // 3. Mute A.B.I.
+        this.createMuteToggle(startY + (spacingY * 2));
 
-        this.createVolumeStepper(startY + (spacingY * 4), 'Music Volume', 
+        // 4. Volume Musica
+        this.createVolumeStepper(startY + (spacingY * 3), 'Music Volume', 
             () => this.settings.musicVol, 
-            (val) => { this.settings.musicVol = val; this.saveSettings(); }
+            (val) => { 
+                this.settings.musicVol = val; 
+                if (val > 0) this.settings.previousMusicVol = val; // Salva il volume pre-mute
+                this.saveSettings(); 
+                
+                // Aggiorna istantaneamente la musica globale
+                const music = this.sound.get('bg_music');
+                if (music) {
+                    (music as any).setVolume(val / 100);
+                }
+
+                // Riavvia l'UI dei settings se passiamo da 0 a 10 per togliere la "X"
+                if (val === 0 || (val === 10 && this.settings.musicVol > 0)) {
+                    this.scene.restart({ parentScene: this.parentSceneKey });
+                }
+            }
         );
 
+        // 5. Mute Musica (NUOVO)
+        this.createMusicMuteToggle(startY + (spacingY * 4));
+
         // --- BOTTONI PRINCIPALI ---
-        const saveBtnY = startY + (spacingY * 5.2);
+        // Spostati più in basso per fare spazio al nuovo tasto
+        const saveBtnY = startY + (spacingY * 5.8); 
         
         const saveBtn = this.add.text(0, saveBtnY, '💾 SAVE & CLOSE', {
             fontSize: '28px', color: '#000000', backgroundColor: '#4caf50', padding: { x: 40, y: 15 }
@@ -111,7 +130,7 @@ export default class SettingsScene extends Phaser.Scene {
         this.mainContainer.add(saveBtn);
 
         // --- BOTTONI DI GESTIONE DATI ---
-        const dataBtnY = startY + (spacingY * 6.8);
+        const dataBtnY = startY + (spacingY * 7.2); // Spostati più in basso
 
         const defaultBtn = this.add.text(-200, dataBtnY, '↻ DEFAULT SETTINGS', {
             fontSize: '24px', color: '#000000', backgroundColor: '#00ffff', padding: { x: 20, y: 10 }
@@ -244,6 +263,7 @@ export default class SettingsScene extends Phaser.Scene {
         if (saved) {
             this.settings = JSON.parse(saved);
             if (this.settings.previousVoiceVol === undefined) this.settings.previousVoiceVol = 100;
+            if (this.settings.previousMusicVol === undefined) this.settings.previousMusicVol = 100;
         } else {
             this.applyDefaultSettings();
         }
@@ -254,7 +274,7 @@ export default class SettingsScene extends Phaser.Scene {
     }
 
     private applyDefaultSettings() {
-        this.settings = { textSpeed: 'Normal', masterVol: 100, voiceVol: 100, previousVoiceVol: 100, sfxVol: 100, musicVol: 100 };
+        this.settings = { textSpeed: 'Normal', masterVol: 100, voiceVol: 100, previousVoiceVol: 100, sfxVol: 100, musicVol: 100, previousMusicVol: 100 };
     }
 
     private resetSettingsToDefault() {
@@ -414,5 +434,50 @@ export default class SettingsScene extends Phaser.Scene {
         
         this.warningBoxContainer.add([box, title, msg, yesBtn, noBtn]);
         this.warningPopup.add([this.warningOverlay, this.warningBoxContainer]);
+    }
+
+    private createMusicMuteToggle(y: number) {
+        const lblText = this.add.text(-250, y, 'Mute Music', { fontSize: '24px', color: '#aaaaaa' }).setOrigin(0, 0.5);
+
+        const isMuted = this.settings.musicVol === 0;
+        const boxColor = isMuted ? 0xff5555 : 0x333333;
+        
+        const box = this.add.rectangle(150, y, 40, 40, boxColor).setStrokeStyle(2, 0xffffff);
+        const checkMark = this.add.text(150, y, isMuted ? 'X' : '', { fontSize: '28px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+
+        this.makeInteractive(box,
+            () => {
+                box.setStrokeStyle(4, 0x00ffff).setScale(1.1);
+                checkMark.setScale(1.1);
+            },
+            () => {
+                box.setStrokeStyle(2, 0xffffff).setScale(1);
+                checkMark.setScale(1);
+            },
+            () => {
+                const isCurrentlyMuted = this.settings.musicVol === 0;
+                
+                // Scambia tra muto e volume precedente
+                if (isCurrentlyMuted) {
+                    this.settings.musicVol = this.settings.previousMusicVol > 0 ? this.settings.previousMusicVol : 100;
+                } else {
+                    this.settings.previousMusicVol = this.settings.musicVol;
+                    this.settings.musicVol = 0;
+                }
+                
+                this.saveSettings();
+
+                // 1. Applica immediatamente il volume globale
+                const music = this.sound.get('bg_music');
+                if (music) {
+                    (music as any).setVolume(this.settings.musicVol / 100);
+                }
+
+                // 2. Riavvia la scena dei settings per aggiornare graficamente lo Stepper e il Checkmark
+                this.scene.restart({ parentScene: this.parentSceneKey });
+            }
+        );
+
+        this.mainContainer.add([lblText, box, checkMark]);
     }
 }

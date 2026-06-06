@@ -123,7 +123,7 @@ export class Level4 extends Phaser.Scene {
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
             bgHTML.src = '/assets/level4/background_level_4.png';
-            bgHTML.style.objectFit = 'fill'; 
+            bgHTML.style.objectFit = 'fill';
         }
 
         const style = document.createElement('style');
@@ -154,9 +154,11 @@ export class Level4 extends Phaser.Scene {
         const backBtn = document.createElement('button');
         backBtn.className = 'Back';
         backBtn.innerText = 'PAUSE';
+
         const wrapper = document.createElement('div');
         wrapper.className = 'phaser-dom-container';
         wrapper.appendChild(backBtn);
+
         const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
 
         backBtn.addEventListener('click', () => {
@@ -187,14 +189,14 @@ export class Level4 extends Phaser.Scene {
             }
 
             if (this.uiContainer) {
-                this.uiContainer.setPosition(newW - 170, 60);
+                this.uiContainer.setPosition(170, 60);
             }
 
             this.repositionCards(newW, newH);
         };
 
         this.scale.on('resize', onResize);
-        
+
         onResize(this.scale.gameSize);
 
         this.events.once('shutdown', () => {
@@ -233,8 +235,8 @@ export class Level4 extends Phaser.Scene {
 
         for (const card of this.cards) {
             const distance = Phaser.Math.Distance.Between(x, y, card.image.x, card.image.y);
-            
-            if (distance < 70 * this.currentScale) { 
+
+            if (distance < 70 * this.currentScale) {
                 this.handleCardClick(card);
                 break;
             }
@@ -247,10 +249,10 @@ export class Level4 extends Phaser.Scene {
         const columns = 5;
         const rows = Math.ceil(this.cards.length / columns);
 
-        let cardW = width * 0.11; 
+        let cardW = width * 0.11;
         let cardH = cardW * (this.cardHeight / this.cardWidth);
 
-        const maxAllowedHeight = height * 0.65; 
+        const maxAllowedHeight = height * 0.65;
         if (cardH * rows > maxAllowedHeight) {
             cardH = maxAllowedHeight / rows;
             cardW = cardH * (this.cardWidth / this.cardHeight);
@@ -258,7 +260,7 @@ export class Level4 extends Phaser.Scene {
 
         this.currentScale = cardW / this.cardWidth;
 
-        const gapX = cardW * 0.15; 
+        const gapX = cardW * 0.15;
         const gapY = cardH * 0.15;
 
         const totalGridWidth = columns * cardW + (columns - 1) * gapX;
@@ -282,8 +284,6 @@ export class Level4 extends Phaser.Scene {
     }
 
     private createUi() {
-        const width = this.cameras.main.width;
-
         const movesBg = this.add.rectangle(
             0,
             0,
@@ -306,7 +306,7 @@ export class Level4 extends Phaser.Scene {
             }
         );
 
-        this.uiContainer = this.add.container(width - 170, 60, [movesBg, this.movesText]);
+        this.uiContainer = this.add.container(170, 60, [movesBg, this.movesText]);
         this.uiContainer.setDepth(20);
     }
 

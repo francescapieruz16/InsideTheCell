@@ -1,23 +1,24 @@
 import Phaser from 'phaser';
 import { HandTrackingController } from '../handTracking/handTrackingController';
+import defaultDialogues from '../../assets/default_dialogues.json';
 
 export default class Cutscene1 extends Phaser.Scene {
     private slides = [
         {
             imagePath: '/assets/Cutscenes/Cutscene1_1.png',
-            text: "WARNING: Viral particles detected in the extracellular matrix. They are rapidly approaching the outer cell membrane."
+            text: ""
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene1_2.png',
-            text: "To breach the cell, the virus uses its spike proteins like a key. It searches for specific surface receptors that perfectly match its shape to force its way inside."
+            text: ""
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene1_3.png',
-            text: "Once attached, the virus will inject its genetic material, hijacking the cell. We cannot let that happen."
+            text: ""
         },
         {
             imagePath: '/assets/Cutscenes/Cutscene1_4.png',
-            text: "Your mission is to intercept the viral load. Control the defense platform and block the pathogens before they can make contact with the receptors."
+            text: ""
         }
     ];
     
@@ -52,6 +53,24 @@ export default class Cutscene1 extends Phaser.Scene {
     }
 
     create() {
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+        let allDialogues = null;    
+        if (savedDialogues) {
+            try {
+                allDialogues = JSON.parse(savedDialogues);
+            } catch (e) {
+                console.warn("Error reading saved dialogues. Using defaults.", e);
+                allDialogues = defaultDialogues;
+            }
+        } else {
+            allDialogues = defaultDialogues;
+        }
+
+        this.slides[0].text = allDialogues.cutscenes.cutscene_1.dialogue_1;
+        this.slides[1].text = allDialogues.cutscenes.cutscene_1.dialogue_2;
+        this.slides[2].text = allDialogues.cutscenes.cutscene_1.dialogue_3;
+        this.slides[3].text = allDialogues.cutscenes.cutscene_1.dialogue_4;
+
         const style = document.createElement('style');
         style.innerHTML = `
             .phaser-dom-container {

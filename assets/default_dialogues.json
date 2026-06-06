@@ -56,6 +56,44 @@
             "dialogue_Log3_3": "They must breach the nuclear membrane to hijack our master polymerases, using our own machinery to mass-produce their genetic material."
         }
     },
+    "cutscenes": {
+        "cutscene_1": {
+            "dialogue_1": "WARNING: Viral particles detected in the extracellular matrix.\nThey are rapidly approaching the outer cell membrane.",
+            "dialogue_2": "To breach the cell, the virus uses its spike proteins like a key.\nIt searches for specific surface receptors that perfectly match its shape to force its way inside.",
+            "dialogue_3": "Once attached, the virus will inject its genetic material, hijacking the cell.\nWe cannot let that happen.",
+            "dialogue_4": "Your mission is to intercept the viral load.\nControl the defense platform and block the pathogens before they can make contact with the receptors."
+        },
+        "cutscene_2": {
+            "dialogue_1": "inserisci il dialogo nel json",
+            "dialogue_2": "inserisci il dialogo nel json",
+            "dialogue_3": "inserisci il dialogo nel json",
+            "dialogue_4": "inserisci il dialogo nel json"
+        },
+        "cutscene_3": {
+            "dialogue_1": "inserisci il dialogo nel json",
+            "dialogue_2": "inserisci il dialogo nel json",
+            "dialogue_3": "inserisci il dialogo nel json",
+            "dialogue_4": "inserisci il dialogo nel json"
+        },
+        "cutscene_4": {
+            "dialogue_1": "inserisci il dialogo nel json",
+            "dialogue_2": "inserisci il dialogo nel json",
+            "dialogue_3": "inserisci il dialogo nel json",
+            "dialogue_4": "inserisci il dialogo nel json"
+        },
+        "cutscene_5": {
+            "dialogue_1": "inserisci il dialogo nel json",
+            "dialogue_2": "inserisci il dialogo nel json",
+            "dialogue_3": "inserisci il dialogo nel json",
+            "dialogue_4": "inserisci il dialogo nel json"
+        },
+        "cutscene_6": {
+            "dialogue_1": "inserisci il dialogo nel json",
+            "dialogue_2": "inserisci il dialogo nel json",
+            "dialogue_3": "inserisci il dialogo nel json",
+            "dialogue_4": "inserisci il dialogo nel json"
+        }
+    },
     "minigames": {
         "minigame_1": {
             "dialogue_1": "The virus reached the cell!",

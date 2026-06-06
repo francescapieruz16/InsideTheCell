@@ -39,21 +39,47 @@ export default class ABI {
 
     private keepOpen: boolean = false;      
     private offsetY: number = -160;
+    private targetOffsetY: number = -160;
 
     private previousPinchState: boolean = false;    
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         
-        if (!this.scene.scene.get('ABIScene')) {
+        let abiScene = this.scene.scene.get('ABIScene');
+        if (!abiScene) {
+            // Primo avvio assoluto
             this.scene.scene.add('ABIScene', ABIScene, true);
         }
         
         this.uiScene = this.scene.scene.get('ABIScene');
+
+        let needsDelay = false; // Flag di sicurezza
+
+        if (this.scene.scene.isSleeping('ABIScene')) {
+            this.scene.scene.wake('ABIScene');
+        } else if (!this.scene.scene.isActive('ABIScene')) {
+            this.scene.scene.start('ABIScene');
+            needsDelay = true; // Se stiamo appena avviando la scena, aspettiamo un attimo prima di accedere agli oggetti
+        }
         
         this.scene.scene.bringToTop('ABIScene');
 
+        this.uiScene = this.scene; 
+
         this.createDialogueUI();
+
+        this.synth = window.speechSynthesis;
+        this.initVoice();
+
+        if (needsDelay) {
+            // Se la UI si sta avviando, aspettiamo 50ms prima di creare gli elementi
+            this.scene.time.delayedCall(50, () => {
+                this.createDialogueUI();
+            });
+        } else {
+            this.createDialogueUI();
+        }
 
         this.synth = window.speechSynthesis;
         this.initVoice();
@@ -156,7 +182,9 @@ export default class ABI {
 
         this.uiContainer = this.uiScene.add.container(screenW / 2, screenH);
         this.uiContainer.setScrollFactor(0); 
-        this.uiContainer.setDepth(100);
+        this.uiContainer.setDepth(999);
+
+        this.offsetY = (this as any).targetOffsetY !== undefined ? (this as any).targetOffsetY : -160;
 
         const bg = this.uiScene.add.rectangle(0, this.offsetY, 1300, 240, 0x000000, 0.92);
         bg.setStrokeStyle(4, 0x4caf50);
@@ -198,7 +226,8 @@ export default class ABI {
     }
 
     public MoveDialogueY(offsetY: number) {
-        // ... inalterato ...
+        this.targetOffsetY = offsetY; // Salva in memoria la posizione richiesta
+        
         if (!this.uiContainer) return; 
 
         this.offsetY = offsetY;
@@ -214,6 +243,12 @@ export default class ABI {
     }
 
     public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false, keepOpen: boolean = false) {
+        
+        if (!this.uiContainer) {
+            this.scene.time.delayedCall(10, () => this.showDialogue(name, text, onClose, unskippable, keepOpen));
+            return;
+        }
+
         this.interrupt(); 
 
         this.keepOpen = keepOpen;
@@ -363,6 +398,12 @@ export default class ABI {
     }
 
     public showRadioMessage(text: string, durationPerPage: number = 8000) {
+        
+        if (!this.uiContainer) {
+            this.scene.time.delayedCall(10, () => this.showRadioMessage(text, durationPerPage));
+            return;
+        }
+        
         this.interrupt(); 
 
         this.uiContainer.setVisible(true);

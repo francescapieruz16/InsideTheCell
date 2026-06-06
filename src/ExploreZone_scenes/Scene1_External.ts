@@ -120,9 +120,28 @@ export default class Scene1_External extends Phaser.Scene {
             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
         
-        this.isTransitioning = false;
-        this.hasSeenIntro = false;
+       this.isTransitioning = true; 
+        
+        // 2. RECUPERO SALVATAGGI DELLA SCENA
+        const savedStateStr = localStorage.getItem('scene1_state');
+        const savedState = savedStateStr ? JSON.parse(savedStateStr) : {
+            hasSeenIntro: false,
+            spikePartsCollected: 0,
+            hasSpikeModule: false,
+            hasFoundACE2: false,
+            destroyedDebrisIds: []
+        };
+
         this.gameState = 'EXPLORING';
+        this.debrisList = []; 
+        this.canShowDebrisWarning = true;
+        this.canShowReceptorWarning = true;
+
+        // Ripristiniamo i valori salvati dal database
+        this.hasSeenIntro = savedState.hasSeenIntro;
+        this.spikePartsCollected = savedState.spikePartsCollected;
+        this.hasSpikeModule = savedState.hasSpikeModule;
+        this.hasFoundACE2 = savedState.hasFoundACE2;
         
         const WORLD_SIZE = 2000;
         this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
@@ -138,8 +157,6 @@ export default class Scene1_External extends Phaser.Scene {
         );
         
         // Variabili per la raccolta dei moduli
-        this.spikePartsCollected = 0;
-        this.hasSpikeModule = false;
         this.canShowReceptorWarning = true;
 
         // GIOCATORE
@@ -151,23 +168,28 @@ export default class Scene1_External extends Phaser.Scene {
 
         this.abi.MoveDialogueY(0); 
 
+        //this.scene.launch('ABIScene');
+
         const abiScene = this.scene.get('ABIScene');
 
          // --- 1. GENERAZIONE DEI RELITTI VIRALI (6 in totale) ---
         // Array che definisce quali virus hanno il pezzo (true) e quali no (false)
         const debrisData = [
-            { x: 800, y: 1200, key: 'virus_debris_1', hasPart: true },
-            { x: 500, y: 800, key: 'virus_debris_2', hasPart: false },
-            { x: 1500, y: 1500, key: 'virus_debris_3', hasPart: true },
-            { x: 500, y: 100, key: 'virus_debris_1', hasPart: false },
-            { x: 100, y: 1000, key: 'virus_debris_2', hasPart: true },
-            { x: 1700, y: 500, key: 'virus_debris_3', hasPart: false }
+            { id: 0, x: 800, y: 1200, key: 'virus_debris_1', hasPart: true },
+            { id: 1, x: 500, y: 800, key: 'virus_debris_2', hasPart: false },
+            { id: 2, x: 1500, y: 1500, key: 'virus_debris_3', hasPart: true },
+            { id: 3, x: 500, y: 100, key: 'virus_debris_1', hasPart: false },
+            { id: 4, x: 100, y: 1000, key: 'virus_debris_2', hasPart: true },
+            { id: 5, x: 1700, y: 500, key: 'virus_debris_3', hasPart: false }
         ];
 
         debrisData.forEach((data) => {
+            // Controllo se questo detrito è già stato distrutto in una sessione precedente
+            if (savedState.destroyedDebrisIds.includes(data.id)) return;
             
             let debris = this.add.sprite(data.x, data.y, data.key);
-            debris.setScale(0.2)
+            debris.setScale(0.2);
+            debris.setName(data.id.toString()); // Memorizziamo l'ID nel nome dello sprite
             this.physics.add.existing(debris);
 
             this.debrisList.push(debris);
@@ -246,8 +268,14 @@ export default class Scene1_External extends Phaser.Scene {
 
         // --- NUOVO: Riattiva la fisica quando chiudi il diario ---
         // Questo evento scatta automaticamente quando JournalScene chiama this.scene.resume()
+        this.events.on('pause', () => {
+            this.scene.sleep('ABIScene'); // Nasconde istantaneamente il contatore
+        });
+
+        // Quando la scena riprende
         this.events.on('resume', () => {
             this.physics.world.resume();
+            this.scene.wake('ABIScene'); // Fa riapparire il contatore intatto
         });
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -263,22 +291,29 @@ export default class Scene1_External extends Phaser.Scene {
         });
 
         // --- CREAZIONE CONTATORE UI ---
-        // Lo posizioniamo in alto a destra (SCREEN_W - 20 pixel di margine)
-        this.spikeCounterText = abiScene.add.text(this.scale.width - 20, 20, 'Spike Fragments: 0/3', {
+        this.spikeCounterText = abiScene.add.text(this.scale.width/2, 20, 'Spike Fragments: 0/3', {
             fontSize: '24px',
             fontStyle: 'bold',
             color: '#ffeb3b',
             backgroundColor: '#00000088',
             padding: { x: 15, y: 10 }
         })
-        .setOrigin(1, 0) // Ancorato in alto a destra
+        .setOrigin(0.5, 0) // Ancorato in alto a destra
         .setScrollFactor(0) // Incollato alla telecamera
-        .setDepth(100)
+        .setDepth(10)
         .setVisible(false)
+
+        if (this.spikePartsCollected > 0) {
+            this.spikeCounterText.setText(`Spike Fragments: ${this.spikePartsCollected}/3`);
+            this.spikeCounterText.setVisible(true);
+            if (this.hasSpikeModule) {
+                this.spikeCounterText.setColor('#4caf50');
+            }
+        }
 
         this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
             if (this.spikeCounterText) {
-                this.spikeCounterText.setPosition(gameSize.width - 20, 20);
+                this.spikeCounterText.setPosition(gameSize.width/2, 20);
             }
         });
 
@@ -335,7 +370,17 @@ export default class Scene1_External extends Phaser.Scene {
         this.dialogue11 = allDialogues.tutorials.tutorial_1.dialogue_17;
 
         this.events.once('shutdown', () => {
-            wrapper.remove();
+            if (wrapper) wrapper.remove();
+
+            if (this.spikeCounterText) {
+                this.spikeCounterText.destroy();
+            }
+            
+            this.scene.sleep('ABIScene');
+        });
+
+        this.time.delayedCall(150, () => {
+            this.isTransitioning = false;
         });
 
     }
@@ -346,6 +391,7 @@ export default class Scene1_External extends Phaser.Scene {
         //TRIGGER SEQUENZA INTRODUTTIVA
         if (!this.hasSeenIntro && this.isTryingToMove()) {
             this.hasSeenIntro = true;
+            this.saveProgress();
             this.abi.showDialogue(
                 "A.B.I.",
                 this.initialDialogues          
@@ -376,7 +422,7 @@ export default class Scene1_External extends Phaser.Scene {
     private startTransitionToInside() {
         this.isTransitioning = true;
 
-        this.scene.stop('ABIScene');
+        this.scene.sleep('ABIScene');
 
         // Assicuriamoci che il giocatore resti fermo durante il nero
         (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
@@ -439,6 +485,7 @@ export default class Scene1_External extends Phaser.Scene {
         
         if (!this.hasFoundACE2) {
             this.hasFoundACE2 = true; // Sblocca la raccolta dei frammenti!
+            this.saveProgress();
             
             // Fermiamo il player per fargli leggere il dialogo
             (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
@@ -547,6 +594,8 @@ export default class Scene1_External extends Phaser.Scene {
                 this.dialogue10
             );
         }
+
+        this.saveProgress();
     }
 
     // LOGICA RECETTORI FINTI
@@ -565,6 +614,24 @@ export default class Scene1_External extends Phaser.Scene {
                 this.canShowReceptorWarning = true;
             });
         }
+    }
+
+    private saveProgress() {
+        // Calcola quali virus sono ancora attivi leggendo i loro Nomi/ID
+        const activeIds = this.debrisList.filter(d => d.active).map(d => parseInt(d.name));
+        const allIds = [0, 1, 2, 3, 4, 5];
+        
+        // La differenza tra tutti gli ID e quelli attivi ci dà i virus distrutti
+        const destroyedDebrisIds = allIds.filter(id => !activeIds.includes(id));
+
+        const state = {
+            hasSeenIntro: this.hasSeenIntro,
+            spikePartsCollected: this.spikePartsCollected,
+            hasSpikeModule: this.hasSpikeModule,
+            hasFoundACE2: this.hasFoundACE2,
+            destroyedDebrisIds: destroyedDebrisIds
+        };
+        localStorage.setItem('scene1_state', JSON.stringify(state));
     }
 
     

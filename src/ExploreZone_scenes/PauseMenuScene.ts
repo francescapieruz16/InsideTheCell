@@ -141,7 +141,7 @@ export default class PauseMenuScene extends Phaser.Scene {
             this.sound.stopAll();
             this.scene.stop(this.parentSceneKey);
             this.scene.stop('ControlsScene');
-            this.scene.stop('ABIScene');
+            this.scene.sleep('ABIScene');
             this.scene.stop();
             this.scene.start('MenuPageScene');
         });

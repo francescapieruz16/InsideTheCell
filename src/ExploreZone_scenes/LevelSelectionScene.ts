@@ -103,8 +103,9 @@ export default class LevelSelectScene extends Phaser.Scene {
                             // WARM-UP SINTESI VOCALE
                             const warmupUtterance = new SpeechSynthesisUtterance(' ');
                             warmupUtterance.volume = 0; 
+                            warmupUtterance.rate = 1.0;  // Previene crash in contentScript.js
+                            warmupUtterance.pitch = 1.0; // Previene crash in contentScript.js
                             window.speechSynthesis.speak(warmupUtterance);
-
                             if (this.parentSceneKey) {
                                 this.scene.stop(this.parentSceneKey);
                             }

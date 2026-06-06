@@ -379,10 +379,29 @@ export default class SettingsScene extends Phaser.Scene {
             () => yesBtn.setStyle({ backgroundColor: '#ff0000', color: '#ffffff' }).setScale(1.1),
             () => yesBtn.setStyle({ backgroundColor: '#ff5555', color: '#000000' }).setScale(1),
             () => {
+                // 1. Cancella TUTTI i salvataggi in un colpo solo
                 localStorage.removeItem('maxUnlockedLevel');
+                localStorage.removeItem('scene1_state');
+                localStorage.removeItem('scene2_state');
+                localStorage.removeItem('scene3_state');
+                localStorage.removeItem('journalUnlocks');
+                
                 this.warningPopup.setVisible(false);
                 msg.setText('Progress erased.');
-                setTimeout(() => msg.setText('This will permanently delete all\nyour unlocked levels. Are you sure?'), 2000);
+                
+                // 2. Dopo 1.5 secondi, riporta il giocatore al Menu Principale per ripulire la RAM
+                this.time.delayedCall(1500, () => {
+                    this.sound.stopAll();
+                    
+                    // Spegne fisicamente il livello che era rimasto in pausa
+                    if (this.parentSceneKey) {
+                        this.scene.stop(this.parentSceneKey); 
+                    }
+                    
+                    this.scene.stop('PauseMenuScene'); // Chiude la Pausa
+                    this.scene.sleep('ABIScene');      // Addormenta A.B.I.
+                    this.scene.start('MenuPageScene'); // Carica il Menu Principale
+                });
             }
         );
 

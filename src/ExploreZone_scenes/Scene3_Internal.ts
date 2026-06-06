@@ -13,6 +13,7 @@ export default class Scene3_Internal extends Phaser.Scene {
     private isTransitioning: boolean = false;
 
     private startingTexture: string = 'nav_front';
+    private hasSeenIntro: boolean = false;
 
     private abi!: ABI;
 
@@ -128,6 +129,13 @@ export default class Scene3_Internal extends Phaser.Scene {
             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
 
+        // --- RECUPERO SALVATAGGIO SCENA 3 ---
+        const savedStateStr = localStorage.getItem('scene3_state');
+        const savedState = savedStateStr ? JSON.parse(savedStateStr) : {
+            hasSeenIntro: false
+        };
+        this.hasSeenIntro = savedState.hasSeenIntro;
+
         const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
                 let allDialogues = null;    
                 if (savedDialogues) {
@@ -142,6 +150,17 @@ export default class Scene3_Internal extends Phaser.Scene {
                 }
         
         this.dialogue1 = allDialogues.tutorials.tutorial_3.dialogue_1;
+
+        //Svuotiamo e riempiamo gli array dei dialoghi specifici per questa scena, in modo da poterli usare facilmente negli eventi di collisione/overlap
+        this.dialogue2 = [];
+        this.dialogue3 = [];
+        this.dialogue4 = [];
+        this.dialogue5 = [];
+        this.dialogue6 = [];
+        this.dialogue7 = [];
+        this.dialogueLog1 = [];
+        this.dialogueLog2 = [];
+        this.dialogueLog3 = [];
 
         this.dialogue2.push(allDialogues.tutorials.tutorial_3.dialogue_2_1);
         this.dialogue2.push(allDialogues.tutorials.tutorial_3.dialogue_2_2);
@@ -550,12 +569,6 @@ export default class Scene3_Internal extends Phaser.Scene {
         });
             
 
-        // Messaggio di benvenuto da A.B.I.
-        this.abi.showDialogue(
-            "A.B.I.",
-            this.dialogue1,
-        );
-
         // DEBUG: Clicca col mouse per ottenere le coordinate esatte
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             // pointer.worldX e worldY tengono conto dello scorrimento della telecamera
@@ -589,6 +602,19 @@ export default class Scene3_Internal extends Phaser.Scene {
     }
 
     update() {
+
+        if (this.isTransitioning) return;
+
+        // --- FIX: TRIGGER DIALOGO INIZIALE AL PRIMO MOVIMENTO ---
+        if (!this.hasSeenIntro && this.isTryingToMove()) {
+            this.hasSeenIntro = true;
+            this.saveProgress();
+            
+            // FONDAMENTALE: Passiamo dialogue1 senza parentesi quadre
+            this.abi.showDialogue("A.B.I.", this.dialogue1);
+            return;
+        }
+
         // Se ABI sta parlando, blocchiamo il gioco e aspettiamo l'input
         if (this.abi.isTalking) {
             (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
@@ -761,5 +787,21 @@ export default class Scene3_Internal extends Phaser.Scene {
                 this.abi.showDialogue("A.B.I.", this.dialogueLog3);
             }
         }
+    }
+
+    private isTryingToMove(): boolean {
+        if (!this.player || !this.player.body) {
+            return false;
+        }
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        return body.velocity.x !== 0 || body.velocity.y !== 0;
+    }
+
+    // Salva i progressi della Scena 3
+    private saveProgress() {
+        const state = {
+            hasSeenIntro: this.hasSeenIntro
+        };
+        localStorage.setItem('scene3_state', JSON.stringify(state));
     }
 }

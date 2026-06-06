@@ -24,6 +24,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
     private background_scene!: Phaser.GameObjects.TileSprite;
 
     private isTransitioning: boolean = false;
+    private hasSeenIntro: boolean = false;
 
     private dialogue2: any = [];
     private dialogue3: any = [];
@@ -128,6 +129,9 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
         this.dialogue1 = allDialogues.tutorials.tutorial_2.dialogue_1;
 
+        this.dialogue2 = [];
+        this.dialogue3 = [];
+
         this.dialogue2.push(allDialogues.tutorials.tutorial_2.dialogue_2_1);
         this.dialogue2.push(allDialogues.tutorials.tutorial_2.dialogue_2_2);
         this.dialogue2.push(allDialogues.tutorials.tutorial_2.dialogue_2_3);
@@ -138,7 +142,12 @@ export default class Scene2_Membrane extends Phaser.Scene {
         this.dialogue4 = allDialogues.tutorials.tutorial_2.dialogue_4;
     
 
-        this.isTransitioning = false;
+        this.isTransitioning = true;
+        const savedStateStr = localStorage.getItem('scene2_state');
+        const savedState = savedStateStr ? JSON.parse(savedStateStr) : {
+            hasSeenIntro: false
+        };
+        this.hasSeenIntro = savedState.hasSeenIntro;
 
         // 0 = Vuoto, 1 = Muro (Actina), 2 = Spawn, 3 = Uscita (Poro Nucleare), 4= relitto, 5= iceberg lipidico, 6=messaggio1, 7=messaggio2
         const mazeGrid = [
@@ -338,11 +347,6 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
         const abiScene = this.scene.get('ABIScene');
 
-        this.abi.showDialogue(
-            "A.B.I.",
-            this.dialogue1,
-        );
-
         // L'Overlap fa scattare l'evento appena la navicella tocca lo sprite dell'oggetto
         this.physics.add.overlap(this.player, this.loreItemsGroup, (player, item) => {
             const loreItem = item as Phaser.Physics.Arcade.Sprite;
@@ -363,14 +367,14 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
                 // 3. Mostra il dialogo corrispondente
                 if (loreItem.getData('itemName') === 'ViralWreck') {
-                    this.abi.showDialogue("A.B.I.", [
+                    this.abi.showDialogue("A.B.I.", 
                         this.dialogue2
-                    ]);
+                    );
                 } 
                 else if (loreItem.getData('itemName') === 'CholesterolIceberg') {
-                    this.abi.showDialogue("A.B.I.", [
+                    this.abi.showDialogue("A.B.I.", 
                         this.dialogue3
-                    ]);
+                    );
                 }
             }
         });
@@ -384,12 +388,32 @@ export default class Scene2_Membrane extends Phaser.Scene {
         });
 
         this.events.once('shutdown', () => {
-            wrapper.remove();
+            if (wrapper) wrapper.remove();
+            
+            // 3. Usa SLEEP al posto di distruggere l'interfaccia quando esci dalla scena
+            this.scene.sleep('ABIScene');
+        });
+
+        // 4. TIMER DI SBLOCCO: Dà ad A.B.I. il tempo di svegliarsi, poi permette il movimento
+        this.time.delayedCall(150, () => {
+            this.isTransitioning = false;
         });
 
     }
 
     update() {
+
+        if (this.isTransitioning) return;
+
+        if (!this.hasSeenIntro && this.isTryingToMove()) {
+            this.hasSeenIntro = true;
+            this.saveProgress();
+            
+            // FONDAMENTALE: Nessuna parentesi quadra per evitare il crash del testo!
+            this.abi.showDialogue("A.B.I.", this.dialogue1);
+            return;
+        }
+
         // Se ABI sta parlando, blocchiamo il gioco e aspettiamo l'input
         if (this.abi.isTalking) {
             (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
@@ -414,7 +438,6 @@ export default class Scene2_Membrane extends Phaser.Scene {
         }
 
         JournalScene.unlockItem(this, 'exit_portal', this.levelDiscoverables);
-        this.isTransitioning = true;
 
         const currentProgress = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
         if (currentProgress < 3) {
@@ -429,12 +452,29 @@ export default class Scene2_Membrane extends Phaser.Scene {
             "A.B.I.",
             this.dialogue4,
             () => { // Questa è la funzione di callback che viene eseguita alla fine del dialogo
-                this.scene.stop('ABIScene');
+
+                this.isTransitioning = true;
+                this.scene.sleep('ABIScene');
                 this.cameras.main.fadeOut(800, 0, 0, 0);
                 this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
                     this.scene.start('Scene3_Internal', { incomingTexture: this.player.texture.key });
                 });
             }
         );
+    }
+
+    private saveProgress() {
+        const state = {
+            hasSeenIntro: this.hasSeenIntro
+        };
+        localStorage.setItem('scene2_state', JSON.stringify(state));
+    }
+
+    private isTryingToMove(): boolean {
+        if (!this.player || !this.player.body) {
+            return false;
+        }
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        return body.velocity.x !== 0 || body.velocity.y !== 0;
     }
 }

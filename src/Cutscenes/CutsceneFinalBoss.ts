@@ -1,12 +1,299 @@
 import Phaser from 'phaser';
+import { HandTrackingController } from '../handTracking/handTrackingController';
+import ABI from '../classes/abi';
+import defaultDialogues from '../../assets/default_dialogues.json';
 
-export default class Cutscene2 extends Phaser.Scene {
+export default class CutsceneFinalBoss extends Phaser.Scene {
+    private bgHTML!: HTMLImageElement;
+    private abi!: ABI;
+    private fadeOverlay!: Phaser.GameObjects.Rectangle;
+
+    private currentDialogueIndex: number = 0;
+    private isTransitioning: boolean = false;
+    private previousPinchState: boolean = false;
+
+    private dialogues = [
+        {
+            speaker: 'ABI',
+            text: 'Stop...'
+        },
+        {
+            speaker: 'ABI',
+            text: 'I know this signal.'
+        },
+        {
+            speaker: 'ABI',
+            text: 'The infection is coming from him.'
+        },
+        {
+            speaker: 'KING VIRUS',
+            text: 'Welcome, little human.'
+        },
+        {
+            speaker: 'KING VIRUS',
+            text: 'You have cleaned my cells... answered my questions... and defeated my servants.'
+        },
+        {
+            speaker: 'KING VIRUS',
+            text: 'But I am the source.'
+        },
+        {
+            speaker: 'ABI',
+            text: "Don't be afraid. Every answer brought you closer to the cure."
+        },
+        {
+            speaker: 'KING VIRUS',
+            text: 'Cure? I am not something you cure. I am something you survive.'
+        },
+        {
+            speaker: 'ABI',
+            text: 'This is it. The final battle begins now.'
+        },
+        {
+            speaker: 'KING VIRUS',
+            text: 'Then come closer... and face the king of infection!'
+        }
+    ];
 
     constructor() {
         super('CutsceneFinalBoss');
     }
 
+    preload() {
+        this.load.image(
+            'ABI_standard',
+            '/assets/tutorial/ABI/ABI_standard.png'
+        );
+    }
+
     create() {
-        this.scene.start('FinalBoss');
+        this.currentDialogueIndex = 0;
+        this.isTransitioning = false;
+        this.previousPinchState = false;
+
+        this.loadDialogues();
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .phaser-dom-container {
+                overflow: visible !important;
+            }
+
+            button {
+                pointer-events: auto !important;
+                padding: 12px 24px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                cursor: pointer;
+                border: 2px solid #333;
+                border-radius: 8px;
+                background-color: rgba(255, 255, 255, 0.8);
+                transition: background-color 0.2s, transform 0.1s;
+            }
+
+            button:hover {
+                background-color: rgba(255, 255, 255, 1);
+                transform: scale(1.05);
+            }
+        `;
+        document.head.appendChild(style);
+
+        const pauseBtn = document.createElement('button');
+        pauseBtn.className = 'Back';
+        pauseBtn.innerText = 'PAUSE';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'phaser-dom-container';
+        wrapper.appendChild(pauseBtn);
+
+        const pauseBtnDom = this.add.dom(
+            this.scale.gameSize.width - 80,
+            40,
+            wrapper
+        );
+
+        pauseBtn.addEventListener('click', () => {
+            this.scene.pause();
+            this.scene.launch('PauseMenuScene', {
+                parentScene: this.scene.key
+            });
+        });
+
+        const { width, height } = this.scale.gameSize;
+
+        this.bgHTML = document.getElementById('background') as HTMLImageElement;
+
+        if (this.bgHTML) {
+            this.bgHTML.src = '/assets/Cutscenes/CutsceneFinalBoss.png';
+            this.bgHTML.style.objectFit = 'fill';
+        }
+
+        this.fadeOverlay = this.add
+            .rectangle(0, 0, width, height, 0x000000, 1)
+            .setOrigin(0);
+
+        this.fadeOverlay.setDepth(0);
+
+        this.abi = new ABI(this);
+        this.abi.MoveDialogueY(0);
+
+        this.input.on('pointerdown', this.handleContinueInput, this);
+
+        this.input.keyboard!.on(
+            'keydown-SPACE',
+            this.handleContinueInput,
+            this
+        );
+
+        this.tweens.add({
+            targets: this.fadeOverlay,
+            alpha: 0,
+            duration: 700,
+            onComplete: () => {
+                this.showCurrentDialogue();
+            }
+        });
+
+        const onResize = (gameSize: Phaser.Structs.Size) => {
+            if (!this.scene.isActive() && !this.scene.isPaused()) return;
+
+            const newW = gameSize.width;
+            const newH = gameSize.height;
+
+            this.cameras.main.setSize(newW, newH);
+            pauseBtnDom.setPosition(newW - 80, 40);
+
+            if (this.fadeOverlay) {
+                this.fadeOverlay.setSize(newW, newH);
+            }
+        };
+
+        this.scale.on('resize', onResize);
+        onResize(this.scale.gameSize);
+
+        this.events.once('shutdown', () => {
+            this.scale.off('resize', onResize);
+            this.input.off('pointerdown', this.handleContinueInput, this);
+            this.input.keyboard!.off(
+                'keydown-SPACE',
+                this.handleContinueInput,
+                this
+            );
+            this.tweens.killAll();
+        });
+    }
+
+    update() {
+        const inputMode =
+            this.registry.get('inputMode') ||
+            localStorage.getItem('inputMode');
+
+        if (inputMode !== 'hand') return;
+
+        const tracker = HandTrackingController.getInstance();
+        const currentPinch = tracker.isClicked;
+
+        if (currentPinch && !this.previousPinchState) {
+            this.handleContinueInput();
+        }
+
+        this.previousPinchState = currentPinch;
+    }
+
+    private loadDialogues() {
+        const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+        let allDialogues: any = null;
+
+        if (savedDialogues) {
+            try {
+                allDialogues = JSON.parse(savedDialogues);
+            } catch (e) {
+                console.warn('Error reading saved dialogues. Using defaults.', e);
+                allDialogues = defaultDialogues;
+            }
+        } else {
+            allDialogues = defaultDialogues;
+        }
+
+        const finalBossDialogues =
+            allDialogues?.cutscenes?.cutscene_final_boss;
+
+        if (!finalBossDialogues) {
+            return;
+        }
+
+        this.dialogues[0].text =
+            finalBossDialogues.dialogue_1 || this.dialogues[0].text;
+        this.dialogues[1].text =
+            finalBossDialogues.dialogue_2 || this.dialogues[1].text;
+        this.dialogues[2].text =
+            finalBossDialogues.dialogue_3 || this.dialogues[2].text;
+        this.dialogues[3].text =
+            finalBossDialogues.dialogue_4 || this.dialogues[3].text;
+        this.dialogues[4].text =
+            finalBossDialogues.dialogue_5 || this.dialogues[4].text;
+        this.dialogues[5].text =
+            finalBossDialogues.dialogue_6 || this.dialogues[5].text;
+        this.dialogues[6].text =
+            finalBossDialogues.dialogue_7 || this.dialogues[6].text;
+        this.dialogues[7].text =
+            finalBossDialogues.dialogue_8 || this.dialogues[7].text;
+        this.dialogues[8].text =
+            finalBossDialogues.dialogue_9 || this.dialogues[8].text;
+        this.dialogues[9].text =
+            finalBossDialogues.dialogue_10 || this.dialogues[9].text;
+    }
+
+    private showCurrentDialogue() {
+        if (this.currentDialogueIndex >= this.dialogues.length) {
+            this.finishCutscene();
+            return;
+        }
+
+        const currentDialogue = this.dialogues[this.currentDialogueIndex];
+
+        this.isTransitioning = false;
+
+        if (currentDialogue.speaker === 'KING VIRUS') {
+            this.cameras.main.shake(250, 0.005);
+        }
+
+        this.abi.showDialogue(
+            currentDialogue.speaker,
+            currentDialogue.text,
+            () => {
+                this.currentDialogueIndex++;
+                this.showCurrentDialogue();
+            }
+        );
+    }
+
+    private handleContinueInput() {
+        if (this.isTransitioning) return;
+
+        if (this.abi && this.abi.isTalking) {
+            this.abi.nextDialoguePage();
+        }
+    }
+
+    private finishCutscene() {
+        if (this.isTransitioning) return;
+
+        this.isTransitioning = true;
+
+        this.abi.hideDialogue();
+
+        this.cameras.main.shake(700, 0.01);
+
+        this.time.delayedCall(700, () => {
+            this.tweens.add({
+                targets: this.fadeOverlay,
+                alpha: 1,
+                duration: 1000,
+                onComplete: () => {
+                    this.scene.start('FinalBossScene');
+                }
+            });
+        });
     }
 }

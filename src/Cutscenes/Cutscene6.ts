@@ -187,19 +187,19 @@ export default class Cutscene6 extends Phaser.Scene {
 
             if (this.controlsIcon) {
                 this.controlsIcon.setPosition(
-                    newW / 2 - 180 * uiScale,
+                    newW / 2 - 210 * uiScale,
                     newH / 2
                 );
 
                 this.controlsIcon.setDisplaySize(
-                    120 * uiScale,
-                    80 * uiScale
+                    100 * uiScale,
+                    100 * uiScale
                 );
             }
 
             if (this.controlsText) {
                 this.controlsText.setPosition(
-                    newW / 2 - 80 * uiScale,
+                    newW / 2 - 90 * uiScale,
                     newH / 2
                 );
 
@@ -347,15 +347,15 @@ export default class Cutscene6 extends Phaser.Scene {
 
         this.controlsIcon = this.add
             .image(
-                width / 2 - 180 * uiScale,
+                width / 2 - 210 * uiScale,
                 height / 2,
                 'icon_arrows'
             )
             .setDepth(10);
 
         this.controlsIcon.setDisplaySize(
-            120 * uiScale,
-            80 * uiScale
+            100 * uiScale,
+            100 * uiScale
         );
 
         const inputMode =
@@ -364,12 +364,12 @@ export default class Cutscene6 extends Phaser.Scene {
 
         const commands =
             inputMode === 'hand'
-                ? 'Move YOUR HAND LEFT/RIGHT'
-                : 'Press LEFT/RIGHT ARROW KEY';
+                ? 'Move YOUR HAND\nLEFT / RIGHT / UP / DOWN'
+                : 'Press ARROW KEYS\nLEFT / RIGHT / UP / DOWN';
 
         this.controlsText = this.add
             .text(
-                width / 2 - 80 * uiScale,
+                width / 2 - 90 * uiScale,
                 height / 2,
                 commands + '\nto intercept viral particles',
                 {

@@ -3,13 +3,10 @@ import { PostGameManager } from './postGame/postGameManager';
 import { HandTrackingController } from '../src/handTracking/handTrackingController';
 
 export class Level3 extends Phaser.Scene {
-    private bg!: Phaser.GameObjects.TileSprite;
     private player!: Phaser.Physics.Arcade.Sprite;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private platforms!: Phaser.Physics.Arcade.Group;
     private spikes!: Phaser.Physics.Arcade.Group;
-
-    private backgroundImage!: Phaser.GameObjects.Image;
 
     private finishFlag!: Phaser.Physics.Arcade.Image;
     private levelCompleted = false;
@@ -22,7 +19,6 @@ export class Level3 extends Phaser.Scene {
 
     private moveSpeed = 220;
     private jumpSpeed = 420;
-    private backgroundScrollSpeed = 1;
 
     private floorY = 0;
     private worldScroll = 0;
@@ -84,11 +80,10 @@ export class Level3 extends Phaser.Scene {
 
     create() {
         this.game.canvas.style.pointerEvents = 'none';
-                
-        const bgHTML = document.getElementById('background');
+
+        const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
-            bgHTML.removeAttribute('src'); 
-            bgHTML.style.backgroundImage = `url('/assets/level3/background_level_3.png')`;
+            bgHTML.src = '/assets/level3/background_level_3.png';
             bgHTML.style.backgroundSize = 'auto 100%'; 
             bgHTML.style.backgroundRepeat = 'repeat-x'; 
             bgHTML.style.backgroundPosition = '0px 0px'; 
@@ -122,6 +117,7 @@ export class Level3 extends Phaser.Scene {
         backBtn.className = 'Back';
         backBtn.innerText = 'PAUSE';
         backBtn.style.pointerEvents = 'auto';
+
         const wrapper = document.createElement('div');
         wrapper.style.position = 'absolute';
         wrapper.style.top = '20px';
@@ -130,12 +126,15 @@ export class Level3 extends Phaser.Scene {
         wrapper.style.zIndex = '1000';
         wrapper.style.pointerEvents = 'none';
         wrapper.appendChild(backBtn);
+
         const gameContainer = document.getElementById('app') || document.body;
         gameContainer.appendChild(wrapper);
 
         backBtn.addEventListener('click', () => {
             this.scene.pause();
-            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+            this.scene.launch('PauseMenuScene', {
+                parentScene: this.scene.key
+            });
         });
 
         const worldWidth = 10000;
@@ -144,7 +143,6 @@ export class Level3 extends Phaser.Scene {
         this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
         const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
 
         this.moveSpeed = 320;
         this.jumpSpeed = 500;
@@ -153,6 +151,7 @@ export class Level3 extends Phaser.Scene {
 
         this.floorY = worldHeight - 80;
         this.startY = this.floorY - 120;
+
         const platformBaseY = this.floorY - 100;
 
         this.player = this.physics.add.sprite(
@@ -258,9 +257,6 @@ export class Level3 extends Phaser.Scene {
         this.genomeText.setOrigin(0.5);
         this.genomeText.setDepth(100);
 
-        /**
-         * PIATTAFORME
-         */
         this.addPlatform(300, platformBaseY + 80, 'small_platform', 0.18, 0.80, 0.45, 0.10, 0.32);
         this.addPlatform(600, platformBaseY, 'small_platform', 0.18, 0.80, 0.45, 0.10, 0.32);
         this.addPlatform(1200, platformBaseY - 80, 'long_platform', 0.45, 0.93, 0.30, 0.03, 0.42);
@@ -277,9 +273,6 @@ export class Level3 extends Phaser.Scene {
         this.addPlatform(6500, platformBaseY + 270, 'tall_platform2', 0.43, 0.58, 0.95, 0.21, 0.10);
         this.addPlatform(7000, platformBaseY + 80, 'small_platform', 0.20, 0.80, 0.45, 0.10, 0.32);
 
-        /**
-         * SPIKES
-         */
         this.addSpikes(790, this.floorY + 20, 0.12);
         this.addSpikes(1558, this.floorY + 20, 0.12);
         this.addSpikes(1930, this.floorY + 20, 0.12);
@@ -297,11 +290,8 @@ export class Level3 extends Phaser.Scene {
 
         this.addSpikes(1200, platformBaseY - 124, 0.09);
         this.addSpikes(2700, platformBaseY - 204, 0.09);
-        this.addSpikes(6000, platformBaseY -163, 0.09);
+        this.addSpikes(6000, platformBaseY - 163, 0.09);
 
-        /**
-         * PIATTAFORMA FINALE + BANDIERINA
-         */
         const finalPlatform = this.addPlatform(
             7700,
             platformBaseY,
@@ -323,7 +313,6 @@ export class Level3 extends Phaser.Scene {
         this.finishFlag.setScale(0.12);
         this.finishFlag.setDepth(30);
 
-        // Salva la posizione iniziale della bandierina
         this.finishFlag.setData('startX', this.finishFlag.x);
 
         const flagBody = this.finishFlag.body as Phaser.Physics.Arcade.Body;
@@ -360,14 +349,13 @@ export class Level3 extends Phaser.Scene {
         );
 
         this.physics.add.collider(this.player, this.platforms);
-        
+
         this.cameraTarget = this.add.zone(this.player.x, this.floorY - 420, 1, 1);
         this.cameras.main.startFollow(this.cameraTarget, true, 0.1, 0.1);
 
         this.cameras.main.setZoom(this.scale.height / worldHeight);
 
         this.postGameManager = new PostGameManager(this);
-
         this.postGameManager.preparePostGame(3);
 
         const onResize = (gameSize: Phaser.Structs.Size) => {
@@ -407,9 +395,7 @@ export class Level3 extends Phaser.Scene {
         platform.setDepth(5);
         platform.setImmovable(true);
 
-        // Salva la posizione iniziale della piattaforma
         platform.setData('startX', x);
-
         platform.setData('bodyWidthPercent', bodyWidthPercent);
         platform.setData('bodyHeightPercent', bodyHeightPercent);
         platform.setData('bodyOffsetXPercent', bodyOffsetXPercent);
@@ -437,7 +423,6 @@ export class Level3 extends Phaser.Scene {
         spike.setDepth(25);
         spike.setImmovable(true);
 
-        // Salva la posizione iniziale dello spike
         spike.setData('startX', x);
 
         const body = spike.body as Phaser.Physics.Arcade.Body;
@@ -564,7 +549,6 @@ export class Level3 extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         body.stop();
 
-        // Disabilita il body del player per evitare overlap continui con gli spikes
         body.enable = false;
 
         this.time.delayedCall(100, () => {
@@ -573,16 +557,14 @@ export class Level3 extends Phaser.Scene {
     }
 
     private respawnPlayer() {
-        // Riporta semplicemente il player allo spawn
         this.player.setPosition(this.startX, this.startY);
         this.player.setVelocity(0, 0);
         this.player.setFlipX(false);
-        
-        // Riattiva la fisica
+
         const body = this.player.body as Phaser.Physics.Arcade.Body;
         body.enable = true;
         body.reset(this.startX, this.startY);
-        
+
         this.gameOver = false;
     }
 
@@ -603,17 +585,12 @@ export class Level3 extends Phaser.Scene {
     update(_time: number, delta: number) {
         const view = this.cameras.main.worldView;
 
-        const bgHTML = document.getElementById('background');
-        if (bgHTML) {
-            const scrollX = this.cameras.main.scrollX * 0.1;
-            bgHTML.style.backgroundPositionX = `-${scrollX}px`;
-        }
-
         this.virus.setPosition(view.centerX, view.y + 170);
         this.genomeText.setPosition(view.centerX, view.y + 330);
-        
+
         if (this.genome) {
             this.genome.setX(view.centerX);
+
             if (!this.gameOver) {
                 this.genome.setY(view.y + 400);
             }
@@ -631,12 +608,14 @@ export class Level3 extends Phaser.Scene {
         this.updateVirusTimer(delta);
 
         const inputMode = this.registry.get('inputMode');
+
         let leftInput = this.cursors.left?.isDown || false;
         let rightInput = this.cursors.right?.isDown || false;
         let jumpInput = this.cursors.up?.isDown || this.cursors.space?.isDown || false;
 
         if (inputMode === 'hand') {
             const tracker = HandTrackingController.getInstance();
+
             if (tracker.targetX !== -1) {
                 if (tracker.targetX < 0.4) {
                     leftInput = true;
@@ -656,22 +635,19 @@ export class Level3 extends Phaser.Scene {
             this.player.setVelocityX(-this.moveSpeed);
             this.player.setFlipX(true);
             this.player.anims.play('run', true);
-        } 
-        else if (rightInput) {
+        } else if (rightInput) {
             this.player.setVelocityX(this.moveSpeed);
             this.player.setFlipX(false);
             this.player.anims.play('run', true);
-        } 
-        else {
+        } else {
             this.player.setVelocityX(0);
             this.player.anims.play('idle', true);
         }
 
         if (jumpInput && playerBody.blocked.down) {
             this.player.setVelocityY(-this.jumpSpeed);
-        } 
+        }
 
-        // Animazione Salto in aria
         if (!playerBody.blocked.down) {
             this.player.anims.play('jump', true);
         }

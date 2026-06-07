@@ -37,7 +37,6 @@ export class Level2 extends Phaser.Scene {
 
     private spawnEvent!: Phaser.Time.TimerEvent;
     private postGameManager!: PostGameManager;
-    
 
     private virusKeys = [
         'virus_circle',
@@ -92,7 +91,7 @@ export class Level2 extends Phaser.Scene {
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
             bgHTML.src = '/assets/level2/background_level_2.png';
-            bgHTML.style.objectFit = 'fill'; 
+            bgHTML.style.objectFit = 'fill';
         }
 
         const style = document.createElement('style');
@@ -123,15 +122,22 @@ export class Level2 extends Phaser.Scene {
         const backBtn = document.createElement('button');
         backBtn.className = 'Back';
         backBtn.innerText = 'PAUSE';
+
         const wrapper = document.createElement('div');
         wrapper.className = 'phaser-dom-container';
         wrapper.appendChild(backBtn);
-        const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
 
+        const backBtnDom = this.add.dom(
+            this.scale.gameSize.width - 80,
+            40,
+            wrapper
+        );
 
         backBtn.addEventListener('click', () => {
             this.scene.pause();
-            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+            this.scene.launch('PauseMenuScene', {
+                parentScene: this.scene.key
+            });
         });
 
         this.viruses = this.add.group();
@@ -155,17 +161,9 @@ export class Level2 extends Phaser.Scene {
             callback: () => this.spawnVirus()
         });
 
-        this.time.addEvent({
-            delay: spawnDelay,
-            loop: true,
-            callback: () => this.spawnVirus()
-        });
-
         this.postGameManager = new PostGameManager(this);
-        
-        this.postGameManager.preparePostGame(
-            2
-        );
+
+        this.postGameManager.preparePostGame(2);
 
         let previousWidth = width;
         let previousHeight = height;
@@ -180,8 +178,13 @@ export class Level2 extends Phaser.Scene {
             backBtnDom.setPosition(newW - 80, 40);
 
             if (this.scorePanel) {
-                const diffX = newW - previousWidth;
-                this.scorePanel.x += diffX;
+                this.scorePanel.destroy();
+                this.createScoreUI();
+
+                this.scoreText.setText(this.score.toString());
+                this.escapedText.setText(
+                    `BREACHES: ${this.escapedViruses} / ${this.maxEscapedViruses}`
+                );
             }
 
             this.createPaths(newW, newH);
@@ -222,15 +225,17 @@ export class Level2 extends Phaser.Scene {
                 const screenX = tracker.targetX * this.cameras.main.width;
                 const screenY = tracker.targetY * this.cameras.main.height;
 
-                const distToBackBtn = Phaser.Math.Distance.Between(screenX, screenY, 80, 40);
+                const distToBackBtn = Phaser.Math.Distance.Between(
+                    screenX,
+                    screenY,
+                    80,
+                    40
+                );
 
-                // cursor near back button -> show hand cursor
                 if (distToBackBtn < 150) {
                     this.registry.set('hideGlobalCursor', false);
-                    this.crosshair.setVisible(false);  
-                //curson in game -> show crosshair   
+                    this.crosshair.setVisible(false);
                 } else {
-                    
                     this.registry.set('hideGlobalCursor', true);
                     this.crosshair.setVisible(true);
                     this.crosshair.setPosition(screenX, screenY);
@@ -245,26 +250,30 @@ export class Level2 extends Phaser.Scene {
 
     private createScoreUI() {
         const width = this.cameras.main.width;
+        const centerX = width / 2;
 
-        const panelBg = this.add.rectangle(width - 190, 55, 330, 72, 0x081426, 0.82)
+        const panelBg = this.add
+            .rectangle(centerX, 55, 330, 72, 0x081426, 0.82)
             .setStrokeStyle(3, 0x00f5ff);
 
-        const title = this.add.text(width - 330, 30, 'ENTRY BLOCKED', {
+        const title = this.add.text(centerX - 140, 30, 'ENTRY BLOCKED', {
             fontFamily: this.MENU_FONT,
             fontSize: '18px',
             fontStyle: 'bold',
             color: '#8ffcff'
         });
 
-        this.scoreText = this.add.text(width - 80, 54, '0', {
-            fontFamily: this.MENU_FONT,
-            fontSize: '34px',
-            fontStyle: 'bold',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        this.scoreText = this.add
+            .text(centerX + 110, 54, '0', {
+                fontFamily: this.MENU_FONT,
+                fontSize: '34px',
+                fontStyle: 'bold',
+                color: '#ffffff'
+            })
+            .setOrigin(0.5);
 
         this.escapedText = this.add.text(
-            width - 330,
+            centerX - 140,
             66,
             `BREACHES: 0 / ${this.maxEscapedViruses}`,
             {
@@ -281,6 +290,7 @@ export class Level2 extends Phaser.Scene {
             this.scoreText,
             this.escapedText
         ]);
+
         this.scorePanel.setDepth(300);
     }
 
@@ -294,12 +304,14 @@ export class Level2 extends Phaser.Scene {
         this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
             if (this.isGameOver || this.isWin || this.isChatActive) return;
             if (this.registry.get('inputMode') === 'hand') return;
+
             this.crosshair.setPosition(pointer.x, pointer.y);
         });
 
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             if (this.isGameOver || this.isWin || this.isChatActive) return;
             if (this.registry.get('inputMode') === 'hand') return;
+
             this.crosshair.setPosition(pointer.x, pointer.y);
             this.shootVirus(pointer.x, pointer.y);
         });
@@ -311,7 +323,7 @@ export class Level2 extends Phaser.Scene {
         for (const virus of virusList) {
             const distance = Phaser.Math.Distance.Between(x, y, virus.x, virus.y);
 
-            if (distance < 35 ) {
+            if (distance < 35) {
                 this.createExplosion(virus.x, virus.y);
                 virus.destroy();
                 this.addScore(1);
@@ -344,7 +356,9 @@ export class Level2 extends Phaser.Scene {
         if (this.isGameOver || this.isWin) return;
 
         this.escapedViruses++;
-        this.escapedText.setText(`BREACHES: ${this.escapedViruses} / ${this.maxEscapedViruses}`);
+        this.escapedText.setText(
+            `BREACHES: ${this.escapedViruses} / ${this.maxEscapedViruses}`
+        );
 
         if (this.escapedViruses >= this.maxEscapedViruses) {
             this.triggerGameOver();
@@ -394,7 +408,7 @@ export class Level2 extends Phaser.Scene {
         if (this.spawnEvent) {
             this.spawnEvent.remove(false);
         }
-        
+
         this.viruses.clear(true, true);
 
         this.crosshair.setVisible(false);
@@ -404,7 +418,6 @@ export class Level2 extends Phaser.Scene {
 
         this.postGameManager.showWinScreen();
     }
-
 
     private createPaths(width: number, height: number) {
         this.paths = [];
@@ -423,7 +436,7 @@ export class Level2 extends Phaser.Scene {
             new Phaser.Math.Vector2(width * 0.75, height * 0.20),
             new Phaser.Math.Vector2(width * 0.84, height * 0.34),
             new Phaser.Math.Vector2(width * 0.90, height * 0.38),
-            new Phaser.Math.Vector2(width * 0.92, height * 0.48),
+            new Phaser.Math.Vector2(width * 0.92, height * 0.48)
         ]);
         this.paths.push(p1);
 

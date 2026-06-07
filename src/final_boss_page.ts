@@ -26,8 +26,11 @@ export class FinalBoss extends Phaser.Scene {
     private bossBaseScaleY = 1;
     private bossGrowthLevel = 0;
 
-    private readonly bossGrowthStep = 0.04;
-    private readonly bossMaxGrowth = 0.22;
+    private readonly bossGrowthStep = 0.06;
+    private readonly bossShrinkStep = 0.05;
+    private readonly bossMaxGrowth = 0.24;
+    private readonly bossMinShrink = -0.25;
+    private readonly bossFaceDuration = 1600;
 
     private abi!: ABI;
     private interactKey!: Phaser.Input.Keyboard.Key;
@@ -96,7 +99,7 @@ export class FinalBoss extends Phaser.Scene {
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
             bgHTML.src = '/assets/finale/background_final_game.png';
-            bgHTML.style.objectFit = 'fill'; 
+            bgHTML.style.objectFit = 'fill';
         }
 
         const style = document.createElement('style');
@@ -128,6 +131,7 @@ export class FinalBoss extends Phaser.Scene {
         backBtn.className = 'Back';
         backBtn.innerText = 'PAUSE';
         backBtn.style.pointerEvents = 'auto';
+
         const wrapper = document.createElement('div');
         wrapper.style.position = 'absolute';
         wrapper.style.top = '20px';
@@ -136,6 +140,7 @@ export class FinalBoss extends Phaser.Scene {
         wrapper.style.zIndex = '1000';
         wrapper.style.pointerEvents = 'none';
         wrapper.appendChild(backBtn);
+
         const gameContainer = document.getElementById('app') || document.body;
         gameContainer.appendChild(wrapper);
 
@@ -170,11 +175,12 @@ export class FinalBoss extends Phaser.Scene {
         this.showAbiIntro();
 
         this.scale.on('resize', this.onResize, this);
-        
+
         this.onResize();
         this.time.delayedCall(10, () => this.onResize());
 
         this.events.once('shutdown', () => {
+            wrapper.remove();
             this.scale.off('resize', this.onResize, this);
             this.allInteractableButtons = [];
         });
@@ -189,13 +195,21 @@ export class FinalBoss extends Phaser.Scene {
         this.cameras.main.setSize(width, height);
 
         const cx = width / 2;
-        const uiScale = height / 1080; 
+        const uiScale = height / 1080;
 
         if (this.boss && this.boss.active) {
             this.boss.setPosition(cx, height * 0.40);
+
             const bossSize = Math.min(width, height) * 0.31;
             const multiplier = this.getBossCurrentScaleMultiplier();
-            this.boss.setDisplaySize(bossSize * multiplier, bossSize * multiplier);
+
+            this.boss.setDisplaySize(
+                bossSize * multiplier,
+                bossSize * multiplier
+            );
+
+            this.bossBaseScaleX = this.boss.scaleX / multiplier;
+            this.bossBaseScaleY = this.boss.scaleY / multiplier;
         }
 
         if (this.hudPanel && this.hudPanel.active) {
@@ -203,6 +217,7 @@ export class FinalBoss extends Phaser.Scene {
             this.hudPanel.setSize((width * 0.72) / uiScale, 78);
             this.hudPanel.setScale(uiScale);
         }
+
         if (this.hudText && this.hudText.active) {
             this.hudText.setPosition(cx, 35 * uiScale);
             this.hudText.setScale(uiScale);
@@ -212,21 +227,23 @@ export class FinalBoss extends Phaser.Scene {
             const buttonWidth = 450;
             const spacing = 40;
             const totalAnswers = this.answerButtons.length;
-            
-            const totalWidth = (buttonWidth * totalAnswers) + (spacing * (totalAnswers - 1));
-            const startX = -(totalWidth / 2) + (buttonWidth / 2);
-            
+
+            const totalWidth =
+                buttonWidth * totalAnswers + spacing * (totalAnswers - 1);
+
+            const startX = -(totalWidth / 2) + buttonWidth / 2;
+
             const scaledPadding = 35 * uiScale;
-            const scaledHalfHeight = 60 * uiScale; 
+            const scaledHalfHeight = 60 * uiScale;
             const fixedY = height - scaledHalfHeight - scaledPadding;
 
             this.answerButtons.forEach((btn, index) => {
                 const xOffset = startX + index * (buttonWidth + spacing);
-                
+
                 btn.setScale(uiScale);
-                (btn as any).baseScale = uiScale; 
-                
-                btn.setPosition(cx + (xOffset * uiScale), fixedY);
+                (btn as any).baseScale = uiScale;
+
+                btn.setPosition(cx + xOffset * uiScale, fixedY);
             });
         }
 
@@ -451,6 +468,15 @@ export class FinalBoss extends Phaser.Scene {
         this.gameEnded = false;
         this.isQuestionDisplayed = false;
 
+        this.bossGrowthLevel = 0;
+
+        if (this.boss && this.boss.active) {
+            this.boss.setTexture('boss_normal');
+            this.boss.setAlpha(1);
+            this.boss.setAngle(0);
+            this.boss.setScale(this.bossBaseScaleX, this.bossBaseScaleY);
+        }
+
         this.updateHud();
 
         if (this.quizzes.length === 0) {
@@ -659,6 +685,8 @@ export class FinalBoss extends Phaser.Scene {
 
     private showFinalWin() {
         this.switchBossSprite('boss_angry');
+
+        this.tweens.killTweensOf(this.boss);
 
         this.tweens.add({
             targets: this.boss,
@@ -892,13 +920,19 @@ export class FinalBoss extends Phaser.Scene {
             }
 
             bg.setFillStyle(0x5276b8, 1);
-            container.setScale(1.05);
+
+            const baseScale = (container as any).baseScale || 1;
+            container.setScale(baseScale * 1.05);
+
             this.game.canvas.style.cursor = 'pointer';
         });
 
         bg.on('pointerout', () => {
             bg.setFillStyle(0x3f5f95, 1);
-            container.setScale(1);
+
+            const baseScale = (container as any).baseScale || 1;
+            container.setScale(baseScale);
+
             this.game.canvas.style.cursor = 'default';
         });
 
@@ -907,7 +941,7 @@ export class FinalBoss extends Phaser.Scene {
             callback();
         });
 
-        (container as any).baseScale = 1; 
+        (container as any).baseScale = 1;
         (container as any).customOnClick = callback;
         this.allInteractableButtons.push(container);
 
@@ -915,8 +949,13 @@ export class FinalBoss extends Phaser.Scene {
     }
 
     private getBossCurrentScaleMultiplier() {
-        return 1 + Math.min(
-            this.bossGrowthLevel * this.bossGrowthStep,
+        const positiveGrowth = Math.max(this.bossGrowthLevel, 0) * this.bossGrowthStep;
+        const negativeShrink = Math.min(this.bossGrowthLevel, 0) * this.bossShrinkStep;
+        const scaleChange = positiveGrowth + negativeShrink;
+
+        return 1 + Phaser.Math.Clamp(
+            scaleChange,
+            this.bossMinShrink,
             this.bossMaxGrowth
         );
     }
@@ -924,33 +963,36 @@ export class FinalBoss extends Phaser.Scene {
     private showCorrectAnswerReaction() {
         this.switchBossSprite('boss_angry');
 
+        this.bossGrowthLevel--;
+
         const multiplier = this.getBossCurrentScaleMultiplier();
 
-        const currentScaleX = this.bossBaseScaleX * multiplier;
-        const currentScaleY = this.bossBaseScaleY * multiplier;
+        const targetScaleX = this.bossBaseScaleX * multiplier;
+        const targetScaleY = this.bossBaseScaleY * multiplier;
 
         this.tweens.killTweensOf(this.boss);
 
         this.tweens.add({
             targets: this.boss,
-            scaleX: currentScaleX * 0.96,
-            scaleY: currentScaleY * 0.96,
-            duration: 120,
-            yoyo: true,
-            ease: 'Power2',
+            scaleX: targetScaleX,
+            scaleY: targetScaleY,
+            angle: -3,
+            duration: 280,
+            ease: 'Back.easeOut',
             onComplete: () => {
                 if (!this.boss || !this.boss.active) return;
 
-                this.boss.setScale(currentScaleX, currentScaleY);
+                this.boss.setAngle(0);
+                this.boss.setScale(targetScaleX, targetScaleY);
                 this.startBossFloating();
             }
         });
 
-        this.time.delayedCall(850, () => {
+        this.time.delayedCall(this.bossFaceDuration, () => {
             if (this.gameEnded) return;
 
             this.switchBossSprite('boss_normal');
-            this.boss.setScale(currentScaleX, currentScaleY);
+            this.boss.setScale(targetScaleX, targetScaleY);
         });
     }
 
@@ -971,10 +1013,8 @@ export class FinalBoss extends Phaser.Scene {
             scaleX: targetScaleX,
             scaleY: targetScaleY,
             angle: 4,
-            duration: 180,
-            yoyo: true,
-            repeat: 1,
-            ease: 'Power1',
+            duration: 280,
+            ease: 'Back.easeOut',
             onComplete: () => {
                 if (!this.boss || !this.boss.active) return;
 
@@ -984,7 +1024,7 @@ export class FinalBoss extends Phaser.Scene {
             }
         });
 
-        this.time.delayedCall(850, () => {
+        this.time.delayedCall(this.bossFaceDuration, () => {
             if (this.gameEnded) return;
 
             this.switchBossSprite('boss_normal');
@@ -1011,7 +1051,9 @@ export class FinalBoss extends Phaser.Scene {
 
         if (this.abi && this.abi.isTalking) {
             const justPinched = currentPinch && !this.previousPinchState;
-            const spaceJustDown = this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey);
+            const spaceJustDown =
+                this.interactKey &&
+                Phaser.Input.Keyboard.JustDown(this.interactKey);
 
             if (!this.isQuestionDisplayed && (spaceJustDown || justPinched)) {
                 this.abi.nextDialoguePage();
@@ -1022,9 +1064,10 @@ export class FinalBoss extends Phaser.Scene {
             if (currentPinch && !this.previousPinchState && this.isQuestionDisplayed) {
                 const cursorX = tracker.targetX * this.cameras.main.width;
                 const cursorY = tracker.targetY * this.cameras.main.height;
-                
+
                 this.handlePinchClick(cursorX, cursorY);
             }
+
             this.previousPinchState = currentPinch;
         }
     }
@@ -1032,7 +1075,7 @@ export class FinalBoss extends Phaser.Scene {
     private handlePinchClick(x: number, y: number) {
         for (const btn of this.allInteractableButtons) {
             let isVisible = btn.visible && btn.active;
-            
+
             let parent = btn.parentContainer;
             while (parent && isVisible) {
                 if (!parent.visible) isVisible = false;
@@ -1045,13 +1088,17 @@ export class FinalBoss extends Phaser.Scene {
 
             if (bounds.contains(x, y)) {
                 (btn as any).customOnClick();
-                
+
                 const baseScale = (btn as any).baseScale || 1;
+
                 btn.setScale(baseScale * 0.95);
+
                 setTimeout(() => {
-                    if (btn.active) btn.setScale(baseScale * 1.05);
+                    if (btn.active) {
+                        btn.setScale(baseScale * 1.05);
+                    }
                 }, 150);
-                
+
                 break;
             }
         }

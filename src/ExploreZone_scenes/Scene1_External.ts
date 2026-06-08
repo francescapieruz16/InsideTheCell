@@ -74,6 +74,19 @@ export default class Scene1_External extends Phaser.Scene {
         this.load.image('receptor_ace2', '/assets/level1/receptor_hexagon.png');
 
         this.load.audio('bg_music', '/assets/tutorial/music/cell_exploration1.mp3');
+
+        this.load.spritesheet('nav_back_anim', '/assets/tutorial/navicella/Navicella_Back_sheet.png', {
+            frameWidth: 627, 
+            frameHeight: 627
+        });
+        this.load.spritesheet('nav_left_anim', '/assets/tutorial/navicella/Navicella_Left_sheet.png', {
+            frameWidth: 627, 
+            frameHeight: 627
+        });
+        this.load.spritesheet('nav_right_anim', '/assets/tutorial/navicella/Navicella_Right_sheet.png', {
+            frameWidth: 627, 
+            frameHeight: 627
+        });
     }
 
     create() {
@@ -168,10 +181,35 @@ export default class Scene1_External extends Phaser.Scene {
         // Variabili per la raccolta dei moduli
         this.canShowReceptorWarning = true;
 
-        // GIOCATORE
+        // --- REGISTRAZIONE ANIMAZIONI NAVICELLA ---
+        const directions = ['back', 'left', 'right'];
+        directions.forEach(dir => {
+            this.anims.create({
+                key: `nav_${dir}_idle`,
+                frames: this.anims.generateFrameNumbers(`nav_${dir}_anim`, { start: 0, end: 0 }),
+                frameRate: 1,
+                repeat: -1
+            });
+            this.anims.create({
+                key: `nav_${dir}_move`,
+                frames: this.anims.generateFrameNumbers(`nav_${dir}_anim`, { start: 1, end: 3 }),
+                frameRate: 10, 
+                repeat: -1
+            });
+        });
+
+        // GIOCATORE: Inizializziamo usando la texture STATICA
         this.player = new Spaceship(this, 1000, 1800, 'nav_front');
         this.player.setScale(0.35);
         (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+
+        // GIOCATORE: Inizializziamo usando il primo frame dello spritesheet animato
+        this.player = new Spaceship(this, 1000, 1800, 'nav_front_anim');
+        this.player.setScale(0.35);
+        (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+        
+        // Impostiamo l'animazione di base
+        this.player.play('nav_front_idle');
 
         this.abi = new ABI(this);
 

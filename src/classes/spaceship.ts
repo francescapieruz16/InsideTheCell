@@ -11,6 +11,9 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
     };
     // Memorizza la dimensione della hitbox di riferimento (quella di 'nav_front')
     private static bodySize: { width: number, height: number } | null = null;
+    
+    // --- NUOVO: Memoria della direzione per l'animazione da fermo ---
+    private lastDirection: string = 'front';
 
     constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
 
@@ -39,26 +42,20 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
 
         // Se questa è la prima navicella creata (il riferimento non esiste) ED è quella 'frontale',
         // salviamo le dimensioni del suo corpo fisico. Questa diventerà la dimensione di riferimento.
-        if (!Spaceship.bodySize && texture === 'nav_front') {
+        if (!Spaceship.bodySize && texture.includes('nav_front')) {
             Spaceship.bodySize = { width: body.width, height: body.height };
         }
 
         // Se la dimensione di riferimento esiste, la applichiamo.
-        // Questo garantisce la coerenza anche se la navicella viene creata con una texture diversa (es. in Scene2).
         if (Spaceship.bodySize) {
             body.setSize(Spaceship.bodySize.width, Spaceship.bodySize.height);
         }
-        
     }
 
-    // Sovrascriviamo il metodo originale setTexture
+    // Sovrascriviamo il metodo originale setTexture (lo teniamo per sicurezza)
     public setTexture(key: string, frame?: string | number): this {
-        // Chiamiamo il metodo originale per cambiare la texture visiva.
-        // Questo, di default, adatta anche la hitbox alla nuova immagine.
         super.setTexture(key, frame);
 
-        // Se il corpo fisico esiste e abbiamo una dimensione di riferimento,
-        // ripristiniamo immediatamente la nostra hitbox personalizzata.
         if (this.body && Spaceship.bodySize) {
             (this.body as Phaser.Physics.Arcade.Body).setSize(Spaceship.bodySize.width, Spaceship.bodySize.height);
         }
@@ -66,7 +63,6 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
         return this;
     }
 
-    // Spostiamo qui la vecchia funzione handleMovement
     update() {
         if (!this.body) return;
         
@@ -106,7 +102,7 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
                 body.setVelocityX(speed);
             }
 
-            // Gestione movimento verticale e texture fronte/retro
+            // Gestione movimento verticale
             if (up) {
                 body.setVelocityY(-speed);
             } else if (down) {
@@ -115,24 +111,54 @@ export default class Spaceship extends Phaser.Physics.Arcade.Sprite {
         }
 
         const isMoving = body.velocity.x !== 0 || body.velocity.y !== 0;
+        let currentDirection = this.lastDirection;
 
+        // --- GESTIONE ANIMAZIONI E DIREZIONE ---
         if (isMoving) {
             // Se la velocità orizzontale è maggiore di quella verticale:
             if (Math.abs(body.velocity.x) > Math.abs(body.velocity.y)) {
                 if (body.velocity.x < 0) {
-                    this.setTexture('nav_left');
+                    currentDirection = 'left';
                 } else {
-                    this.setTexture('nav_right');
+                    currentDirection = 'right';
                 }
             } 
             // Altrimenti, prevale il movimento verticale:
             else {
                 if (body.velocity.y < 0) {
-                    this.setTexture('nav_back');
+                    currentDirection = 'back';
                 } else {
-                    this.setTexture('nav_front');
+                    currentDirection = 'front';
                 }
             }
+
+            this.lastDirection = currentDirection; // Salva la memoria
+            
+            // GESTIONE DIFFERENZIATA: Se è frontale usiamo l'immagine statica, altrimenti animiamo
+            if (currentDirection === 'front') {
+                this.anims.stop(); // Ferma eventuali animazioni (come left o back)
+                this.setTexture('nav_front');
+            } else {
+                this.play(`nav_${currentDirection}_move`, true);
+            }
+
+        } else {
+            // Se siamo fermi, gestiamo l'idle
+            if (this.lastDirection === 'front') {
+                this.anims.stop();
+                this.setTexture('nav_front');
+            } else {
+                this.play(`nav_${this.lastDirection}_idle`, true);
+            }
         }
-}
+
+        // --- FIX SICUREZZA HITBOX ---
+
+        // --- FIX SICUREZZA HITBOX ---
+        // Visto che this.play() cambia i fotogrammi sotto il cofano, forziamo la hitbox 
+        // a rimanere quella di riferimento ogni singolo frame.
+        if (Spaceship.bodySize) {
+            body.setSize(Spaceship.bodySize.width, Spaceship.bodySize.height);
+        }
+    }
 }

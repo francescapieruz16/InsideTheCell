@@ -5,6 +5,7 @@ import Spaceship from '../classes/spaceship';
 import defaultDialogues from '../../assets/default_dialogues.json';
 import JournalScene from './JournalScene';
 import { JournalItem } from './JournalScene';
+import AudioManager from './AudioManager';
 
 export default class Scene1_External extends Phaser.Scene {
     private static hasShownControls = false;
@@ -78,11 +79,7 @@ export default class Scene1_External extends Phaser.Scene {
 
     create() {
 
-        const savedSettings = localStorage.getItem('gameSettings');
-        const volume = savedSettings ? JSON.parse(savedSettings).musicVol / 100 : 1;
-
-        const music = this.sound.add('bg_music', { loop: true, volume: volume });
-        music.play();
+        AudioManager.playMusic(this, 'bg_music');
 
         const style = document.createElement('style');
         style.innerHTML = `
@@ -378,15 +375,6 @@ export default class Scene1_External extends Phaser.Scene {
         this.dialogue10 = allDialogues.tutorials.tutorial_1.dialogue_16;
         this.dialogue11 = allDialogues.tutorials.tutorial_1.dialogue_17;
 
-
-
-        if (!this.sound.get('bg_music')) {
-        const music = this.sound.add('bg_music', {
-            loop: true,
-            volume: 0.5 // Puoi collegarlo ai tuoi settings!
-        });
-        music.play();
-        }
 
         this.events.once('shutdown', () => {
             if (wrapper) wrapper.remove();

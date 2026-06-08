@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HandTrackingController } from '../handTracking/handTrackingController';
+import AudioManager from './AudioManager';
 
 export interface GameSettings {
     textSpeed: string; 
@@ -96,10 +97,7 @@ export default class SettingsScene extends Phaser.Scene {
                 this.saveSettings(); 
                 
                 // Aggiorna istantaneamente la musica globale
-                const music = this.sound.get('bg_music');
-                if (music) {
-                    (music as any).setVolume(val / 100);
-                }
+                AudioManager.setVolume(val / 100);
 
                 // Riavvia l'UI dei settings se passiamo da 0 a 10 per togliere la "X"
                 if (val === 0 || (val === 10 && this.settings.musicVol > 0)) {
@@ -286,10 +284,7 @@ export default class SettingsScene extends Phaser.Scene {
         
         this.saveSettings();
 
-        const music = this.sound.get('bg_music');
-        if (music) {
-            (music as any).setVolume(1); 
-        }
+       AudioManager.setVolume(1);
     }
 
     private resetSettingsToDefault() {
@@ -483,10 +478,7 @@ export default class SettingsScene extends Phaser.Scene {
                 this.saveSettings();
 
                 // 1. Applica immediatamente il volume globale
-                const music = this.sound.get('bg_music');
-                if (music) {
-                    (music as any).setVolume(this.settings.musicVol / 100);
-                }
+                AudioManager.setVolume(this.settings.musicVol / 100);
 
                 // 2. Riavvia la scena dei settings per aggiornare graficamente lo Stepper e il Checkmark
                 this.scene.restart({ parentScene: this.parentSceneKey });

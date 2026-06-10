@@ -153,11 +153,13 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
 
         this.input.on('pointerdown', this.handleContinueInput, this);
 
-        this.input.keyboard!.on(
-            'keydown-SPACE',
-            this.handleContinueInput,
-            this
-        );
+        if (this.input.keyboard) {
+            this.input.keyboard.on(
+                'keydown-SPACE',
+                this.handleContinueInput,
+                this
+            );
+        }
 
         this.tweens.add({
             targets: this.fadeOverlay,
@@ -217,6 +219,7 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
             }
 
             this.tweens.killAll();
+
             pauseBtnDom.destroy();
             wrapper.remove();
             style.remove();
@@ -272,6 +275,29 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
             ease: 'Sine.easeInOut',
             yoyo: true,
             repeat: -1
+        });
+    }
+
+    private setAbiIconVisible(visible: boolean) {
+        const searchInside = (gameObject: Phaser.GameObjects.GameObject) => {
+            if (
+                gameObject instanceof Phaser.GameObjects.Image &&
+                gameObject.texture &&
+                gameObject.texture.key === 'ABI_standard'
+            ) {
+                gameObject.setVisible(visible);
+                gameObject.setAlpha(visible ? 1 : 0);
+            }
+
+            if (gameObject instanceof Phaser.GameObjects.Container) {
+                gameObject.list.forEach((child) => {
+                    searchInside(child as Phaser.GameObjects.GameObject);
+                });
+            }
+        };
+
+        this.children.list.forEach((child) => {
+            searchInside(child as Phaser.GameObjects.GameObject);
         });
     }
 
@@ -332,7 +358,9 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
 
         this.isTransitioning = false;
 
-        if (currentDialogue.speaker === 'KING VIRUS') {
+        const isVirusSpeaking = currentDialogue.speaker === 'VIRUS';
+
+        if (isVirusSpeaking) {
             this.cameras.main.shake(250, 0.005);
         }
 
@@ -344,6 +372,10 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
                 this.showCurrentDialogue();
             }
         );
+
+        this.time.delayedCall(50, () => {
+            this.setAbiIconVisible(!isVirusSpeaking);
+        });
     }
 
     private handleContinueInput() {
@@ -359,6 +391,7 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
 
         this.isTransitioning = true;
 
+        this.setAbiIconVisible(false);
         this.abi.hideDialogue();
 
         this.cameras.main.shake(700, 0.01);

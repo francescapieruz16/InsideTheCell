@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
 import { HandTrackingController } from '../src/handTracking/handTrackingController';
+import AudioManager from './ExploreZone_scenes/AudioManager';
 
 type ComponentLevel = {
     key: string;
@@ -231,9 +232,14 @@ export class Level5 extends Phaser.Scene {
             'ABI_standard',
             '/assets/tutorial/ABI/ABI_standard.png'
         );
+
+        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
     }
 
     create() {
+
+        AudioManager.playMusic(this, 'bg_music');
+
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
             bgHTML.src = '/assets/level5/background_level_5.png';

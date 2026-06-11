@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
 import { HandTrackingController } from './handTracking/handTrackingController';
+import AudioManager from './ExploreZone_scenes/AudioManager';
 
 type Point = {
     x: number;
@@ -136,9 +137,14 @@ export class Level6 extends Phaser.Scene {
         this.load.image('player_level6', '/assets/level6/player.png');
         this.load.image('virus_level6', '/assets/level6/virus.png');
         this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
+        
+        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
     }
 
     create() {
+
+        AudioManager.playMusic(this, 'bg_music');
+
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
             bgHTML.src = '/assets/level6/background_level_6.png';

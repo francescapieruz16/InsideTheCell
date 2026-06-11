@@ -5,6 +5,8 @@ import { HandTrackingController } from '../src/handTracking/handTrackingControll
 import defaultDialogues from '../assets/default_dialogues.json';
 import defaultContent from '../assets/default_context_and_quizzes.json';
 
+import AudioManager from './ExploreZone_scenes/AudioManager';
+
 type QuizAnswer = {
     label: string;
     text: string;
@@ -93,9 +95,14 @@ export class FinalBoss extends Phaser.Scene {
             'ABI_standard',
             '/assets/tutorial/ABI/ABI_standard.png'
         );
+
+        this.load.audio('boss_music', '/assets/music/boss_music.mp3');
     }
 
     create() {
+
+            AudioManager.playMusic(this, 'boss_music');
+
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
             bgHTML.src = '/assets/finale/background_final_game.png';

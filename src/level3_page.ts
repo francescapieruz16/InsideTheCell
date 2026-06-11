@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
 import { HandTrackingController } from '../src/handTracking/handTrackingController';
+import AudioManager from './ExploreZone_scenes/AudioManager';
 
 export class Level3 extends Phaser.Scene {
     private player!: Phaser.Physics.Arcade.Sprite;
@@ -76,9 +77,14 @@ export class Level3 extends Phaser.Scene {
         this.load.image('genome', '/assets/level3/genome.png');
 
         this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
+
+        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
+
     }
 
     create() {
+
+            AudioManager.playMusic(this, 'bg_music');
         this.game.canvas.style.pointerEvents = 'none';
 
         const bgHTML = document.getElementById('background') as HTMLImageElement;

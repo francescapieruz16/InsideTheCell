@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
 import { HandTrackingController } from '../src/handTracking/handTrackingController';
+import AudioManager from './ExploreZone_scenes/AudioManager';
 
 type CardType = 'true' | 'false' | 'gold';
 
@@ -117,9 +118,14 @@ export class Level4 extends Phaser.Scene {
             'ABI_standard',
             '/assets/tutorial/ABI/ABI_standard.png'
         );
+
+        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
     }
 
     create() {
+
+        AudioManager.playMusic(this, 'bg_music');
+        
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
             bgHTML.src = '/assets/level4/background_level_4.png';

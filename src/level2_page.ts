@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PostGameManager } from './postGame/postGameManager';
 import { HandTrackingController } from '../src/handTracking/handTrackingController';
+import AudioManager from './ExploreZone_scenes/AudioManager';
 
 export class Level2 extends Phaser.Scene {
     private readonly MENU_FONT = 'Arial';
@@ -71,9 +72,14 @@ export class Level2 extends Phaser.Scene {
         this.virusKeys.forEach(key => {
             this.load.image(key, `/assets/level1/${key}.png`);
         });
+
+        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
+
     }
 
     create() {
+
+            AudioManager.playMusic(this, 'bg_music');
         this.game.canvas.style.pointerEvents = 'auto';
         this.game.canvas.style.position = 'relative';
         this.game.canvas.style.zIndex = '999';

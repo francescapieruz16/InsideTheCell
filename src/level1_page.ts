@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import Cutscene1 from './Cutscenes/Cutscene1';
 import { PostGameManager } from './postGame/postGameManager';
 import { HandTrackingController } from '../src/handTracking/handTrackingController';
+import AudioManager from './ExploreZone_scenes/AudioManager';
 
 export class Level1 extends Phaser.Scene {
     private virusGroup!: Phaser.Physics.Arcade.Group;
@@ -78,10 +79,15 @@ export class Level1 extends Phaser.Scene {
         this.load.image('cart', '/assets/level1/cart.png');
         this.load.image('cart_full', '/assets/level1/cart_full.png');
 
-        this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
+        this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png')
+        
+        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
+        
     }
 
     create() {
+
+        AudioManager.playMusic(this, 'bg_music');
         this.game.canvas.style.pointerEvents = 'none';
         
         const bgHTML = document.getElementById('background') as HTMLImageElement;

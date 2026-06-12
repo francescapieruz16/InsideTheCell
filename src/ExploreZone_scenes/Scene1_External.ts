@@ -513,7 +513,7 @@ export default class Scene1_External extends Phaser.Scene {
                     this.dialogue4
                 );
 
-                this.time.delayedCall(3000, () => {
+                this.time.delayedCall(12000, () => {
                     this.canShowReceptorWarning = true;
                 });
             }
@@ -555,8 +555,8 @@ export default class Scene1_External extends Phaser.Scene {
                     this.dialogue6
                 );
 
-                // Ripristiniamo l'avviso dopo 3 secondi
-                this.time.delayedCall(3000, () => {
+                // Ripristiniamo l'avviso dopo 6 secondi
+                this.time.delayedCall(12000, () => {
                     this.canShowDebrisWarning = true;
                 });
             }
@@ -617,7 +617,7 @@ export default class Scene1_External extends Phaser.Scene {
                 this.dialogue11
             );
 
-            this.time.delayedCall(3000, () => {
+            this.time.delayedCall(12000, () => {
                 this.canShowReceptorWarning = true;
             });
         }

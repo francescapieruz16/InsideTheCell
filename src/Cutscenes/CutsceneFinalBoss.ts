@@ -16,46 +16,16 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
     private previousPinchState: boolean = false;
 
     private dialogues = [
-        {
-            speaker: 'ABI',
-            text: 'Stop...'
-        },
-        {
-            speaker: 'ABI',
-            text: 'I know this signal.'
-        },
-        {
-            speaker: 'ABI',
-            text: 'The infection is coming from him.'
-        },
-        {
-            speaker: 'VIRUS',
-            text: 'Welcome, little human.'
-        },
-        {
-            speaker: 'VIRUS',
-            text: 'You have cleaned my cells... answered my questions... and defeated my servants.'
-        },
-        {
-            speaker: 'VIRUS',
-            text: 'But I am the source.'
-        },
-        {
-            speaker: 'ABI',
-            text: "Don't be afraid. Every answer brought you closer to the cure."
-        },
-        {
-            speaker: 'VIRUS',
-            text: 'Cure? I am not something you cure. I am something you survive.'
-        },
-        {
-            speaker: 'ABI',
-            text: 'This is it. The final battle begins now.'
-        },
-        {
-            speaker: 'VIRUS',
-            text: 'Then come closer... and face the king of infection!'
-        }
+        { speaker: 'ABI', text: 'Stop...' },
+        { speaker: 'ABI', text: 'I know this signal.' },
+        { speaker: 'ABI', text: 'The infection is coming from him.' },
+        { speaker: 'VIRUS', text: 'Welcome, little human.' },
+        { speaker: 'VIRUS', text: 'You have cleaned my cells... answered my questions... and defeated my servants.' },
+        { speaker: 'VIRUS', text: 'But I am the source.' },
+        { speaker: 'ABI', text: "Don't be afraid. Every answer brought you closer to the cure." },
+        { speaker: 'VIRUS', text: 'Cure? I am not something you cure. I am something you survive.' },
+        { speaker: 'ABI', text: 'This is it. The final battle begins now.' },
+        { speaker: 'VIRUS', text: 'Then come closer... and face the king of infection!' }
     ];
 
     constructor() {
@@ -63,15 +33,8 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image(
-            'ABI_standard',
-            '/assets/tutorial/ABI/ABI_standard.png'
-        );
-
-        this.load.image(
-            'boss_normal',
-            '/assets/finale/sprite_normal.png'
-        );
+        this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
+        this.load.image('boss_normal', '/assets/finale/sprite_normal.png');
     }
 
     create() {
@@ -86,7 +49,6 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
             .phaser-dom-container {
                 overflow: visible !important;
             }
-
             button {
                 pointer-events: auto !important;
                 padding: 12px 24px;
@@ -98,7 +60,6 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
                 background-color: rgba(255, 255, 255, 0.8);
                 transition: background-color 0.2s, transform 0.1s;
             }
-
             button:hover {
                 background-color: rgba(255, 255, 255, 1);
                 transform: scale(1.05);
@@ -122,30 +83,22 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
 
         pauseBtn.addEventListener('click', () => {
             this.scene.pause();
-            this.scene.launch('PauseMenuScene', {
-                parentScene: this.scene.key
-            });
+            this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
 
         const { width, height } = this.scale.gameSize;
 
         this.bgHTML = document.getElementById('background') as HTMLImageElement;
-
         if (this.bgHTML) {
             this.bgHTML.src = '/assets/finale/background_final_game.png';
             this.bgHTML.style.objectFit = 'fill';
         }
 
-        this.textures.get('boss_normal').setFilter(
-            Phaser.Textures.FilterMode.NEAREST
-        );
+        this.textures.get('boss_normal').setFilter(Phaser.Textures.FilterMode.NEAREST);
 
         this.createBoss(width, height);
 
-        this.fadeOverlay = this.add
-            .rectangle(0, 0, width, height, 0x000000, 1)
-            .setOrigin(0);
-
+        this.fadeOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 1).setOrigin(0);
         this.fadeOverlay.setDepth(100);
 
         this.abi = new ABI(this);
@@ -154,11 +107,7 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
         this.input.on('pointerdown', this.handleContinueInput, this);
 
         if (this.input.keyboard) {
-            this.input.keyboard.on(
-                'keydown-SPACE',
-                this.handleContinueInput,
-                this
-            );
+            this.input.keyboard.on('keydown-SPACE', this.handleContinueInput, this);
         }
 
         this.tweens.add({
@@ -185,10 +134,8 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
 
             if (this.boss && this.boss.active) {
                 this.boss.setPosition(newW / 2, newH * 0.38);
-
                 const bossSize = Math.min(newW, newH) * 0.31;
                 this.boss.setDisplaySize(bossSize, bossSize);
-
                 this.startBossFloating();
             }
         };
@@ -198,19 +145,10 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
 
         this.events.once('shutdown', () => {
             this.scale.off('resize', onResize);
-
-            this.input.off(
-                'pointerdown',
-                this.handleContinueInput,
-                this
-            );
+            this.input.off('pointerdown', this.handleContinueInput, this);
 
             if (this.input.keyboard) {
-                this.input.keyboard.off(
-                    'keydown-SPACE',
-                    this.handleContinueInput,
-                    this
-                );
+                this.input.keyboard.off('keydown-SPACE', this.handleContinueInput, this);
             }
 
             if (this.bossFloatingTween) {
@@ -219,7 +157,6 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
             }
 
             this.tweens.killAll();
-
             pauseBtnDom.destroy();
             wrapper.remove();
             style.remove();
@@ -227,10 +164,7 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
     }
 
     update() {
-        const inputMode =
-            this.registry.get('inputMode') ||
-            localStorage.getItem('inputMode');
-
+        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
         if (inputMode !== 'hand') return;
 
         const tracker = HandTrackingController.getInstance();
@@ -244,12 +178,7 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
     }
 
     private createBoss(width: number, height: number) {
-        this.boss = this.add.image(
-            width / 2,
-            height * 0.38,
-            'boss_normal'
-        );
-
+        this.boss = this.add.image(width / 2, height * 0.38, 'boss_normal');
         this.boss.setOrigin(0.5);
         this.boss.setDepth(10);
 
@@ -260,9 +189,7 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
     }
 
     private startBossFloating() {
-        if (!this.boss || !this.boss.active) {
-            return;
-        }
+        if (!this.boss || !this.boss.active) return;
 
         if (this.bossFloatingTween) {
             this.bossFloatingTween.stop();
@@ -278,29 +205,6 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
         });
     }
 
-    private setAbiIconVisible(visible: boolean) {
-        const searchInside = (gameObject: Phaser.GameObjects.GameObject) => {
-            if (
-                gameObject instanceof Phaser.GameObjects.Image &&
-                gameObject.texture &&
-                gameObject.texture.key === 'ABI_standard'
-            ) {
-                gameObject.setVisible(visible);
-                gameObject.setAlpha(visible ? 1 : 0);
-            }
-
-            if (gameObject instanceof Phaser.GameObjects.Container) {
-                gameObject.list.forEach((child) => {
-                    searchInside(child as Phaser.GameObjects.GameObject);
-                });
-            }
-        };
-
-        this.children.list.forEach((child) => {
-            searchInside(child as Phaser.GameObjects.GameObject);
-        });
-    }
-
     private loadDialogues() {
         const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
         let allDialogues: any = null;
@@ -309,43 +213,26 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
             try {
                 allDialogues = JSON.parse(savedDialogues);
             } catch (e) {
-                console.warn(
-                    'Error reading saved dialogues. Using defaults.',
-                    e
-                );
+                console.warn('Error reading saved dialogues. Using defaults.', e);
                 allDialogues = defaultDialogues;
             }
         } else {
             allDialogues = defaultDialogues;
         }
 
-        const finalBossDialogues =
-            allDialogues?.cutscenes?.cutscene_final_boss;
+        const finalBossDialogues = allDialogues?.cutscenes?.cutscene_final_boss;
+        if (!finalBossDialogues) return;
 
-        if (!finalBossDialogues) {
-            return;
-        }
-
-        this.dialogues[0].text =
-            finalBossDialogues.dialogue_1 || this.dialogues[0].text;
-        this.dialogues[1].text =
-            finalBossDialogues.dialogue_2 || this.dialogues[1].text;
-        this.dialogues[2].text =
-            finalBossDialogues.dialogue_3 || this.dialogues[2].text;
-        this.dialogues[3].text =
-            finalBossDialogues.dialogue_4 || this.dialogues[3].text;
-        this.dialogues[4].text =
-            finalBossDialogues.dialogue_5 || this.dialogues[4].text;
-        this.dialogues[5].text =
-            finalBossDialogues.dialogue_6 || this.dialogues[5].text;
-        this.dialogues[6].text =
-            finalBossDialogues.dialogue_7 || this.dialogues[6].text;
-        this.dialogues[7].text =
-            finalBossDialogues.dialogue_8 || this.dialogues[7].text;
-        this.dialogues[8].text =
-            finalBossDialogues.dialogue_9 || this.dialogues[8].text;
-        this.dialogues[9].text =
-            finalBossDialogues.dialogue_10 || this.dialogues[9].text;
+        this.dialogues[0].text = finalBossDialogues.dialogue_1 || this.dialogues[0].text;
+        this.dialogues[1].text = finalBossDialogues.dialogue_2 || this.dialogues[1].text;
+        this.dialogues[2].text = finalBossDialogues.dialogue_3 || this.dialogues[2].text;
+        this.dialogues[3].text = finalBossDialogues.dialogue_4 || this.dialogues[3].text;
+        this.dialogues[4].text = finalBossDialogues.dialogue_5 || this.dialogues[4].text;
+        this.dialogues[5].text = finalBossDialogues.dialogue_6 || this.dialogues[5].text;
+        this.dialogues[6].text = finalBossDialogues.dialogue_7 || this.dialogues[6].text;
+        this.dialogues[7].text = finalBossDialogues.dialogue_8 || this.dialogues[7].text;
+        this.dialogues[8].text = finalBossDialogues.dialogue_9 || this.dialogues[8].text;
+        this.dialogues[9].text = finalBossDialogues.dialogue_10 || this.dialogues[9].text;
     }
 
     private showCurrentDialogue() {
@@ -355,27 +242,34 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
         }
 
         const currentDialogue = this.dialogues[this.currentDialogueIndex];
-
         this.isTransitioning = false;
 
         const isVirusSpeaking = currentDialogue.speaker === 'VIRUS';
 
         if (isVirusSpeaking) {
+            // Effetto tremolio quando parla il boss
             this.cameras.main.shake(250, 0.005);
+            
+            // Usiamo il nuovo metodo dedicato!
+            this.abi.showBossDialogue(
+                currentDialogue.text,
+                currentDialogue.speaker,
+                () => {
+                    this.currentDialogueIndex++;
+                    this.showCurrentDialogue();
+                }
+            );
+        } else {
+            // Dialogo normale di A.B.I.
+            this.abi.showDialogue(
+                currentDialogue.speaker,
+                currentDialogue.text,
+                () => {
+                    this.currentDialogueIndex++;
+                    this.showCurrentDialogue();
+                }
+            );
         }
-
-        this.abi.showDialogue(
-            currentDialogue.speaker,
-            currentDialogue.text,
-            () => {
-                this.currentDialogueIndex++;
-                this.showCurrentDialogue();
-            }
-        );
-
-        this.time.delayedCall(50, () => {
-            this.setAbiIconVisible(!isVirusSpeaking);
-        });
     }
 
     private handleContinueInput() {
@@ -390,8 +284,6 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
         if (this.isTransitioning) return;
 
         this.isTransitioning = true;
-
-        this.setAbiIconVisible(false);
         this.abi.hideDialogue();
 
         this.cameras.main.shake(700, 0.01);

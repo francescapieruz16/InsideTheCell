@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { HandTrackingController } from '../handTracking/handTrackingController';
 import { GameSettings } from '../ExploreZone_scenes/SettingsScene';
+import AudioManager from '../ExploreZone_scenes/AudioManager';
 
 class ABIScene extends Phaser.Scene {
     constructor() {
@@ -21,6 +22,7 @@ export default class ABI {
     
     public isTalking: boolean = false;
     public isUnskippable: boolean = false;
+    private isBossTalking: boolean = false;
     
     private onCloseCallback?: () => void; 
 
@@ -32,9 +34,7 @@ export default class ABI {
     private currentVisibleText: string = "";
     private typingTimer?: Phaser.Time.TimerEvent;
     
-    // Rimuoviamo il readonly per poter modificare la velocità in base ai settings
     private TYPING_SPEED: number = 40; 
-
     private radioTimer?: Phaser.Time.TimerEvent; 
 
     private keepOpen: boolean = false;      
@@ -48,23 +48,21 @@ export default class ABI {
         
         let abiScene = this.scene.scene.get('ABIScene');
         if (!abiScene) {
-            // Primo avvio assoluto
             this.scene.scene.add('ABIScene', ABIScene, true);
         }
         
         this.uiScene = this.scene.scene.get('ABIScene');
 
-        let needsDelay = false; // Flag di sicurezza
+        let needsDelay = false;
 
         if (this.scene.scene.isSleeping('ABIScene')) {
             this.scene.scene.wake('ABIScene');
         } else if (!this.scene.scene.isActive('ABIScene')) {
             this.scene.scene.start('ABIScene');
-            needsDelay = true; // Se stiamo appena avviando la scena, aspettiamo un attimo prima di accedere agli oggetti
+            needsDelay = true;
         }
         
         this.scene.scene.bringToTop('ABIScene');
-
         this.uiScene = this.scene; 
 
         this.createDialogueUI();
@@ -73,7 +71,6 @@ export default class ABI {
         this.initVoice();
 
         if (needsDelay) {
-            // Se la UI si sta avviando, aspettiamo 50ms prima di creare gli elementi
             this.scene.time.delayedCall(50, () => {
                 this.createDialogueUI();
             });
@@ -101,13 +98,12 @@ export default class ABI {
         });
     }
 
-    // --- NUOVO METODO HELPER PER LEGGERE I SETTINGS ---
+    // --- HELPER PER LEGGERE I SETTINGS ---
     private getSettings(): GameSettings {
         const saved = localStorage.getItem('gameSettings');
         if (saved) {
             return JSON.parse(saved);
         }
-        // Valori di default se non è mai stata aperta la scena Settings
         return { 
             textSpeed: 'Normal', 
             masterVol: 100, 
@@ -117,6 +113,15 @@ export default class ABI {
             musicVol: 100, 
             previousMusicVol: 100 
         };
+    }
+
+    // --- HELPER PER LA VELOCITÀ DEL TESTO ---
+    private getTextSpeedDelay(): number {
+        const settings = this.getSettings();
+        if (settings.textSpeed === 'Instant') return 0;
+        if (settings.textSpeed === 'Slow') return 80;
+        if (settings.textSpeed === 'Fast') return 15;
+        return 40; // Normal
     }
 
     private initVoice() {
@@ -135,16 +140,11 @@ export default class ABI {
     private speakText(text: string) {
         this.synth.cancel();
 
-        // 1. Recuperiamo i settings attuali prima di parlare
         const settings = this.getSettings();
-
-        // 2. Calcoliamo il volume reale
-        // Esempio: se Master è 80% e Voice è 50%, il volume finale è 0.8 * 0.5 = 0.4
         const masterRatio = settings.masterVol / 100;
         const voiceRatio = settings.voiceVol / 100;
         const finalVolume = masterRatio * voiceRatio;
 
-        // Se il volume è 0, non facciamo nemmeno partire la sintesi vocale
         if (finalVolume <= 0) return;
 
         const utterance = new SpeechSynthesisUtterance(text);
@@ -161,11 +161,75 @@ export default class ABI {
 
         utterance.pitch = 1.5; 
         utterance.rate = 1.5;  
-
-        // 3. Applichiamo il volume calcolato
         utterance.volume = finalVolume;
         
         this.synth.speak(utterance);
+    }
+
+    // --- PARTE PER IL BOSS ---
+    private speakBossText(text: string) {
+        const settings = this.getSettings();
+        const masterRatio = settings.masterVol / 100;
+        const voiceRatio = settings.voiceVol / 100;
+        const finalVolume = masterRatio * voiceRatio;
+
+        if (finalVolume <= 0) return;
+
+        this.synth.cancel(); 
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.volume = finalVolume;
+        
+        // Modificatori voce Boss (Tono basso e ritmo rallentato)
+        utterance.pitch = 0.2; 
+        utterance.rate = 0.85; 
+        utterance.lang = 'en-GB'; 
+
+        this.isTalking = true;
+        utterance.onend = () => {
+            this.isTalking = false;
+        };
+
+        this.synth.speak(utterance);
+    }
+
+    public showBossDialogue(text: string | string[], bossName: string = "SISTEMA CENTRALE", onClose?: () => void) {
+        if (!this.uiContainer) {
+            this.scene.time.delayedCall(10, () => this.showBossDialogue(text, bossName, onClose));
+            return;
+        }
+
+        this.interrupt(); 
+
+        // --- IMPOSTAZIONI STATO BOSS ---
+        this.keepOpen = false;
+        this.isTalking = true;
+        this.isUnskippable = false;
+        this.isBossTalking = true; 
+        
+        this.dialogueName.setText(bossName);
+        this.onCloseCallback = onClose; 
+
+        this.promptText.setVisible(true);
+
+        // Nascondi il ritratto
+        if (this.portrait) {
+            this.portrait.setVisible(false);
+        }
+
+        // Imposta le pagine e avvia il motore standard
+        if (typeof text === 'string') {
+            this.dialoguePages = this.autoSplitText(text, 180); 
+        } else {
+            this.dialoguePages = text;
+        }
+
+        this.currentDialoguePage = 0;
+        this.updateDialogueView(); 
+        this.uiContainer.setVisible(true);
+
+        // Abbassiamo la musica in modo sicuro tramite AudioManager
+        AudioManager.duckMusic(this.scene, true);
     }
 
     private update(time: number, delta: number) {
@@ -234,12 +298,10 @@ export default class ABI {
     }
 
     public MoveDialogueY(offsetY: number) {
-        this.targetOffsetY = offsetY; // Salva in memoria la posizione richiesta
-        
+        this.targetOffsetY = offsetY; 
         if (!this.uiContainer) return; 
 
         this.offsetY = offsetY;
-        
         const bottomY = this.uiScene.cameras?.main?.height || this.scene.scale.height;
 
         this.uiScene.tweens.add({
@@ -251,13 +313,14 @@ export default class ABI {
     }
 
     public showDialogue(name: string, text: string | string[], onClose?: () => void, unskippable: boolean = false, keepOpen: boolean = false) {
-        
         if (!this.uiContainer) {
             this.scene.time.delayedCall(10, () => this.showDialogue(name, text, onClose, unskippable, keepOpen));
             return;
         }
 
         this.interrupt(); 
+
+        this.isBossTalking = false;
 
         this.keepOpen = keepOpen;
         this.isTalking = true;
@@ -266,6 +329,11 @@ export default class ABI {
         this.onCloseCallback = onClose; 
 
         this.promptText.setVisible(!unskippable);
+
+        // Assicuriamoci che il ritratto di A.B.I. sia visibile nei dialoghi normali
+        if (this.portrait) {
+            this.portrait.setVisible(true);
+        }
 
         if (typeof text === 'string') {
             this.dialoguePages = this.autoSplitText(text, 180); 
@@ -277,14 +345,8 @@ export default class ABI {
         this.updateDialogueView();
         this.uiContainer.setVisible(true);
 
-        const music = this.scene.sound.get('bg_music');
-        if (music) {
-            this.scene.tweens.add({
-                targets: music,
-                volume: 0.1, // Abbassa il volume quando parla
-                duration: 500
-            });
-        }
+        // Abbassiamo la musica in modo sicuro tramite AudioManager
+        AudioManager.duckMusic(this.scene, true);
     }
 
     private updateDialogueView() {
@@ -295,24 +357,24 @@ export default class ABI {
 
         this.speakText(this.currentFullText);
 
+        if (this.isBossTalking) {
+            this.speakBossText(this.currentFullText);
+        } else {
+            this.speakText(this.currentFullText);
+        }
+
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
 
-        // --- APPLICAZIONE VELOCITÀ TESTO ---
-        const settings = this.getSettings();
+        const speed = this.getTextSpeedDelay();
         
-        if (settings.textSpeed === 'Instant') {
-            // Se Istantaneo, mostra tutto subito senza timer
+        if (speed === 0) {
             this.completeTyping();
             return;
         }
 
-        // Traduciamo le etichette in millisecondi (più basso è più veloce)
-        if (settings.textSpeed === 'Slow') this.TYPING_SPEED = 80;
-        else if (settings.textSpeed === 'Fast') this.TYPING_SPEED = 15;
-        else this.TYPING_SPEED = 40; // 'Normal'
-
+        this.TYPING_SPEED = speed;
         this.typingTimer = this.uiScene.time.addEvent({
             delay: this.TYPING_SPEED,
             callback: this.typeNextChar,
@@ -331,7 +393,6 @@ export default class ABI {
     }
 
     private completeTyping() {
-        // ... inalterato ...
         this.isTyping = false;
         if (this.typingTimer) {
             this.typingTimer.remove();
@@ -340,7 +401,6 @@ export default class ABI {
     }
 
     private autoSplitText(text: string, maxLength: number): string[] {
-        // ... inalterato ...
         const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
         const pages: string[] = [];
         let currentPage = "";
@@ -358,7 +418,6 @@ export default class ABI {
     }
 
     public nextDialoguePage() {
-        // ... inalterato ...
         if (this.isTyping) {
             this.completeTyping();
         } else {
@@ -381,7 +440,6 @@ export default class ABI {
     }
 
     public hideDialogue() {
-        // ... inalterato ...
         this.isTalking = false;
         this.isUnskippable = false;
         this.uiContainer.setVisible(false);
@@ -391,15 +449,8 @@ export default class ABI {
         const callback = this.onCloseCallback;
         this.onCloseCallback = undefined; 
 
-        const music = this.scene.sound.get('bg_music');
-        if (music) {
-            const settings = this.getSettings(); // Recupera le impostazioni
-            this.scene.tweens.add({
-                targets: music,
-                volume: settings.musicVol / 100, // Usa il volume delle impostazioni
-                duration: 500
-            });
-        }
+        // Ripristiniamo la musica in modo sicuro tramite AudioManager
+        AudioManager.duckMusic(this.scene, false);
         
         if (callback) {
             callback();
@@ -407,7 +458,6 @@ export default class ABI {
     }
 
     private interrupt() {
-        // 1. Fermiamo i timer attivi
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
@@ -415,10 +465,8 @@ export default class ABI {
             this.radioTimer.remove();
         }
 
-        // 2. Fermiamo la voce
         this.synth.cancel();
         
-        // 3. Reset dello stato
         this.isTyping = false;
         this.isTalking = false;
         
@@ -426,19 +474,11 @@ export default class ABI {
             this.onCloseCallback = undefined;
         }
 
-        const music = this.scene.sound.get('bg_music');
-        if (music) {
-            const settings = this.getSettings(); // Recupera le impostazioni
-            this.scene.tweens.add({ 
-                targets: music, 
-                volume: settings.musicVol / 100, // Usa il volume delle impostazioni
-                duration: 500 
-            });
-        }
+        // Ripristiniamo la musica in modo sicuro tramite AudioManager
+        AudioManager.duckMusic(this.scene, false);
     }
 
     public showRadioMessage(text: string, durationPerPage: number = 8000) {
-        
         if (!this.uiContainer) {
             this.scene.time.delayedCall(10, () => this.showRadioMessage(text, durationPerPage));
             return;
@@ -449,30 +489,22 @@ export default class ABI {
         this.uiContainer.setVisible(true);
         this.dialogueName.setText("A.B.I.");
         this.promptText.setVisible(false); 
-        this.promptText.setVisible(false); 
 
-        const music = this.scene.sound.get('bg_music');
-        if (music) {
-                    const settings = this.getSettings(); // Recupera le impostazioni
-                    this.scene.tweens.add({
-                        targets: music,
-                        volume: settings.musicVol / 100, // Usa il volume delle impostazioni
-                        duration: 500
-                    });
-                }
+        // Assicuriamoci che il ritratto di A.B.I. sia visibile via radio
+        if (this.portrait) {
+            this.portrait.setVisible(true);
+        }
+
+        // Abbassiamo la musica in modo sicuro tramite AudioManager
+        AudioManager.duckMusic(this.scene, true);
 
         const pages = this.autoSplitText(text, 180);
         let pageIndex = 0;
 
         const showNextPage = () => {
             if (pageIndex >= pages.length) {
-                if (music) {
-                    this.scene.tweens.add({
-                        targets: music,
-                        volume: 0.5, // Imposta il tuo volume standard
-                        duration: 500
-                    });
-                }
+                // Ripristiniamo la musica in modo sicuro tramite AudioManager
+                AudioManager.duckMusic(this.scene, false);
 
                 if (!this.isTalking) { 
                     this.uiContainer.setVisible(false);

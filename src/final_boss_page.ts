@@ -101,7 +101,20 @@ export class FinalBoss extends Phaser.Scene {
 
     create() {
 
-            AudioManager.playMusic(this, 'boss_music');
+        AudioManager.playMusic(this, 'boss_music');
+
+        //fix per eventuali "fantasmi" in memoria
+        this.isQuestionDisplayed = false;
+        this.canAnswer = false;
+        this.gameEnded = false;
+        this.bossGrowthLevel = 0;
+        this.currentQuizIndex = 0;
+        this.bossHp = this.maxBossHp;
+        this.playerLives = this.maxPlayerLives;
+        this.correctAnswers = 0;
+        this.previousPinchState = false;
+        this.answerButtons = [];
+        this.allInteractableButtons = [];
 
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {

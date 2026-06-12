@@ -98,6 +98,17 @@ export class MenuPageScene extends Phaser.Scene {
                 background-color: #3ce8a6;
                 transform: scale(1.05);
             }
+
+            .locked-btn {
+                background-color: #555555;
+                color: #999999;
+                border: 3px solid #777777;
+                padding: 15px 40px;
+                font-size: 1.5rem;
+                width: 250px;
+                cursor: not-allowed;
+                pointer-events: none !important; /* Disabilita i click e gli hover */
+            }
         `;
         document.head.appendChild(style);
 
@@ -117,14 +128,25 @@ export class MenuPageScene extends Phaser.Scene {
             this.uiElements.push({ dom: domElement, offsetX, offsetY });
         };
 
+        // 1. Recupera il livello massimo sbloccato (di default è 1)
+        const maxUnlockedLevel = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
+
         const levelSpacing = 80; 
         const startOffsetY = -(levelSpacing * 3); 
 
         for (let i = 1; i <= 6; i++) {
             const offsetY = startOffsetY + ((i - 1) * levelSpacing);
+            
+            // 2. Determina se questo specifico livello è sbloccato
+            const isUnlocked = i <= maxUnlockedLevel;
+            
+            // 3. Assegna lo stile di conseguenza
+            const btnClass = isUnlocked ? 'level-btn' : 'locked-btn';
 
-            createHTMLButton(`Level ${i}`, 'level-btn', 0, offsetY, () => {
-                this.scene.start(`Cutscene${i}`);
+            createHTMLButton(`Level ${i}`, btnClass, 0, offsetY, () => {
+                if (isUnlocked) {
+                    this.scene.start(`Cutscene${i}`);
+                }
             });
         }
 

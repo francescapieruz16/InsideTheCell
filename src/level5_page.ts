@@ -1251,6 +1251,14 @@ export class Level5 extends Phaser.Scene {
 
         this.clearComponents();
 
+        // --- LOGICA DI SBLOCCO LIVELLO SUCCESSIVO ---
+        const currentMax = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
+        // Sblocca il livello 6 solo se non eravamo già andati oltre
+        if (currentMax < 6) {
+            localStorage.setItem('maxUnlockedLevel', '6');
+        }
+        // --------------------------------------------
+
         this.postGameManager.showWinScreen();
     }
 

@@ -56,11 +56,6 @@ export class OptionsScene extends Phaser.Scene {
                 width: 450px;
             }
 
-            .title-box:hover {
-                background-color: #3f5f95;
-                transform: scale(1);
-            }
-
             .orange-btn {
                 background-color: #FF3E00;
                 color: white;
@@ -74,6 +69,45 @@ export class OptionsScene extends Phaser.Scene {
                 background-color: #FF5F1F;
                 transform: scale(1.05);
             }
+
+            /* NUOVO STILE PULSANTE NEW GAME ROSSO */
+            .red-btn {
+                background-color: #cc0000;
+                color: white;
+                border: 3px solid white;
+                padding: 15px 40px;
+                font-size: 1.5rem;
+                width: 400px;
+                box-shadow: 0 4px #880000;
+            }
+
+            .red-btn:hover {
+                background-color: #ff1111;
+                transform: scale(1.05);
+            }
+
+            /* NUOVO STILE PANNELLO DEBUG */
+            .debug-container {
+                background-color: rgba(0, 0, 0, 0.8);
+                border: 2px dashed #00ffff;
+                padding: 15px;
+                color: white;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                font-family: Arial, sans-serif;
+            }
+
+            .debug-btn {
+                background-color: #444;
+                color: white;
+                border: 1px solid #fff;
+                padding: 8px 15px;
+                font-size: 1rem;
+            }
+
+            .debug-btn:hover { background-color: #666; transform: scale(1.05); }
+            .debug-input { width: 60px; font-size: 1.2rem; text-align: center; }
 
             .loader {
                 border: 8px solid rgb(252, 252, 252);
@@ -117,20 +151,40 @@ export class OptionsScene extends Phaser.Scene {
             this.uiElements.push({ dom: domElement, offsetX, offsetY });
         };
 
+        // --- CREAZIONE ELEMENTI HTML ---
+
         const titleBox = document.createElement('button');
         titleBox.className = 'title-box';
         titleBox.innerText = 'Choose input method';
-        createUIElement(titleBox, 0, -180);
+        createUIElement(titleBox, 0, -240);
 
         const btnKeyboard = document.createElement('button');
         btnKeyboard.className = 'orange-btn';
         btnKeyboard.innerText = 'MOUSE & KEYBOARD';
-        createUIElement(btnKeyboard, -220, 50);
+        createUIElement(btnKeyboard, -220, -80);
 
         const btnHand = document.createElement('button');
         btnHand.className = 'orange-btn';
         btnHand.innerText = 'HAND TRACKING';
-        createUIElement(btnHand, 220, 50);
+        createUIElement(btnHand, 220, -80);
+
+        // NUOVO PULSANTE NEW GAME
+        const btnNewGame = document.createElement('button');
+        btnNewGame.className = 'red-btn';
+        btnNewGame.innerText = '⚠ NEW GAME (WIPE ALL) ⚠';
+        createUIElement(btnNewGame, 0, 50);
+
+        // NUOVO PANNELLO DEBUG
+        const debugPanel = document.createElement('div');
+        debugPanel.className = 'debug-container';
+        debugPanel.innerHTML = `
+            <span style="color:#00ffff; font-weight:bold;">DEBUG:</span>
+            <label>Level:</label>
+            <input type="number" id="dbgLevel" class="debug-input" min="1" max="6" value="1" />
+            <button id="btnSetLevel" class="debug-btn">SET MAX</button>
+            <button id="btnToggleBoss" class="debug-btn">TOGGLE BOSS</button>
+        `;
+        createUIElement(debugPanel, 0, 160);
 
         const spinner = document.createElement('div');
         spinner.className = 'loader';
@@ -142,6 +196,8 @@ export class OptionsScene extends Phaser.Scene {
         backBtn.innerText = 'BACK';
         createUIElement(backBtn, 0, 0); 
 
+        // --- EVENT LISTENERS ---
+
         btnKeyboard.addEventListener('click', () => {
             this.setModeAndContinue('keyboard');
         });
@@ -149,6 +205,48 @@ export class OptionsScene extends Phaser.Scene {
         btnHand.addEventListener('click', () => {
             spinner.style.display = 'block';
             this.startHandCalibrationPhase();
+        });
+
+        btnNewGame.addEventListener('click', () => {
+            // Un popup nativo del browser per evitare misclick disastrosi
+            const confirmed = window.confirm("WARNING: This will delete ALL your progress (Tutorials, Levels, BioLog, and Final Boss). Are you absolutely sure?");
+            if (confirmed) {
+                localStorage.removeItem('maxUnlockedLevel');
+                localStorage.removeItem('scene1_state');
+                localStorage.removeItem('scene2_state');
+                localStorage.removeItem('scene3_state');
+                localStorage.removeItem('journalUnlocks');
+                localStorage.removeItem('FINAL_BOSS_UNLOCKED');
+                alert("All progress has been completely wiped!");
+            }
+        });
+
+        // Gestione Logica Debug
+        this.time.delayedCall(100, () => {
+            const btnSetLevel = document.getElementById('btnSetLevel');
+            const dbgLevel = document.getElementById('dbgLevel') as HTMLInputElement;
+            const btnToggleBoss = document.getElementById('btnToggleBoss');
+
+            if (btnSetLevel && dbgLevel) {
+                btnSetLevel.addEventListener('click', () => {
+                    const val = Math.max(1, Math.min(6, parseInt(dbgLevel.value) || 1));
+                    localStorage.setItem('maxUnlockedLevel', val.toString());
+                    alert(`Max unlocked level forcefully set to ${val}`);
+                });
+            }
+
+            if (btnToggleBoss) {
+                btnToggleBoss.addEventListener('click', () => {
+                    const current = localStorage.getItem('FINAL_BOSS_UNLOCKED') === 'true';
+                    if (current) {
+                        localStorage.removeItem('FINAL_BOSS_UNLOCKED');
+                        alert("Final Boss is now LOCKED.");
+                    } else {
+                        localStorage.setItem('FINAL_BOSS_UNLOCKED', 'true');
+                        alert("Final Boss is now UNLOCKED.");
+                    }
+                });
+            }
         });
 
         backBtn.addEventListener('click', () => {
@@ -160,17 +258,19 @@ export class OptionsScene extends Phaser.Scene {
                 tracker.stop(); 
             }
 
-            const spinner = document.getElementById('loading-spinner');
-            if (spinner) spinner.style.display = 'none';
+            const spin = document.getElementById('loading-spinner');
+            if (spin) spin.style.display = 'none';
 
             this.scene.start('MenuPageScene');
         });
 
+        // --- GESTIONE MANO ---
         this.game.events.on('hand_click', (pos: {x: number, y: number}) => {
             if (this.isCalibrating) return; 
 
             const handRect = btnHand.getBoundingClientRect();
             const keyRect = btnKeyboard.getBoundingClientRect();
+            const newGameRect = btnNewGame.getBoundingClientRect();
 
             if (pos.x >= handRect.left && pos.x <= handRect.right && pos.y >= handRect.top && pos.y <= handRect.bottom) {
                 spinner.style.display = 'block';
@@ -178,6 +278,10 @@ export class OptionsScene extends Phaser.Scene {
             } 
             else if (pos.x >= keyRect.left && pos.x <= keyRect.right && pos.y >= keyRect.top && pos.y <= keyRect.bottom) {
                 this.setModeAndContinue('keyboard');
+            }
+            // Permette alla mano di cliccare anche "New Game"
+            else if (pos.x >= newGameRect.left && pos.x <= newGameRect.right && pos.y >= newGameRect.top && pos.y <= newGameRect.bottom) {
+                btnNewGame.click();
             }
         }, this);
 

@@ -585,6 +585,14 @@ export class Level3 extends Phaser.Scene {
         this.player.setVelocityY(0);
         this.player.anims.play('idle', true);
 
+        // --- LOGICA DI SBLOCCO LIVELLO SUCCESSIVO ---
+        const currentMax = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
+        // Sblocca il livello 4 solo se non eravamo già andati oltre
+        if (currentMax < 4) {
+            localStorage.setItem('maxUnlockedLevel', '4');
+        }
+        // --------------------------------------------
+
         this.postGameManager.showWinScreen();
     }
 

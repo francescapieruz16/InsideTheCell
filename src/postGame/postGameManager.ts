@@ -44,6 +44,8 @@ export class PostGameManager {
     private currentLevel: number = 0;
     private nextLevel: number = 0;
 
+    private isListening: boolean = false;
+
     private postGameTexts: any = {
         questionLost: "",
         proceedPrompt: "",
@@ -103,11 +105,16 @@ export class PostGameManager {
             this.llm = null;
         }
 
+        const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const isHandTrackingActive = inputMode === 'hand';
+
         this.chatManager = new ChatManager(
             (playerMessage: string) => {
                 this.evaluatePlayerChatInput(playerMessage);
             },
             (isChatActive: boolean) => {
+                this.scene.input.enabled = !isChatActive;
+
                 if (this.scene.input.keyboard) {
                     this.scene.input.keyboard.enabled = !isChatActive;
 
@@ -136,6 +143,15 @@ export class PostGameManager {
                     this.abi.MoveDialogueY(-100);
                 } else {
                     this.abi.MoveDialogueY(0);
+                }
+            },
+            isHandTrackingActive,
+            () => this.startSpeechToText(),
+            (isKeyboardOpen: boolean) => {
+                if (isKeyboardOpen) {
+                    this.abi.MoveDialogueY(-280);
+                } else {
+                    this.abi.MoveDialogueY(-100);
                 }
             }
         );
@@ -466,6 +482,87 @@ export class PostGameManager {
             this.abi.showDialogue("ABI", this.defaultResponse, () => {
                 this.proceedToQuiz();
             });
+        }
+    }
+
+    private startSpeechToText(langCode: string = 'en-US') {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) return;
+
+        // Evita di avviare l'ascolto se è già in corso (evita l'errore 'aborted')
+        if (this.isListening) {
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = langCode; 
+        // Se noti che si interrompe troppo presto, puoi impostare continuous su true,
+        // ma dovrai gestire manualmente la chiusura con un timer o un secondo click.
+        recognition.continuous = false; 
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        const chatInput = document.getElementById('llm-chat-input') as HTMLInputElement;
+
+        recognition.onstart = () => {
+            this.isListening = true;
+            this.scene.input.enabled = false;
+
+            if (chatInput) {
+                chatInput.placeholder = "Listening... Speak now";
+                chatInput.value = ""; 
+            }
+        };
+
+        recognition.onresult = (event: any) => {
+            const resultIndex = event.resultIndex;
+            const transcript = event.results[resultIndex][0].transcript;
+            if (chatInput) {
+                chatInput.value = transcript;
+            }
+        };
+
+        recognition.onspeechend = () => {
+            recognition.stop();
+        };
+
+        recognition.onend = () => {
+            this.isListening = false;
+            this.scene.input.enabled = true;
+
+            if (chatInput && chatInput.placeholder.startsWith("Listening")) {
+                chatInput.placeholder = "Press mic to start dictating";
+            }
+        };
+
+        recognition.onerror = (event: any) => {
+            this.isListening = false;
+            this.scene.input.enabled = true;
+            
+            console.error("Speech Recognition Error Code:", event.error);
+
+            if (chatInput) {
+            if (event.error === 'network' || event.error === 'no-speech') {
+                chatInput.placeholder = "Speech unavailable. Use Virtual Keyboard!";
+                
+                if (this.chatManager) {
+                    this.chatManager.showVirtualKeyboard();
+                }
+            } else {
+                chatInput.placeholder = `Error: ${event.error}. Use keyboard.`;
+                if (this.chatManager) {
+                    this.chatManager.showVirtualKeyboard();
+                }
+            }
+        }
+        };
+
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error("Failed to start recognition:", e);
+            this.isListening = false;
         }
     }
 

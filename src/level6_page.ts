@@ -192,6 +192,8 @@ export class Level6 extends Phaser.Scene {
         gameContainer.appendChild(wrapper);
 
         backBtn.addEventListener('click', () => {
+            wrapper.style.display = 'none';
+
             this.scene.pause();
             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
@@ -245,6 +247,23 @@ export class Level6 extends Phaser.Scene {
             wrapper.remove();
             this.scale.off('resize', onResize);
             this.tweens.killAll();
+        });
+
+        if(this.input.keyboard){
+            this.input.keyboard.on('keydown-ESC', () => {
+                wrapper.style.display = 'none';
+
+                this.scene.pause();
+                this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+            });
+        }
+
+        this.events.on('pause', () => {
+            wrapper.style.display = 'none';
+        });
+
+        this.events.on('resume', () => {
+            wrapper.style.display = 'block';
         });
     }
 

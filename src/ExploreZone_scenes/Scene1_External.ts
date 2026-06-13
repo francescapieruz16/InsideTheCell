@@ -122,8 +122,36 @@ export default class Scene1_External extends Phaser.Scene {
         gameContainer.appendChild(wrapper);
 
         backBtn.addEventListener('click', () => {
+            wrapper.style.display = 'none';
+
             this.scene.pause();
             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+        });
+
+        const bioLogBtn = document.createElement('button');
+        bioLogBtn.className = 'BioLog';
+        bioLogBtn.innerText = 'BIOLOG';
+        bioLogBtn.style.pointerEvents = 'auto';
+        const wrapper2 = document.createElement('div');
+        wrapper2.style.position = 'absolute';
+        wrapper2.style.top = '20px';
+        wrapper2.style.left = '40px';
+        wrapper2.style.transform = 'none';
+        wrapper2.style.zIndex = '1000';
+        wrapper2.style.pointerEvents = 'none';
+        wrapper2.appendChild(bioLogBtn);
+        gameContainer.appendChild(wrapper2);
+
+        bioLogBtn.addEventListener('click', () => {
+            wrapper2.style.display = 'none';
+
+            this.physics.world.pause();  
+            this.scene.pause(); 
+
+            this.scene.launch('JournalScene', { 
+                parentScene: this.scene.key, 
+                items: this.levelDiscoverables 
+            });
         });
         
        this.isTransitioning = true; 
@@ -248,6 +276,8 @@ export default class Scene1_External extends Phaser.Scene {
 
             this.input.keyboard.on('keydown-ESC', () => {
                 if (!this.abi.isTalking) {
+                    wrapper.style.display = 'none';
+
                     this.scene.pause();
                     this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
                 }
@@ -257,6 +287,9 @@ export default class Scene1_External extends Phaser.Scene {
             this.input.keyboard.on('keydown-I', () => {
                 // Impedisce di aprire il diario durante un dialogo o una transizione
                 if (this.isTransitioning || this.abi.isTalking) return;
+
+                // hide bioLog button
+                wrapper2.style.display = 'none';
 
                 // Mette in pausa la fisica (ferma la navicella e i detriti)
                 this.physics.world.pause(); 
@@ -276,12 +309,17 @@ export default class Scene1_External extends Phaser.Scene {
         // Questo evento scatta automaticamente quando JournalScene chiama this.scene.resume()
         this.events.on('pause', () => {
             this.scene.sleep('ABIScene'); // Nasconde istantaneamente il contatore
+            wrapper.style.display = 'none';
+            wrapper2.style.display = 'none';
         });
 
         // Quando la scena riprende
         this.events.on('resume', () => {
             this.physics.world.resume();
             this.scene.wake('ABIScene'); // Fa riapparire il contatore intatto
+
+            wrapper.style.display = 'block';
+            wrapper2.style.display = 'block';
         });
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -378,6 +416,7 @@ export default class Scene1_External extends Phaser.Scene {
 
         this.events.once('shutdown', () => {
             if (wrapper) wrapper.remove();
+            if (wrapper2) wrapper2.remove();
 
             if (this.spikeCounterText) {
                 this.spikeCounterText.destroy();

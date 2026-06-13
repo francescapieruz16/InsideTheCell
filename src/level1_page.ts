@@ -130,6 +130,8 @@ export class Level1 extends Phaser.Scene {
         const backBtnDom = this.add.dom(this.scale.gameSize.width - 80, 40, wrapper);
 
         backBtn.addEventListener('click', () => {
+            backBtnDom.setVisible(false);
+
             this.scene.pause();
             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
@@ -248,6 +250,23 @@ export class Level1 extends Phaser.Scene {
         
         this.events.once('shutdown', () => {
             this.scale.off('resize', onResize);
+        });
+
+        if(this.input.keyboard){
+            this.input.keyboard.on('keydown-ESC', () => {
+                backBtnDom.setVisible(false);
+
+                this.scene.pause();
+                this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+            });
+        }
+
+        this.events.on('pause', () => {
+            backBtnDom.setVisible(false);
+        });
+
+        this.events.on('resume', () => {
+            backBtnDom.setVisible(false);
         });
     }
 

@@ -125,8 +125,36 @@ export default class Scene3_Internal extends Phaser.Scene {
         gameContainer.appendChild(wrapper);
 
         backBtn.addEventListener('click', () => {
+            wrapper.style.display = 'none';
+
             this.scene.pause();
             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+        });
+
+        const bioLogBtn = document.createElement('button');
+        bioLogBtn.className = 'BioLog';
+        bioLogBtn.innerText = 'BIOLOG';
+        bioLogBtn.style.pointerEvents = 'auto';
+        const wrapper2 = document.createElement('div');
+        wrapper2.style.position = 'absolute';
+        wrapper2.style.top = '20px';
+        wrapper2.style.left = '40px';
+        wrapper2.style.transform = 'none';
+        wrapper2.style.zIndex = '1000';
+        wrapper2.style.pointerEvents = 'none';
+        wrapper2.appendChild(bioLogBtn);
+        gameContainer.appendChild(wrapper2);
+
+        bioLogBtn.addEventListener('click', () => {
+            wrapper2.style.display = 'none';
+
+            this.physics.world.pause();  
+            this.scene.pause(); 
+
+            this.scene.launch('JournalScene', { 
+                parentScene: this.scene.key, 
+                items: this.levelDiscoverables 
+            });
         });
 
         // --- RECUPERO SALVATAGGIO SCENA 3 ---
@@ -540,6 +568,8 @@ export default class Scene3_Internal extends Phaser.Scene {
         
                     this.input.keyboard.on('keydown-ESC', () => {
                         if (!this.abi.isTalking) {
+                            wrapper.style.display = 'none';
+
                             this.scene.pause();
                             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
                         }
@@ -549,6 +579,8 @@ export default class Scene3_Internal extends Phaser.Scene {
                     this.input.keyboard.on('keydown-I', () => {
                         // Impedisce di aprire il diario durante un dialogo o una transizione
                         if (this.isTransitioning || this.abi.isTalking) return;
+
+                        wrapper2.style.display = 'none';
         
                         // Mette in pausa la fisica (ferma la navicella e i detriti)
                         this.physics.world.pause(); 
@@ -564,8 +596,16 @@ export default class Scene3_Internal extends Phaser.Scene {
                     });
                 }
 
+        this.events.on('pause', () => {
+            this.scene.sleep('ABIScene'); // Nasconde istantaneamente il contatore
+            wrapper.style.display = 'none';
+            wrapper2.style.display = 'none';
+        });
+
         this.events.on('resume', () => {
             this.physics.world.resume();
+            wrapper.style.display = 'block';
+            wrapper2.style.display = 'block';
         });
             
 
@@ -597,7 +637,8 @@ export default class Scene3_Internal extends Phaser.Scene {
         });
 
         this.events.once('shutdown', () => {
-            wrapper.remove();
+            if (wrapper) wrapper.remove();
+            if (wrapper2) wrapper2.remove();
         });
     }
 

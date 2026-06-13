@@ -1,4 +1,13 @@
 import Phaser from 'phaser';
+import { HandTrackingController } from '../handTracking/handTrackingController';
+
+interface InteractiveElement {
+    obj: Phaser.GameObjects.GameObject & { getBounds: () => Phaser.Geom.Rectangle };
+    isHovered: boolean;
+    simulateOver: () => void;
+    simulateOut: () => void;
+    simulateDown: () => void;
+}
 
 export interface JournalItem {
     id: string;        
@@ -17,6 +26,9 @@ export default class JournalScene extends Phaser.Scene {
     private wipeBtn!: Phaser.GameObjects.Text;
     private closeBtn!: Phaser.GameObjects.Text;
 
+    private interactables: InteractiveElement[] = [];
+    private previousPinchState: boolean = false;
+
     constructor() {
         super('JournalScene');
     }
@@ -24,6 +36,7 @@ export default class JournalScene extends Phaser.Scene {
     init(data: { parentScene: string, items: JournalItem[] }) {
         this.parentSceneKey = data.parentScene;
         this.itemsList = data.items || [];
+        this.interactables = [];
     }
 
     create() {
@@ -81,9 +94,11 @@ export default class JournalScene extends Phaser.Scene {
             padding: { x: 15, y: 10 }
         }).setOrigin(0, 0).setInteractive({ useHandCursor: true }); 
 
-        this.closeBtn.on('pointerover', () => this.closeBtn.setStyle({ color: '#ffffff', backgroundColor: '#444444' }));
-        this.closeBtn.on('pointerout', () => this.closeBtn.setStyle({ color: '#aaaaaa', backgroundColor: '#222222' }));
-        this.closeBtn.on('pointerdown', () => this.closeJournal());
+        this.makeInteractive(this.closeBtn,
+            () => this.closeBtn.setStyle({ color: '#ffffff', backgroundColor: '#444444' }),
+            () => this.closeBtn.setStyle({ color: '#aaaaaa', backgroundColor: '#222222' }),
+            () => this.closeJournal()
+        );
 
     
         // 5. TASTO RESET DATI (Centrato in basso)
@@ -92,24 +107,34 @@ export default class JournalScene extends Phaser.Scene {
             fontSize: '24px', color: '#ffaa00', backgroundColor: '#331100', padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        this.wipeBtn.on('pointerdown', () => {
-            if (!confirmWipe) {
-                confirmWipe = true;
-                this.wipeBtn.setText('[ ARE YOU SURE? ]');
-                this.wipeBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' });
-                
-                this.time.delayedCall(3000, () => {
-                    if (this.scene.isActive()) {
-                        confirmWipe = false;
-                        this.wipeBtn.setText('[ ERASE DATA ]');
-                        this.wipeBtn.setStyle({ color: '#ffaa00', backgroundColor: '#331100' });
-                    }
-                });
-            } else {
-                localStorage.removeItem('journalUnlocks');
-                this.scene.restart({ parentScene: this.parentSceneKey, items: this.itemsList });
+        this.makeInteractive(this.wipeBtn,
+            () => {
+                if (!confirmWipe) this.wipeBtn.setStyle({ backgroundColor: '#552200' });
+                else this.wipeBtn.setStyle({ backgroundColor: '#ff3333' });
+            },
+            () => {
+                if (!confirmWipe) this.wipeBtn.setStyle({ backgroundColor: '#331100' });
+                else this.wipeBtn.setStyle({ backgroundColor: '#ff0000' });
+            },
+            () => {
+                if (!confirmWipe) {
+                    confirmWipe = true;
+                    this.wipeBtn.setText('[ ARE YOU SURE? ]');
+                    this.wipeBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' });
+                    
+                    this.time.delayedCall(3000, () => {
+                        if (this.scene.isActive()) {
+                            confirmWipe = false;
+                            this.wipeBtn.setText('[ ERASE DATA ]');
+                            this.wipeBtn.setStyle({ color: '#ffaa00', backgroundColor: '#331100' });
+                        }
+                    });
+                } else {
+                    localStorage.removeItem('journalUnlocks');
+                    this.scene.restart({ parentScene: this.parentSceneKey, items: this.itemsList });
+                }
             }
-        });
+        );
 
         // Input
         this.input.keyboard!.on('keydown-I', () => this.closeJournal());
@@ -243,5 +268,60 @@ export default class JournalScene extends Phaser.Scene {
                 });
             }
         });
+    }
+
+    update(time: number, delta: number) {
+        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
+            const px = tracker.targetX * this.scale.gameSize.width;
+            const py = tracker.targetY * this.scale.gameSize.height;
+            const currentPinch = tracker.isClicked;
+
+            let hoveredElement: InteractiveElement | null = null;
+
+            this.interactables.forEach(el => {
+                const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
+                const isHovering = Phaser.Geom.Rectangle.Contains(bounds, px, py);
+
+                if (isHovering && !el.isHovered) {
+                    el.isHovered = true;
+                    el.simulateOver();
+                } else if (!isHovering && el.isHovered) {
+                    el.isHovered = false;
+                    el.simulateOut();
+                }
+
+                if (isHovering) hoveredElement = el;
+            });
+
+            if (currentPinch && !this.previousPinchState) {
+                if (hoveredElement) {
+                    (hoveredElement as InteractiveElement).simulateDown();
+                }
+            }
+
+            this.previousPinchState = currentPinch;
+        }
+    }
+
+    private makeInteractive(
+        obj: Phaser.GameObjects.GameObject & { getBounds: () => Phaser.Geom.Rectangle },
+        onOver: () => void,
+        onOut: () => void,
+        onDown: () => void
+    ) {
+        obj.setInteractive({ useHandCursor: true });
+        
+        const interactable: InteractiveElement = {
+            obj, isHovered: false, simulateOver: onOver, simulateOut: onOut, simulateDown: onDown
+        };
+
+        obj.on('pointerover', () => { interactable.isHovered = true; onOver(); });
+        obj.on('pointerout', () => { interactable.isHovered = false; onOut(); });
+        obj.on('pointerdown', () => { onDown(); }); 
+
+        this.interactables.push(interactable);
     }
 }

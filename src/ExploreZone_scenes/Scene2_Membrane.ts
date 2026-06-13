@@ -110,8 +110,36 @@ export default class Scene2_Membrane extends Phaser.Scene {
         gameContainer.appendChild(wrapper);
 
         backBtn.addEventListener('click', () => {
+            wrapper.style.display = 'none'; 
+
             this.scene.pause();
             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+        });
+
+        const bioLogBtn = document.createElement('button');
+        bioLogBtn.className = 'BioLog';
+        bioLogBtn.innerText = 'BIOLOG';
+        bioLogBtn.style.pointerEvents = 'auto';
+        const wrapper2 = document.createElement('div');
+        wrapper2.style.position = 'absolute';
+        wrapper2.style.top = '20px';
+        wrapper2.style.left = '40px';
+        wrapper2.style.transform = 'none';
+        wrapper2.style.zIndex = '1000';
+        wrapper2.style.pointerEvents = 'none';
+        wrapper2.appendChild(bioLogBtn);
+        gameContainer.appendChild(wrapper2);
+
+        bioLogBtn.addEventListener('click', () => {
+            wrapper2.style.display = 'none';
+
+            this.physics.world.pause();  
+            this.scene.pause(); 
+
+            this.scene.launch('JournalScene', { 
+                parentScene: this.scene.key, 
+                items: this.levelDiscoverables 
+            });
         });
 
         const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
@@ -313,6 +341,8 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
             this.input.keyboard.on('keydown-ESC', () => {
                 if (!this.abi.isTalking) {
+                    wrapper.style.display = 'none';
+
                     this.scene.pause();
                     this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
                 }
@@ -320,6 +350,8 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
             this.input.keyboard.on('keydown-I', () => {
                 if (this.isTransitioning || this.abi.isTalking) return;
+
+                wrapper2.style.display = 'none';
 
                 this.physics.world.pause(); 
                 this.scene.pause(); 
@@ -331,8 +363,16 @@ export default class Scene2_Membrane extends Phaser.Scene {
             });
         }
 
+        this.events.on('pause', () => {
+            this.scene.sleep('ABIScene'); // Nasconde istantaneamente il contatore
+            wrapper.style.display = 'none';
+            wrapper2.style.display = 'none';
+        });
+
         this.events.on('resume', () => {
             this.physics.world.resume();
+            wrapper.style.display = 'block';
+            wrapper2.style.display = 'block';
         });
 
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -389,6 +429,7 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
         this.events.once('shutdown', () => {
             if (wrapper) wrapper.remove();
+            if (wrapper2) wrapper2.remove();
             
             // 3. Usa SLEEP al posto di distruggere l'interfaccia quando esci dalla scena
             this.scene.sleep('ABIScene');

@@ -82,6 +82,8 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
         );
 
         pauseBtn.addEventListener('click', () => {
+            pauseBtnDom.setVisible(false);
+
             this.scene.pause();
             this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
         });
@@ -160,6 +162,23 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
             pauseBtnDom.destroy();
             wrapper.remove();
             style.remove();
+        });
+
+        if(this.input.keyboard){
+            this.input.keyboard.on('keydown-ESC', () => {
+                pauseBtnDom.setVisible(false);
+
+                this.scene.pause();
+                this.scene.launch('PauseMenuScene', { parentScene: this.scene.key });
+            });
+        }
+
+        this.events.on('pause', () => {
+            pauseBtnDom.setVisible(false);
+        });
+
+        this.events.on('resume', () => {
+            pauseBtnDom.setVisible(true);
         });
     }
 

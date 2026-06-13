@@ -13,6 +13,11 @@ export class HandTrackingController {
     public rawY: number = -1;
     
     public isClicked: boolean = false;
+
+    private lastClickTime: number = 0;
+    private readonly clickCooldownMs: number = 300;
+    private readonly pinchThresholdStart: number = 0.05;
+    private readonly pinchThresholdRelease: number = 0.08;
     
     public isReady: boolean = false;
     public onReady?: () => void;
@@ -86,8 +91,20 @@ export class HandTrackingController {
                     indexTip.y - thumbTip.y
                 );
 
-                this.isClicked = distance < 0.06;
+                const now = Date.now();
 
+                if (!this.isClicked) {
+                    if (distance < this.pinchThresholdStart) {
+                        if (now - this.lastClickTime > this.clickCooldownMs) {
+                            this.isClicked = true;
+                            this.lastClickTime = now;
+                        }
+                    }
+                } else {
+                    if (distance > this.pinchThresholdRelease) {
+                        this.isClicked = false;
+                    }
+                }
             } else {
                 this.targetX = -1;
                 this.targetY = -1;

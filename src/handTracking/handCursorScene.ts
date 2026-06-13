@@ -98,8 +98,10 @@ export class HandCursorScene extends Phaser.Scene {
                     
                     currentElement.style.transition = 'transform 0.1s ease, filter 0.1s ease';
                     
-                    currentElement.style.transform = 'scale(1.05)';
-                    currentElement.style.filter = 'brightness(1.30)';
+                    if (currentElement.className !== 'title-box') {
+                        currentElement.style.transform = 'scale(1.05)';
+                        currentElement.style.filter = 'brightness(1.30)';
+                    }
                     
                     currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
                 }

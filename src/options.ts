@@ -56,6 +56,11 @@ export class OptionsScene extends Phaser.Scene {
                 width: 450px;
             }
 
+            .title-box:hover {
+                background-color: #3f5f95;
+                transform: scale(1);
+            }
+
             .orange-btn {
                 background-color: #FF3E00;
                 color: white;
@@ -110,6 +115,7 @@ export class OptionsScene extends Phaser.Scene {
             .debug-input { width: 60px; font-size: 1.2rem; text-align: center; }
 
             .loader {
+                box-sizing: border-box;
                 border: 8px solid rgb(252, 252, 252);
                 border-top: 8px solid #FF3E00;
                 border-radius: 50%;
@@ -117,6 +123,7 @@ export class OptionsScene extends Phaser.Scene {
                 height: 60px;
                 animation: spin 1s linear infinite;
                 display: none;
+                margin: 0;
             }
 
             button {
@@ -296,8 +303,7 @@ export class OptionsScene extends Phaser.Scene {
                 
                 if (child && child.innerText === 'BACK') {
                     item.dom.setPosition(80, 40); 
-                } 
-                else {
+                } else {
                     item.dom.setPosition(newCx + item.offsetX, newCy + item.offsetY);
                 }
             });

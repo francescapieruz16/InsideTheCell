@@ -8,6 +8,15 @@ import defaultDialogues from '../../assets/default_dialogues.json';
 import defaultAdminSettings from '../../assets/default_context_and_quizzes.json';
 import { HandTrackingController } from '../handTracking/handTrackingController';
 
+interface InteractiveElement {
+    obj: Phaser.GameObjects.Container;
+    isMouseHovered: boolean;
+    isHandHovered: boolean;
+    simulateOver: () => void;
+    simulateOut: () => void;
+    simulateDown: () => void;
+}
+
 class PostGameUIScene extends Phaser.Scene {
     constructor() {
         super({ key: 'PostGameUIScene' });
@@ -61,8 +70,17 @@ export class PostGameManager {
 
     private llm: ChatGoogleGenerativeAI | null = null;
 
-    private allInteractableButtons: Phaser.GameObjects.Container[] = [];
+    private allInteractableButtons: InteractiveElement[] = [];
     private previousPinchState: boolean = false;
+
+    private customMouseX: number = -1;
+    private customMouseY: number = -1;
+    private isCustomMouseDown: boolean = false;
+    private previousMouseClickState: boolean = false;
+
+    private onMouseMove!: (e: MouseEvent) => void;
+    private onMouseDown!: () => void;
+    private onMouseUp!: () => void;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -79,6 +97,23 @@ export class PostGameManager {
         this.abi = new ABI(this.scene);
 
         this.scene.scale.on('resize', this.handleResize, this);
+
+        this.onMouseMove = (e: MouseEvent) => {
+            if (!this.scene || !this.scene.scale) return;
+            const rect = this.scene.game.canvas.getBoundingClientRect();
+            const scaleX = this.scene.scale.gameSize.width / rect.width;
+            const scaleY = this.scene.scale.gameSize.height / rect.height;
+            
+            this.customMouseX = (e.clientX - rect.left) * scaleX;
+            this.customMouseY = (e.clientY - rect.top) * scaleY;
+        };
+
+        this.onMouseDown = () => { this.isCustomMouseDown = true; };
+        this.onMouseUp = () => { this.isCustomMouseDown = false; };
+
+        window.addEventListener('mousemove', this.onMouseMove);
+        window.addEventListener('mousedown', this.onMouseDown);
+        window.addEventListener('mouseup', this.onMouseUp);
 
         if (this.scene.input.keyboard) {
             this.scene.input.keyboard.on('keydown-SPACE', () => {
@@ -161,6 +196,10 @@ export class PostGameManager {
         this.scene.events.once('shutdown', () => {
             this.scene.events.off('update', this.update, this);
             this.scene.scale.off('resize', this.handleResize, this);
+
+            window.removeEventListener('mousemove', this.onMouseMove);
+            window.removeEventListener('mousedown', this.onMouseDown);
+            window.removeEventListener('mouseup', this.onMouseUp);
 
             if (this.chatManager) {
                 this.chatManager.destroy();
@@ -913,57 +952,75 @@ export class PostGameManager {
     }
 
     private update(time: number, delta: number) {
-        const inputMode =
-            this.scene.registry.get('inputMode') ||
-            localStorage.getItem('inputMode');
+        const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
 
-        if (inputMode !== 'hand') return;
+        if (inputMode === 'hand') {
+            const tracker = HandTrackingController.getInstance();
+            const px = tracker.targetX * this.uiScene.cameras.main.width;
+            const py = tracker.targetY * this.uiScene.cameras.main.height;
+            const currentPinch = tracker.isClicked;
+            const isHandActive = inputMode === 'hand' && tracker.targetX !== -1;
 
-        const tracker = HandTrackingController.getInstance();
+            let hoveredElement: InteractiveElement | null = null;
 
-        const currentPinch = tracker.isClicked;
-
-        if (currentPinch && !this.previousPinchState) {
-            const cursorX = tracker.targetX * this.uiScene.cameras.main.width;
-            const cursorY = tracker.targetY * this.uiScene.cameras.main.height;
-
-            this.handlePinchClick(cursorX, cursorY);
-        }
-
-        this.previousPinchState = currentPinch;
-    }
-
-    private handlePinchClick(x: number, y: number) {
-        for (const btn of this.allInteractableButtons) {
-            let isVisible = btn.visible && btn.active;
-
-            let parent = btn.parentContainer;
-
-            while (parent && isVisible) {
-                if (!parent.visible) {
-                    isVisible = false;
+            this.allInteractableButtons.forEach(el => {
+                let isVisible = el.obj.visible && el.obj.active;
+                let parent = el.obj.parentContainer;
+                while (parent && isVisible) {
+                    if (!parent.visible) isVisible = false;
+                    parent = parent.parentContainer;
                 }
 
-                parent = parent.parentContainer;
-            }
-
-            if (!isVisible) continue;
-
-            const bounds = btn.getBounds();
-
-            if (bounds.contains(x, y)) {
-                (btn as any).customOnClick();
-
-                btn.setScale((btn as any).baseScale * 0.95);
-
-                setTimeout(() => {
-                    if (btn.active) {
-                        btn.setScale((btn as any).baseScale * 1.05);
+                if (!isVisible) {
+                    if (el.isHandHovered || el.isMouseHovered) {
+                        el.isHandHovered = false;
+                        el.isMouseHovered = false;
+                        el.simulateOut();
                     }
-                }, 150);
+                    return;
+                }
 
-                break;
+                const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
+
+                let isHandHovering = false;
+                if (isHandActive) {
+                    isHandHovering = Phaser.Geom.Rectangle.Contains(bounds, px, py);
+                }
+
+                const isMouseHovering = Phaser.Geom.Rectangle.Contains(bounds, this.customMouseX, this.customMouseY);
+
+                // --- Logica Hover Mano ---
+                if (isHandHovering && !el.isHandHovered) {
+                    el.isHandHovered = true;
+                    if (!el.isMouseHovered) el.simulateOver();
+                } else if (!isHandHovering && el.isHandHovered) {
+                    el.isHandHovered = false;
+                    if (!el.isMouseHovered) el.simulateOut();
+                }
+
+                // --- Logica Hover Mouse Custom ---
+                if (isMouseHovering && !el.isMouseHovered) {
+                    el.isMouseHovered = true;
+                    if (!el.isHandHovered) el.simulateOver();
+                } else if (!isMouseHovering && el.isMouseHovered) {
+                    el.isMouseHovered = false;
+                    if (!el.isHandHovered) el.simulateOut();
+                }
+
+                if (isHandHovering || isMouseHovering) {
+                    hoveredElement = el;
+                }
+            });
+
+            if (isHandActive && currentPinch && !this.previousPinchState) {
+                if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
             }
+            this.previousPinchState = currentPinch;
+
+            if (this.isCustomMouseDown && !this.previousMouseClickState) {
+                if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+            }
+            this.previousMouseClickState = this.isCustomMouseDown;
         }
     }
 
@@ -998,22 +1055,16 @@ export class PostGameManager {
         const outer = this.uiScene.add.rectangle(0, 0, width, height, 0x3d5381, 1)
             .setStrokeStyle(4, 0xffffff);
 
-        const text = this.uiScene.add.text(
-            0,
-            0,
-            label,
-            {
-                fontFamily: this.MENU_FONT,
-                fontSize: fontSize,
-                fontStyle: 'bold',
-                color: '#ffffff',
-                align: 'center',
-                wordWrap: { width: width - 40 }
-            }
-        ).setOrigin(0.5);
+        const text = this.uiScene.add.text(0, 0, label, {
+            fontFamily: this.MENU_FONT,
+            fontSize: fontSize,
+            fontStyle: 'bold',
+            color: '#ffffff',
+            align: 'center',
+            wordWrap: { width: width - 40 }
+        }).setOrigin(0.5);
 
         const maxTextWidth = width - 40;
-
         if (text.width > maxTextWidth) {
             text.setScale(maxTextWidth / text.width);
         }
@@ -1023,28 +1074,44 @@ export class PostGameManager {
         outer.setScrollFactor(0);
         outer.setInteractive({ useHandCursor: true });
 
-        outer.on('pointerover', () => {
-            container.setScale((container as any).baseScale * 1.05);
-            this.scene.game.canvas.style.cursor = 'pointer';
-        });
+        const interactable: InteractiveElement = {
+            obj: container,
+            isMouseHovered: false,
+            isHandHovered: false,
+            simulateOver: () => {
+                container.setScale((container as any).baseScale * 1.05);
+                this.scene.game.canvas.style.cursor = 'pointer';
+            },
+            simulateOut: () => {
+                container.setScale((container as any).baseScale);
+                this.scene.game.canvas.style.cursor = 'default';
+            },
+            simulateDown: () => {
+                container.setScale((container as any).baseScale * 0.95);
+                this.scene.game.canvas.style.cursor = 'default';
+                setTimeout(() => {
+                    if (container.active) {
+                        container.setScale((container as any).baseScale * 1.05);
+                    }
+                }, 150);
+                onClick();
+            }
+        };
 
-        outer.on('pointerout', () => {
-            container.setScale((container as any).baseScale);
-            this.scene.game.canvas.style.cursor = 'default';
+        // Eventi mouse nativi combinati con le nuove flag
+        outer.on('pointerover', () => { 
+            interactable.isMouseHovered = true;
+            if (!interactable.isHandHovered) interactable.simulateOver(); 
         });
-
-        outer.on('pointerdown', () => {
-            container.setScale((container as any).baseScale * 0.95);
-            this.scene.game.canvas.style.cursor = 'default';
-            onClick();
+        
+        outer.on('pointerout', () => { 
+            interactable.isMouseHovered = false;
+            if (!interactable.isHandHovered) interactable.simulateOut(); 
         });
+        
+        outer.on('pointerdown', () => { interactable.simulateDown(); }); 
 
-        outer.on('pointerup', () => {
-            container.setScale((container as any).baseScale * 1.05);
-        });
-
-        (container as any).customOnClick = onClick;
-        this.allInteractableButtons.push(container);
+        this.allInteractableButtons.push(interactable);
 
         return container;
     }

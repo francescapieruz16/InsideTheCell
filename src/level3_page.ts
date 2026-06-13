@@ -84,7 +84,7 @@ export class Level3 extends Phaser.Scene {
 
     create() {
 
-            AudioManager.playMusic(this, 'bg_music');
+        AudioManager.playMusic(this, 'bg_music');
         this.game.canvas.style.pointerEvents = 'none';
 
         const bgHTML = document.getElementById('background') as HTMLImageElement;

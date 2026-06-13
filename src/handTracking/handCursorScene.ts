@@ -8,6 +8,7 @@ export class HandCursorScene extends Phaser.Scene {
     private currentX: number = 0;
     private currentY: number = 0;
     private isTracking: boolean = false;
+    private hoveredElement: HTMLElement | null = null;
 
     constructor() {
         super({ key: 'HandCursorScene', active: false });
@@ -32,9 +33,7 @@ export class HandCursorScene extends Phaser.Scene {
                 backgroundImage: 'url(/assets/cursor_open.png)',
                 backgroundSize: 'contain', 
                 backgroundRepeat: 'no-repeat',
-                
                 pointerEvents: 'none', 
-                
                 zIndex: '999999',
                 transform: 'translate(-50%, -50%)',
                 display: 'none',
@@ -85,6 +84,29 @@ export class HandCursorScene extends Phaser.Scene {
 
             this.cursorDiv.style.transform = `translate(calc(${this.currentX}px - 50%), calc(${this.currentY}px - 50%))`;
 
+            const currentElement = document.elementFromPoint(this.currentX, this.currentY) as HTMLElement;
+
+            if (this.hoveredElement !== currentElement) {
+                
+                if (this.hoveredElement) {
+                    this.hoveredElement.style.transform = '';
+                    this.hoveredElement.style.filter = '';
+                    this.hoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+                }
+                
+                if (currentElement && (currentElement.tagName === 'BUTTON' || currentElement.classList.contains('interattivo'))) {
+                    
+                    currentElement.style.transition = 'transform 0.1s ease, filter 0.1s ease';
+                    
+                    currentElement.style.transform = 'scale(1.05)';
+                    currentElement.style.filter = 'brightness(1.30)';
+                    
+                    currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                }
+                
+                this.hoveredElement = currentElement;
+            }
+
             if (tracker.isClicked) {
                 this.cursorDiv.style.backgroundImage = 'url(/assets/cursor_pinch.png)';
                 
@@ -105,6 +127,15 @@ export class HandCursorScene extends Phaser.Scene {
         } else {
             this.cursorDiv.style.display = 'none';
             this.isTracking = false;
+        }
+    }
+
+    private clearHover() {
+        if (this.hoveredElement) {
+            this.hoveredElement.style.transform = '';
+            this.hoveredElement.style.filter = '';
+            this.hoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+            this.hoveredElement = null;
         }
     }
 }

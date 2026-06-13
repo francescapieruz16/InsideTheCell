@@ -12,6 +12,7 @@ interface MenuButton {
     simulateDown: () => void;
     setCurrentScale: (scale: number) => void;
 }
+
 export default class PauseMenuScene extends Phaser.Scene {
     private parentSceneKey!: string;
 
@@ -20,6 +21,15 @@ export default class PauseMenuScene extends Phaser.Scene {
     private buttons: MenuButton[] = [];
     
     private previousPinchState: boolean = false;
+
+    private customMouseX: number = -1;
+    private customMouseY: number = -1;
+    private isCustomMouseDown: boolean = false;
+    private previousMouseClickState: boolean = false;
+
+    private onMouseMove!: (e: MouseEvent) => void;
+    private onMouseDown!: () => void;
+    private onMouseUp!: () => void;
 
     constructor() {
         super('PauseMenuScene');
@@ -114,6 +124,22 @@ export default class PauseMenuScene extends Phaser.Scene {
                 }
             };
 
+            this.onMouseMove = (e: MouseEvent) => {
+                const rect = this.game.canvas.getBoundingClientRect();
+                const scaleX = this.scale.gameSize.width / rect.width;
+                const scaleY = this.scale.gameSize.height / rect.height;
+                
+                this.customMouseX = (e.clientX - rect.left) * scaleX;
+                this.customMouseY = (e.clientY - rect.top) * scaleY;
+            };
+
+            this.onMouseDown = () => { this.isCustomMouseDown = true; };
+            this.onMouseUp = () => { this.isCustomMouseDown = false; };
+
+            window.addEventListener('mousemove', this.onMouseMove);
+            window.addEventListener('mousedown', this.onMouseDown);
+            window.addEventListener('mouseup', this.onMouseUp);
+
             // --- EVENTI MOUSE INTELLIGENTI ---
             bg.on('pointerover', () => { 
                 btnObj.isMouseHovered = true;
@@ -185,6 +211,9 @@ export default class PauseMenuScene extends Phaser.Scene {
         this.events.on('shutdown', () => {
             this.scale.off('resize', onResize);
             this.tweens.killAll();
+            window.removeEventListener('mousemove', this.onMouseMove);
+            window.removeEventListener('mousedown', this.onMouseDown);
+            window.removeEventListener('mouseup', this.onMouseUp);
         });
     }
 
@@ -193,41 +222,54 @@ export default class PauseMenuScene extends Phaser.Scene {
 
         if (inputMode === 'hand') {
 
-            const tracker = HandTrackingController.getInstance();
-            const px = tracker.targetX * this.scale.gameSize.width;
-            const py = tracker.targetY * this.scale.gameSize.height;
-            const currentPinch = tracker.isClicked;
-
             let hoveredButton: MenuButton | null = null;
 
-            this.buttons.forEach(btn => {
-                const bounds = btn.bg.getBounds();
-                const isHandHovering = bounds.contains(px, py);
+            const tracker = HandTrackingController.getInstance();
+            const handX = tracker.targetX * this.scale.gameSize.width;
+            const handY = tracker.targetY * this.scale.gameSize.height;
+            const currentPinch = tracker.isClicked;
+            const isHandActive = inputMode === 'hand' && tracker.targetX !== -1;
 
-                // Se la MANO entra nel bottone
+            this.buttons.forEach(btn => {
+                const bounds = btn.container.getBounds();
+
+                let isHandHovering = false;
+                if (isHandActive) {
+                    isHandHovering = bounds.contains(handX, handY);
+                }
+
+                const isMouseHovering = bounds.contains(this.customMouseX, this.customMouseY);
+
                 if (isHandHovering && !btn.isHandHovered) {
                     btn.isHandHovered = true;
                     if (!btn.isMouseHovered) btn.simulateOver();
-                } 
-                // Se la MANO esce dal bottone
-                else if (!isHandHovering && btn.isHandHovered) {
+                } else if (!isHandHovering && btn.isHandHovered) {
                     btn.isHandHovered = false;
                     if (!btn.isMouseHovered) btn.simulateOut();
                 }
 
-                // Consideriamo il bottone "puntato" se c'è sopra il mouse o la mano
-                if (isHandHovering || btn.isMouseHovered) {
+                if (isMouseHovering && !btn.isMouseHovered) {
+                    btn.isMouseHovered = true;
+                    if (!btn.isHandHovered) btn.simulateOver();
+                } else if (!isMouseHovering && btn.isMouseHovered) {
+                    btn.isMouseHovered = false;
+                    if (!btn.isHandHovered) btn.simulateOut();
+                }
+
+                if (isHandHovering || isMouseHovering) {
                     hoveredButton = btn;
                 }
             });
 
-            if (currentPinch && !this.previousPinchState) {
-                if (hoveredButton) {
-                    (hoveredButton as MenuButton).simulateDown();
-                }
+            if (isHandActive && currentPinch && !this.previousPinchState) {
+                if (hoveredButton) (hoveredButton as MenuButton).simulateDown();
             }
-
             this.previousPinchState = currentPinch;
+
+            if (this.isCustomMouseDown && !this.previousMouseClickState) {
+                if (hoveredButton) (hoveredButton as MenuButton).simulateDown();
+            }
+            this.previousMouseClickState = this.isCustomMouseDown
         }
     }
 

@@ -79,7 +79,7 @@ export class Level2 extends Phaser.Scene {
 
     create() {
 
-            AudioManager.playMusic(this, 'bg_music');
+        AudioManager.playMusic(this, 'bg_music');
         this.game.canvas.style.pointerEvents = 'auto';
         this.game.canvas.style.position = 'relative';
         this.game.canvas.style.zIndex = '999';

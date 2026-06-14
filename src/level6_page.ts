@@ -247,6 +247,7 @@ export class Level6 extends Phaser.Scene {
             wrapper.remove();
             this.scale.off('resize', onResize);
             this.tweens.killAll();
+            AudioManager.stopMusic(); 
         });
 
         if(this.input.keyboard){

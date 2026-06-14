@@ -210,6 +210,7 @@ export class Level4 extends Phaser.Scene {
         this.events.once('shutdown', () => {
             this.scale.off('resize', onResize);
             this.tweens.killAll();
+            AudioManager.stopMusic(); 
         });
 
         if(this.input.keyboard){

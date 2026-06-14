@@ -205,6 +205,8 @@ export class FinalBoss extends Phaser.Scene {
             wrapper.remove();
             this.scale.off('resize', this.onResize, this);
             this.allInteractableButtons = [];
+            
+            AudioManager.stopMusic();
         });
 
         if(this.input.keyboard){
@@ -804,7 +806,7 @@ export class FinalBoss extends Phaser.Scene {
                 'Menu',
                 '28px',
                 () => {
-                    window.location.href = '/pages/menu_page.html';
+                    this.scene.start('MenuPageScene');
                 }
             );
 
@@ -822,6 +824,7 @@ export class FinalBoss extends Phaser.Scene {
                 'Try Again',
                 '28px',
                 () => {
+                    AudioManager.stopMusic();
                     this.scene.restart();
                 }
             );
@@ -834,7 +837,7 @@ export class FinalBoss extends Phaser.Scene {
                 'Menu',
                 '28px',
                 () => {
-                    window.location.href = '/pages/menu_page.html';
+                    this.scene.start('MenuPageScene');
                 }
             );
 
@@ -900,7 +903,7 @@ export class FinalBoss extends Phaser.Scene {
             'Menu',
             '26px',
             () => {
-                window.location.href = '/pages/menu_page.html';
+                this.scene.start('MenuPageScene');
             }
         ).setDepth(140);
     }

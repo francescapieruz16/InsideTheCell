@@ -21,7 +21,6 @@ export default class JournalScene extends Phaser.Scene {
     private itemsList: JournalItem[] = [];
     private unlockedItems: string[] = [];
 
-    // Riferimenti per il resize
     private bgOverlay!: Phaser.GameObjects.Rectangle;
     private uiContainer!: Phaser.GameObjects.Container;
     private wipeBtn!: Phaser.GameObjects.Text;
@@ -53,12 +52,14 @@ export default class JournalScene extends Phaser.Scene {
         const { width, height } = this.scale.gameSize;
 
         this.onMouseMove = (e: MouseEvent) => {
-            const rect = this.game.canvas.getBoundingClientRect();
+            const canvas = this.game.canvas;
+            const rect = canvas.getBoundingClientRect();
+            const xRel = e.clientX - rect.left;
+            const yRel = e.clientY - rect.top;
             const scaleX = this.scale.gameSize.width / rect.width;
             const scaleY = this.scale.gameSize.height / rect.height;
-            
-            this.customMouseX = (e.clientX - rect.left) * scaleX;
-            this.customMouseY = (e.clientY - rect.top) * scaleY;
+            this.customMouseX = (xRel * scaleX) + this.cameras.main.scrollX;
+            this.customMouseY = (yRel * scaleY) + this.cameras.main.scrollY;
         };
 
         this.onMouseDown = () => { this.isCustomMouseDown = true; };
@@ -68,7 +69,6 @@ export default class JournalScene extends Phaser.Scene {
         window.addEventListener('mousedown', this.onMouseDown);
         window.addEventListener('mouseup', this.onMouseUp);
 
-        // 1. Sfondo oscuro scalabile
         this.bgOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.85).setOrigin(0);
 
         const savedData = localStorage.getItem('journalUnlocks');
@@ -79,8 +79,6 @@ export default class JournalScene extends Phaser.Scene {
             if (this.unlockedItems.includes(item.id)) discoveredCount++;
         });
 
-        // 2. CREAZIONE DEL CONTAINER CENTRALE
-        // Posizioniamo il contenitore al centro della X. Tutti i figli avranno X=0 come centro perfetto.
         this.uiContainer = this.add.container(width / 2, 0);
 
         const titleText = this.add.text(0, 80, 'BioLog', {
@@ -91,12 +89,10 @@ export default class JournalScene extends Phaser.Scene {
             fontSize: '28px', color: discoveredCount === this.itemsList.length ? '#4caf50' : '#ffffff'
         }).setOrigin(0.5);
 
-        // Aggiungiamo i testi al container
         this.uiContainer.add([titleText, subtitleText]);
 
-        // 3. GENERAZIONE GRIGLIA NEL CONTAINER
-        const startX = -400;  // Offset dal centro del container
-        const startY = 280;   // Altezza assoluta
+        const startX = -400;  
+        const startY = 280;   
         const spacingX = 400;
         const spacingY = 180; 
         const cols = 3;
@@ -108,17 +104,15 @@ export default class JournalScene extends Phaser.Scene {
             const x = startX + (col * spacingX);
             const y = startY + (row * spacingY);
 
-            // Passiamo il container alla funzione
             this.createEntryCard(this.uiContainer, x, y, item);
         });
 
-        // 4. TASTO CLOSE (Fisso in alto a sinistra)
         this.closeBtn = this.add.text(40, 40, '✖ CLOSE', {
             fontSize: '24px', 
             color: '#aaaaaa', 
             backgroundColor: '#222222', 
             padding: { x: 15, y: 10 }
-        }).setOrigin(0, 0).setInteractive({ useHandCursor: true }); 
+        }).setOrigin(0, 0); 
 
         this.makeInteractive(this.closeBtn,
             () => this.closeBtn.setStyle({ color: '#ffffff', backgroundColor: '#444444' }),
@@ -126,12 +120,10 @@ export default class JournalScene extends Phaser.Scene {
             () => this.closeJournal()
         );
 
-    
-        // 5. TASTO RESET DATI (Centrato in basso)
         let confirmWipe = false;
         this.wipeBtn = this.add.text(width / 2, height - 80, '[ ERASE DATA ]', {
             fontSize: '24px', color: '#ffaa00', backgroundColor: '#331100', padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        }).setOrigin(0.5);
 
         this.makeInteractive(this.wipeBtn,
             () => {
@@ -162,38 +154,29 @@ export default class JournalScene extends Phaser.Scene {
             }
         );
 
-        // Input
         this.input.keyboard!.on('keydown-I', () => this.closeJournal());
         this.input.keyboard!.on('keydown-ESC', () => this.closeJournal());
 
         this.scene.bringToTop();
 
-        // 6. LOGICA DI RESIZE DINAMICA
         const handleResize = (gameSize: Phaser.Structs.Size) => {
             const newW = gameSize.width;
             const newH = gameSize.height;
 
-            // Riadatta lo sfondo a tutto schermo
             this.bgOverlay.setSize(newW, newH);
-
-            // Sposta l'intero blocco del Diario (Testi + Griglia) al nuovo centro
             this.uiContainer.setX(newW / 2);
-
-            // Tieni il tasto Reset agganciato al fondo dello schermo
             this.wipeBtn.setPosition(newW / 2, newH - 80);
-            
-            // Il close non serve muoverlo: le coordinate 40, 40 dall'angolo alto/sinistro sono assolute.
         };
 
         this.scale.on('resize', handleResize);
         this.events.on('shutdown', () => {
+            this.game.canvas.style.cursor = 'default';
             this.scale.off('resize', handleResize);
             window.removeEventListener('mousemove', this.onMouseMove);
             window.removeEventListener('mousedown', this.onMouseDown);
             window.removeEventListener('mouseup', this.onMouseUp);
         });
 
-        // Forza un ricalcolo manuale immediato per sicurezza
         handleResize(this.scale.gameSize);
     }
 
@@ -224,7 +207,6 @@ export default class JournalScene extends Phaser.Scene {
             wordWrap: { width: 200 }
         }).setOrigin(0, 0.5); 
 
-        // FONDAMENTALE: aggiunge tutti i pezzi generati al container genitore
         container.add([cardBg, icon, nameLabel]);
     }
 
@@ -232,10 +214,6 @@ export default class JournalScene extends Phaser.Scene {
         this.scene.resume(this.parentSceneKey);
         this.scene.stop();
     }
-
-    // ==========================================
-    // --- METODI STATICI GLOBALI DI SBLOCCO ---
-    // ==========================================
 
     public static unlockItem(scene: Phaser.Scene, itemId: string, discoverables: JournalItem[]) {
         const savedData = localStorage.getItem('journalUnlocks');
@@ -300,62 +278,70 @@ export default class JournalScene extends Phaser.Scene {
     }
 
     update(time: number, delta: number) {
+        let hoveredElement: InteractiveElement | null = null;
+        let isAnyMouseHovering = false;
+
         const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const isHandActive = inputMode === 'hand';
 
-        if (inputMode === 'hand') {
+        let handX = -1;
+        let handY = -1;
+        let currentPinch = false;
+
+        if (isHandActive) {
             const tracker = HandTrackingController.getInstance();
-            const handX = tracker.targetX * this.scale.gameSize.width;
-            const handY = tracker.targetY * this.scale.gameSize.height;
-            const currentPinch = tracker.isClicked;
-            const isHandActive = inputMode === 'hand' && tracker.targetX !== -1;
-
-            let hoveredElement: InteractiveElement | null = null;
-
-            this.interactables.forEach(el => {
-                const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
-
-                let isHandHovering = false;
-                if (isHandActive) {
-                    isHandHovering = Phaser.Geom.Rectangle.Contains(bounds, handX, handY);
-                }
-
-                const isMouseHovering = Phaser.Geom.Rectangle.Contains(bounds, this.customMouseX, this.customMouseY);
-
-                // --- Logica Hover Mano ---
-                if (isHandHovering && !el.isHandHovered) {
-                    el.isHandHovered = true;
-                    if (!el.isMouseHovered) el.simulateOver();
-                } else if (!isHandHovering && el.isHandHovered) {
-                    el.isHandHovered = false;
-                    if (!el.isMouseHovered) el.simulateOut();
-                }
-
-                // --- Logica Hover Mouse Custom ---
-                if (isMouseHovering && !el.isMouseHovered) {
-                    el.isMouseHovered = true;
-                    if (!el.isHandHovered) el.simulateOver();
-                } else if (!isMouseHovering && el.isMouseHovered) {
-                    el.isMouseHovered = false;
-                    if (!el.isHandHovered) el.simulateOut();
-                }
-
-                if (isHandHovering || isMouseHovering) {
-                    hoveredElement = el;
-                }
-            });
-
-            // Trigger click per Mano
-            if (isHandActive && currentPinch && !this.previousPinchState) {
-                if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
-            }
-            this.previousPinchState = currentPinch;
-
-            // Trigger click per Mouse Custom
-            if (this.isCustomMouseDown && !this.previousMouseClickState) {
-                if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
-            }
-            this.previousMouseClickState = this.isCustomMouseDown;
+            handX = tracker.targetX * this.scale.gameSize.width;
+            handY = tracker.targetY * this.scale.gameSize.height;
+            currentPinch = tracker.isClicked;
         }
+
+        this.interactables.forEach(el => {
+            const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
+
+            let isHandHovering = false;
+            if (isHandActive && handX !== -1) {
+                isHandHovering = Phaser.Geom.Rectangle.Contains(bounds, handX, handY);
+            }
+
+            const isMouseHovering = Phaser.Geom.Rectangle.Contains(bounds, this.customMouseX, this.customMouseY);
+
+            if (isHandHovering && !el.isHandHovered) {
+                el.isHandHovered = true;
+                if (!el.isMouseHovered) el.simulateOver();
+            } else if (!isHandHovering && el.isHandHovered) {
+                el.isHandHovered = false;
+                if (!el.isMouseHovered) el.simulateOut();
+            }
+
+            if (isMouseHovering && !el.isMouseHovered) {
+                el.isMouseHovered = true;
+                if (!el.isHandHovered) el.simulateOver();
+            } else if (!isMouseHovering && el.isMouseHovered) {
+                el.isMouseHovered = false;
+                if (!el.isHandHovered) el.simulateOut();
+            }
+
+            if (isHandHovering || isMouseHovering) {
+                hoveredElement = el;
+            }
+            if (isMouseHovering) isAnyMouseHovering = true;
+        });
+
+        if (!isAnyMouseHovering) {
+            this.game.canvas.style.cursor = 'default';
+        }
+
+        if (isHandActive && currentPinch && !this.previousPinchState) {
+            if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+        }
+        if (isHandActive) {
+            this.previousPinchState = currentPinch;
+        }
+
+        if (this.isCustomMouseDown && !this.previousMouseClickState) {
+            if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+        }
+        this.previousMouseClickState = this.isCustomMouseDown;
     }
 
     private makeInteractive(
@@ -364,30 +350,20 @@ export default class JournalScene extends Phaser.Scene {
         onOut: () => void,
         onDown: () => void
     ) {
-        obj.setInteractive({ useHandCursor: true });
-        
         const interactable: InteractiveElement = {
             obj, 
             isMouseHovered: false, 
             isHandHovered: false, 
-            simulateOver: onOver, 
-            simulateOut: onOut, 
+            simulateOver: () => {
+                this.game.canvas.style.cursor = 'pointer';
+                onOver();
+            }, 
+            simulateOut: () => {
+                this.game.canvas.style.cursor = 'default';
+                onOut();
+            }, 
             simulateDown: onDown
         };
-
-        // Eventi mouse nativi combinati con le nuove flag
-        obj.on('pointerover', () => { 
-            interactable.isMouseHovered = true;
-            if (!interactable.isHandHovered) onOver(); 
-        });
-        
-        obj.on('pointerout', () => { 
-            interactable.isMouseHovered = false;
-            if (!interactable.isHandHovered) onOut(); 
-        });
-        
-        obj.on('pointerdown', () => { onDown(); }); 
-
         this.interactables.push(interactable);
     }
 }

@@ -71,12 +71,14 @@ export default class SettingsScene extends Phaser.Scene {
         this.loadSettings();
 
         this.onMouseMove = (e: MouseEvent) => {
-            const rect = this.game.canvas.getBoundingClientRect();
+            const canvas = this.game.canvas;
+            const rect = canvas.getBoundingClientRect();
+            const xRel = e.clientX - rect.left;
+            const yRel = e.clientY - rect.top;
             const scaleX = this.scale.gameSize.width / rect.width;
             const scaleY = this.scale.gameSize.height / rect.height;
-            
-            this.customMouseX = (e.clientX - rect.left) * scaleX;
-            this.customMouseY = (e.clientY - rect.top) * scaleY;
+            this.customMouseX = (xRel * scaleX) + this.cameras.main.scrollX;
+            this.customMouseY = (yRel * scaleY) + this.cameras.main.scrollY;
         };
 
         this.onMouseDown = () => { this.isCustomMouseDown = true; };
@@ -86,18 +88,15 @@ export default class SettingsScene extends Phaser.Scene {
         window.addEventListener('mousedown', this.onMouseDown);
         window.addEventListener('mouseup', this.onMouseUp);
 
-        // --- GENERATORE DI STEPPER E TOGGLE ---
         let startY = -250;
         const spacingY = 75;
         
-        // 1. Velocità Testo
         const speedOptions = ['Slow', 'Normal', 'Fast', 'Instant'];
         this.createStepper(startY, 'Text Speed', speedOptions, 
             () => this.settings.textSpeed, 
             (val) => { this.settings.textSpeed = val; this.saveSettings(); }
         );
 
-        // 2. Volume Voce A.B.I.
         this.createVolumeStepper(startY + (spacingY * 1), 'A.B.I. Voice Vol', 
             () => this.settings.voiceVol, 
             (val) => { 
@@ -111,32 +110,25 @@ export default class SettingsScene extends Phaser.Scene {
             }
         );
 
-        // 3. Mute A.B.I.
         this.createMuteToggle(startY + (spacingY * 2));
 
-        // 4. Volume Musica
         this.createVolumeStepper(startY + (spacingY * 3), 'Music Volume', 
             () => this.settings.musicVol, 
             (val) => { 
                 this.settings.musicVol = val; 
-                if (val > 0) this.settings.previousMusicVol = val; // Salva il volume pre-mute
+                if (val > 0) this.settings.previousMusicVol = val; 
                 this.saveSettings(); 
                 
-                // Aggiorna istantaneamente la musica globale
                 AudioManager.setVolume(val / 100);
 
-                // Riavvia l'UI dei settings se passiamo da 0 a 10 per togliere la "X"
                 if (val === 0 || (val === 10 && this.settings.musicVol > 0)) {
                     this.scene.restart({ parentScene: this.parentSceneKey });
                 }
             }
         );
 
-        // 5. Mute Musica (NUOVO)
         this.createMusicMuteToggle(startY + (spacingY * 4));
 
-        // --- BOTTONI PRINCIPALI ---
-        // Spostati più in basso per fare spazio al nuovo tasto
         const saveBtnY = startY + (spacingY * 5.8); 
         
         const saveBtn = this.add.text(0, saveBtnY, '💾 SAVE & CLOSE', {
@@ -153,8 +145,7 @@ export default class SettingsScene extends Phaser.Scene {
         );
         this.mainContainer.add(saveBtn);
 
-        // --- BOTTONI DI GESTIONE DATI ---
-        const dataBtnY = startY + (spacingY * 7.2); // Spostati più in basso
+        const dataBtnY = startY + (spacingY * 7.2); 
 
         const defaultBtn = this.add.text(-200, dataBtnY, '↻ DEFAULT SETTINGS', {
             fontSize: '24px', color: '#000000', backgroundColor: '#00ffff', padding: { x: 20, y: 10 }
@@ -180,7 +171,6 @@ export default class SettingsScene extends Phaser.Scene {
         );
         this.mainContainer.add(resetBtn);
 
-        // --- RESIZE LOGIC ---
         const onResize = (gameSize: Phaser.Structs.Size) => {
             if (!this.sys || !this.sys.isActive() && !this.scene.isPaused()) return;
 
@@ -207,6 +197,7 @@ export default class SettingsScene extends Phaser.Scene {
         onResize(this.scale.gameSize);
 
         this.events.on('shutdown', () => {
+            this.game.canvas.style.cursor = 'default';
             this.scale.off('resize', onResize);
             this.tweens.killAll();
             window.removeEventListener('mousemove', this.onMouseMove);
@@ -216,74 +207,83 @@ export default class SettingsScene extends Phaser.Scene {
     }
 
     update(time: number, delta: number) {
+        let hoveredElement: InteractiveElement | null = null;
+        let isAnyMouseHovering = false;
+
         const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const isHandActive = inputMode === 'hand';
 
-        if (inputMode === 'hand') {
+        let handX = -1;
+        let handY = -1;
+        let currentPinch = false;
 
+        if (isHandActive) {
             const tracker = HandTrackingController.getInstance();
-            const handX = tracker.targetX * this.scale.gameSize.width;
-            const handY = tracker.targetY * this.scale.gameSize.height;
-            const currentPinch = tracker.isClicked;
-            const isHandActive = inputMode === 'hand' && tracker.targetX !== -1;
-
-            let hoveredElement: InteractiveElement | null = null;
-            const isPopupOpen = this.warningPopup && this.warningPopup.visible;
-
-            this.interactables.forEach(el => {
-                const isElementInPopup = el.obj.parentContainer === this.warningBoxContainer;
-                if ((isPopupOpen && !isElementInPopup) || (!isPopupOpen && isElementInPopup)) {
-                    if (el.isHandHovered || el.isMouseHovered) {
-                        el.isHandHovered = false;
-                        el.isMouseHovered = false;
-                        el.simulateOut();
-                    }
-                    return;
-                }
-
-                const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
-                let isHandHovering = false;
-                if (isHandActive) {
-                    isHandHovering = Phaser.Geom.Rectangle.Contains(bounds, handX, handY);
-                }
-
-                const isMouseHovering = Phaser.Geom.Rectangle.Contains(bounds, this.customMouseX, this.customMouseY);
-
-                if (isHandHovering && !el.isHandHovered) {
-                    el.isHandHovered = true;
-                    if (!el.isMouseHovered) el.simulateOver();
-                } else if (!isHandHovering && el.isHandHovered) {
-                    el.isHandHovered = false;
-                    if (!el.isMouseHovered) el.simulateOut();
-                }
-
-                if (isMouseHovering && !el.isMouseHovered) {
-                    el.isMouseHovered = true;
-                    if (!el.isHandHovered) el.simulateOver();
-                } else if (!isMouseHovering && el.isMouseHovered) {
-                    el.isMouseHovered = false;
-                    if (!el.isHandHovered) el.simulateOut();
-                }
-
-                if (isHandHovering || isMouseHovering) {
-                    hoveredElement = el;
-                }
-            });
-
-            if (isHandActive && currentPinch && !this.previousPinchState) {
-                if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
-            }
-            this.previousPinchState = currentPinch;
-
-            if (this.isCustomMouseDown && !this.previousMouseClickState) {
-                if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
-            }
-            this.previousMouseClickState = this.isCustomMouseDown;
+            handX = tracker.targetX * this.scale.gameSize.width;
+            handY = tracker.targetY * this.scale.gameSize.height;
+            currentPinch = tracker.isClicked;
         }
-    }
 
-    // =========================================================
-    // --- HELPER LOGICA E INTERAZIONE ---
-    // =========================================================
+        const isPopupOpen = this.warningPopup && this.warningPopup.visible;
+
+        this.interactables.forEach(el => {
+            const isElementInPopup = el.obj.parentContainer === this.warningBoxContainer;
+            if ((isPopupOpen && !isElementInPopup) || (!isPopupOpen && isElementInPopup)) {
+                if (el.isHandHovered || el.isMouseHovered) {
+                    el.isHandHovered = false;
+                    el.isMouseHovered = false;
+                    el.simulateOut();
+                }
+                return;
+            }
+
+            const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
+            let isHandHovering = false;
+            
+            if (isHandActive && handX !== -1) {
+                isHandHovering = Phaser.Geom.Rectangle.Contains(bounds, handX, handY);
+            }
+
+            const isMouseHovering = Phaser.Geom.Rectangle.Contains(bounds, this.customMouseX, this.customMouseY);
+
+            if (isHandHovering && !el.isHandHovered) {
+                el.isHandHovered = true;
+                if (!el.isMouseHovered) el.simulateOver();
+            } else if (!isHandHovering && el.isHandHovered) {
+                el.isHandHovered = false;
+                if (!el.isMouseHovered) el.simulateOut();
+            }
+
+            if (isMouseHovering && !el.isMouseHovered) {
+                el.isMouseHovered = true;
+                if (!el.isHandHovered) el.simulateOver();
+            } else if (!isMouseHovering && el.isMouseHovered) {
+                el.isMouseHovered = false;
+                if (!el.isHandHovered) el.simulateOut();
+            }
+
+            if (isHandHovering || isMouseHovering) {
+                hoveredElement = el;
+            }
+            if (isMouseHovering) isAnyMouseHovering = true;
+        });
+
+        if (!isAnyMouseHovering) {
+            this.game.canvas.style.cursor = 'default';
+        }
+
+        if (isHandActive && currentPinch && !this.previousPinchState) {
+            if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+        }
+        if (isHandActive) {
+            this.previousPinchState = currentPinch;
+        }
+
+        if (this.isCustomMouseDown && !this.previousMouseClickState) {
+            if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+        }
+        this.previousMouseClickState = this.isCustomMouseDown;
+    }
 
     private makeInteractive(
         obj: Phaser.GameObjects.GameObject & { getBounds: () => Phaser.Geom.Rectangle },
@@ -291,29 +291,20 @@ export default class SettingsScene extends Phaser.Scene {
         onOut: () => void,
         onDown: () => void
     ) {
-        obj.setInteractive({ useHandCursor: true });
-        
         const interactable: InteractiveElement = {
             obj, 
             isMouseHovered: false, 
             isHandHovered: false, 
-            simulateOver: onOver, 
-            simulateOut: onOut, 
+            simulateOver: () => {
+                this.game.canvas.style.cursor = 'pointer';
+                onOver();
+            }, 
+            simulateOut: () => {
+                this.game.canvas.style.cursor = 'default';
+                onOut();
+            }, 
             simulateDown: onDown
         };
-
-        obj.on('pointerover', () => { 
-            interactable.isMouseHovered = true;
-            if (!interactable.isHandHovered) onOver(); 
-        });
-        
-        obj.on('pointerout', () => { 
-            interactable.isMouseHovered = false;
-            if (!interactable.isHandHovered) onOut(); 
-        });
-        
-        obj.on('pointerdown', () => { onDown(); }); 
-
         this.interactables.push(interactable);
     }
 
@@ -339,13 +330,12 @@ export default class SettingsScene extends Phaser.Scene {
             voiceVol: 100, 
             previousVoiceVol: 100, 
             sfxVol: 100, 
-            musicVol: 100, 
+            musicVol: 100,  
             previousMusicVol: 100 
         };
         
         this.saveSettings();
-
-       AudioManager.setVolume(1);
+        AudioManager.setVolume(1);
     }
 
     private resetSettingsToDefault() {
@@ -353,10 +343,6 @@ export default class SettingsScene extends Phaser.Scene {
         this.saveSettings();
         this.scene.restart({ parentScene: this.parentSceneKey });
     }
-
-    // =========================================================
-    // --- COSTRUTTORI UI ---
-    // =========================================================
 
     private createStepper(y: number, label: string, options: string[], getVal: () => string, setVal: (val: string) => void) {
         const lblText = this.add.text(-250, y, label, { fontSize: '24px', color: '#aaaaaa' }).setOrigin(0, 0.5);
@@ -448,17 +434,14 @@ export default class SettingsScene extends Phaser.Scene {
     }
 
     private createWarningPopup() {
-        // 1. Recupera le dimensioni dello schermo fin da subito
         const { width, height } = this.scale.gameSize;
 
         this.warningPopup = this.add.container(0, 0);
         this.warningPopup.setDepth(100);
         this.warningPopup.setVisible(false); 
 
-        // 2. Imposta l'overlay a schermo intero dinamico
         this.warningOverlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.8).setOrigin(0).setInteractive(); 
         
-        // 3. FONDAMENTALE: Inizializza il box già al centro esatto!
         this.warningBoxContainer = this.add.container(width / 2, height / 2);
 
         const box = this.add.rectangle(0, 0, 500, 300, 0x220000).setStrokeStyle(4, 0xff0000);
@@ -470,7 +453,6 @@ export default class SettingsScene extends Phaser.Scene {
             () => yesBtn.setStyle({ backgroundColor: '#ff0000', color: '#ffffff' }).setScale(1.1),
             () => yesBtn.setStyle({ backgroundColor: '#ff5555', color: '#000000' }).setScale(1),
             () => {
-                // 1. Cancella TUTTI i salvataggi in un colpo solo
                 localStorage.removeItem('maxUnlockedLevel');
                 localStorage.removeItem('scene1_state');
                 localStorage.removeItem('scene2_state');
@@ -480,18 +462,16 @@ export default class SettingsScene extends Phaser.Scene {
                 this.warningPopup.setVisible(false);
                 msg.setText('Progress erased.');
                 
-                // 2. Dopo 1.5 secondi, riporta il giocatore al Menu Principale per ripulire la RAM
                 this.time.delayedCall(1500, () => {
                     this.sound.stopAll();
                     
-                    // Spegne fisicamente il livello che era rimasto in pausa
                     if (this.parentSceneKey) {
                         this.scene.stop(this.parentSceneKey); 
                     }
                     
-                    this.scene.stop('PauseMenuScene'); // Chiude la Pausa
-                    this.scene.sleep('ABIScene');      // Addormenta A.B.I.
-                    this.scene.start('MenuPageScene'); // Carica il Menu Principale
+                    this.scene.stop('PauseMenuScene');
+                    this.scene.sleep('ABIScene');      
+                    this.scene.start('MenuPageScene'); 
                 });
             }
         );
@@ -528,7 +508,6 @@ export default class SettingsScene extends Phaser.Scene {
             () => {
                 const isCurrentlyMuted = this.settings.musicVol === 0;
                 
-                // Scambia tra muto e volume precedente
                 if (isCurrentlyMuted) {
                     this.settings.musicVol = this.settings.previousMusicVol > 0 ? this.settings.previousMusicVol : 100;
                 } else {
@@ -537,11 +516,7 @@ export default class SettingsScene extends Phaser.Scene {
                 }
                 
                 this.saveSettings();
-
-                // 1. Applica immediatamente il volume globale
                 AudioManager.setVolume(this.settings.musicVol / 100);
-
-                // 2. Riavvia la scena dei settings per aggiornare graficamente lo Stepper e il Checkmark
                 this.scene.restart({ parentScene: this.parentSceneKey });
             }
         );

@@ -43,10 +43,8 @@ export default class PauseMenuScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale.gameSize;
 
-        // 1. Sfondo nero con trasparenza
         this.bgRect = this.add.rectangle(0, 0, width, height, 0x000000, 0.85).setOrigin(0);
 
-        // 2. Titolo del menu
         this.titleText = this.add.text(width / 2, height / 2 - 200, 'GAME PAUSED', {
             fontSize: '46px',
             color: '#4caf50',
@@ -56,7 +54,27 @@ export default class PauseMenuScene extends Phaser.Scene {
             shadow: { offsetX: 0, offsetY: 0, color: '#4caf50', blur: 15, fill: true }
         }).setOrigin(0.5);
 
-        // --- FUNZIONE HELPER AVANZATA PER CREARE BOTTONI (CON TWEENS E CONTAINER) ---
+        this.onMouseMove = (e: MouseEvent) => {
+            const canvas = this.game.canvas;
+            const rect = canvas.getBoundingClientRect();
+            
+            const xRel = e.clientX - rect.left;
+            const yRel = e.clientY - rect.top;
+            
+            const scaleX = this.scale.gameSize.width / rect.width;
+            const scaleY = this.scale.gameSize.height / rect.height;
+            
+            this.customMouseX = (xRel * scaleX) + this.cameras.main.scrollX;
+            this.customMouseY = (yRel * scaleY) + this.cameras.main.scrollY;
+        };
+
+        this.onMouseDown = () => { this.isCustomMouseDown = true; };
+        this.onMouseUp = () => { this.isCustomMouseDown = false; };
+
+        window.addEventListener('mousemove', this.onMouseMove);
+        window.addEventListener('mousedown', this.onMouseDown);
+        window.addEventListener('mouseup', this.onMouseUp);
+
         const createAdvancedButton = (baseYOffset: number, text: string, callback: () => void, isSpecial: boolean = false) => {
             const baseFill = isSpecial ? 0x112233 : 0x1a1a1a;
             const baseStroke = isSpecial ? 0x00ffff : 0x4caf50; 
@@ -79,15 +97,13 @@ export default class PauseMenuScene extends Phaser.Scene {
 
             btnContainer.add([bg, txt]);
 
-            bg.setInteractive({ useHandCursor: true });
-
             let currentBaseScale = 1;
 
-            // --- FUNZIONI DI SIMULAZIONE (Pura animazione, senza logica di stato) ---
             const simulateOver = () => {
                 bg.setFillStyle(hoverFill, 0.9);
                 bg.setStrokeStyle(3, hoverStroke);
                 txt.setColor('#ffffff');
+                this.game.canvas.style.cursor = 'pointer';
                 this.tweens.killTweensOf(btnContainer); 
                 this.tweens.add({ targets: btnContainer, scaleX: currentBaseScale * 1.15, scaleY: currentBaseScale * 1.15, duration: 150, ease: 'Power2' });
             };
@@ -96,6 +112,7 @@ export default class PauseMenuScene extends Phaser.Scene {
                 bg.setFillStyle(baseFill, 0.7);
                 bg.setStrokeStyle(2, baseStroke);
                 txt.setColor(isSpecial ? '#00ffff' : '#ffffff');
+                this.game.canvas.style.cursor = 'default';
                 this.tweens.killTweensOf(btnContainer); 
                 this.tweens.add({ targets: btnContainer, scaleX: currentBaseScale, scaleY: currentBaseScale, duration: 150, ease: 'Power2' });
             };
@@ -112,8 +129,8 @@ export default class PauseMenuScene extends Phaser.Scene {
                 container: btnContainer,
                 bg: bg,
                 baseYOffset: baseYOffset,
-                isMouseHovered: false, // <--- Aggiornato
-                isHandHovered: false,  // <--- Aggiornato
+                isMouseHovered: false,
+                isHandHovered: false,
                 simulateOver,
                 simulateOut,
                 simulateDown,
@@ -124,47 +141,14 @@ export default class PauseMenuScene extends Phaser.Scene {
                 }
             };
 
-            this.onMouseMove = (e: MouseEvent) => {
-                const rect = this.game.canvas.getBoundingClientRect();
-                const scaleX = this.scale.gameSize.width / rect.width;
-                const scaleY = this.scale.gameSize.height / rect.height;
-                
-                this.customMouseX = (e.clientX - rect.left) * scaleX;
-                this.customMouseY = (e.clientY - rect.top) * scaleY;
-            };
-
-            this.onMouseDown = () => { this.isCustomMouseDown = true; };
-            this.onMouseUp = () => { this.isCustomMouseDown = false; };
-
-            window.addEventListener('mousemove', this.onMouseMove);
-            window.addEventListener('mousedown', this.onMouseDown);
-            window.addEventListener('mouseup', this.onMouseUp);
-
-            // --- EVENTI MOUSE INTELLIGENTI ---
-            bg.on('pointerover', () => { 
-                btnObj.isMouseHovered = true;
-                // Si ingrandisce solo se non era già ingrandito dalla mano
-                if (!btnObj.isHandHovered) simulateOver(); 
-            });
-            
-            bg.on('pointerout', () => { 
-                btnObj.isMouseHovered = false;
-                // Si rimpicciolisce solo se anche la mano è lontana
-                if (!btnObj.isHandHovered) simulateOut(); 
-            });
-            
-            bg.on('pointerdown', () => { 
-                simulateDown(); 
-            });
-
             this.buttons.push(btnObj);
         };
 
-        // 3. Generazione dei Bottoni
         createAdvancedButton(-80, 'Resume', () => { this.resumeGame(); });
         createAdvancedButton(0, 'Settings', () => { this.scene.start('SettingsScene', { parentScene: this.parentSceneKey }); });
         createAdvancedButton(80, 'Return to Main Menu', () => {
             this.sound.stopAll();
+            this.game.canvas.style.cursor = 'default';
             this.scene.stop(this.parentSceneKey);
             this.scene.stop('ControlsScene');
             this.scene.sleep('ABIScene');
@@ -175,11 +159,11 @@ export default class PauseMenuScene extends Phaser.Scene {
         const tutorialScenes = ['ExternalScene', 'Scene2_Membrane', 'Scene3_Internal'];
         if (tutorialScenes.includes(this.parentSceneKey)) {
             createAdvancedButton(200, '► TUTORIAL LEVELS ◄', () => {
+                this.game.canvas.style.cursor = 'default';
                 this.scene.start('LevelSelectScene', { parentScene: this.parentSceneKey });
             }, true);
         }
 
-        // 4. Input da tastiera (ESC)
         this.input.keyboard!.on('keydown-ESC', () => { this.resumeGame(); });
 
         this.scene.bringToTop();
@@ -209,6 +193,7 @@ export default class PauseMenuScene extends Phaser.Scene {
         onResize(this.scale.gameSize);
 
         this.events.on('shutdown', () => {
+            this.game.canvas.style.cursor = 'default';
             this.scale.off('resize', onResize);
             this.tweens.killAll();
             window.removeEventListener('mousemove', this.onMouseMove);
@@ -219,61 +204,68 @@ export default class PauseMenuScene extends Phaser.Scene {
 
     update(time: number, delta: number) {
         const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        
+        let hoveredButton: MenuButton | null = null;
+        let isAnyMouseHovering = false;
 
-        if (inputMode === 'hand') {
+        const tracker = HandTrackingController.getInstance();
+        const handX = tracker.targetX * this.scale.gameSize.width;
+        const handY = tracker.targetY * this.scale.gameSize.height;
+        const currentPinch = tracker.isClicked;
+        const isHandActive = inputMode === 'hand' && tracker.targetX !== -1;
 
-            let hoveredButton: MenuButton | null = null;
-
-            const tracker = HandTrackingController.getInstance();
-            const handX = tracker.targetX * this.scale.gameSize.width;
-            const handY = tracker.targetY * this.scale.gameSize.height;
-            const currentPinch = tracker.isClicked;
-            const isHandActive = inputMode === 'hand' && tracker.targetX !== -1;
-
-            this.buttons.forEach(btn => {
-                const bounds = btn.container.getBounds();
-
-                let isHandHovering = false;
-                if (isHandActive) {
-                    isHandHovering = bounds.contains(handX, handY);
-                }
-
-                const isMouseHovering = bounds.contains(this.customMouseX, this.customMouseY);
-
-                if (isHandHovering && !btn.isHandHovered) {
-                    btn.isHandHovered = true;
-                    if (!btn.isMouseHovered) btn.simulateOver();
-                } else if (!isHandHovering && btn.isHandHovered) {
-                    btn.isHandHovered = false;
-                    if (!btn.isMouseHovered) btn.simulateOut();
-                }
-
-                if (isMouseHovering && !btn.isMouseHovered) {
-                    btn.isMouseHovered = true;
-                    if (!btn.isHandHovered) btn.simulateOver();
-                } else if (!isMouseHovering && btn.isMouseHovered) {
-                    btn.isMouseHovered = false;
-                    if (!btn.isHandHovered) btn.simulateOut();
-                }
-
-                if (isHandHovering || isMouseHovering) {
-                    hoveredButton = btn;
-                }
-            });
-
-            if (isHandActive && currentPinch && !this.previousPinchState) {
-                if (hoveredButton) (hoveredButton as MenuButton).simulateDown();
+        this.buttons.forEach(btn => {
+            const bounds = btn.container.getBounds();
+            
+            let isHandHovering = false;
+            if (isHandActive) {
+                isHandHovering = bounds.contains(handX, handY);
             }
-            this.previousPinchState = currentPinch;
 
-            if (this.isCustomMouseDown && !this.previousMouseClickState) {
-                if (hoveredButton) (hoveredButton as MenuButton).simulateDown();
+            const isMouseHovering = bounds.contains(this.customMouseX, this.customMouseY);
+
+            // --- HOVER MANO ---
+            if (isHandHovering && !btn.isHandHovered) {
+                btn.isHandHovered = true;
+                if (!btn.isMouseHovered) btn.simulateOver();
+            } else if (!isHandHovering && btn.isHandHovered) {
+                btn.isHandHovered = false;
+                if (!btn.isMouseHovered) btn.simulateOut();
             }
-            this.previousMouseClickState = this.isCustomMouseDown
+
+            // --- HOVER MOUSE CUSTOM ---
+            if (isMouseHovering && !btn.isMouseHovered) {
+                btn.isMouseHovered = true;
+                if (!btn.isHandHovered) btn.simulateOver();
+            } else if (!isMouseHovering && btn.isMouseHovered) {
+                btn.isMouseHovered = false;
+                if (!btn.isHandHovered) btn.simulateOut();
+            }
+
+            if (isHandHovering || isMouseHovering) {
+                hoveredButton = btn;
+            }
+            
+            if (isMouseHovering) isAnyMouseHovering = true;
+        });
+
+        if (!isAnyMouseHovering) {
+            this.game.canvas.style.cursor = 'default';
         }
+
+        if (isHandActive && currentPinch && !this.previousPinchState) {
+            if (hoveredButton) (hoveredButton as MenuButton).simulateDown();
+        }
+        this.previousPinchState = currentPinch;
+
+        if (this.isCustomMouseDown && !this.previousMouseClickState) {
+            if (hoveredButton) (hoveredButton as MenuButton).simulateDown();
+        }
+        this.previousMouseClickState = this.isCustomMouseDown;
     }
 
     private resumeGame() {
+        this.game.canvas.style.cursor = 'default';
         this.scene.resume(this.parentSceneKey);
         this.scene.stop();
     }

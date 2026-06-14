@@ -99,13 +99,17 @@ export class PostGameManager {
         this.scene.scale.on('resize', this.handleResize, this);
 
         this.onMouseMove = (e: MouseEvent) => {
-            if (!this.scene || !this.scene.scale) return;
-            const rect = this.scene.game.canvas.getBoundingClientRect();
+            if (!this.scene || !this.scene.scale || !this.scene.game.canvas) return;
+            const canvas = this.scene.game.canvas;
+            const rect = canvas.getBoundingClientRect();
+            const xRel = e.clientX - rect.left;
+            const yRel = e.clientY - rect.top;
             const scaleX = this.scene.scale.gameSize.width / rect.width;
             const scaleY = this.scene.scale.gameSize.height / rect.height;
-            
-            this.customMouseX = (e.clientX - rect.left) * scaleX;
-            this.customMouseY = (e.clientY - rect.top) * scaleY;
+            const scrollX = this.uiScene?.cameras?.main?.scrollX || 0;
+            const scrollY = this.uiScene?.cameras?.main?.scrollY || 0;
+            this.customMouseX = (xRel * scaleX) + scrollX;
+            this.customMouseY = (yRel * scaleY) + scrollY;
         };
 
         this.onMouseDown = () => { this.isCustomMouseDown = true; };
@@ -194,6 +198,7 @@ export class PostGameManager {
         this.scene.events.on('update', this.update, this);
 
         this.scene.events.once('shutdown', () => {
+            this.scene.game.canvas.style.cursor = 'default';
             this.scene.events.off('update', this.update, this);
             this.scene.scale.off('resize', this.handleResize, this);
 
@@ -364,22 +369,22 @@ export class PostGameManager {
     }
 
     private waitForUISceneReady(callback: () => void) {
-    const tryRun = () => {
-        const cameraReady =
-            this.uiScene &&
-            this.uiScene.cameras &&
-            this.uiScene.cameras.main;
+        const tryRun = () => {
+            const cameraReady =
+                this.uiScene &&
+                this.uiScene.cameras &&
+                this.uiScene.cameras.main;
 
-        if (cameraReady) {
-            callback();
-            return;
-        }
+            if (cameraReady) {
+                callback();
+                return;
+            }
 
-        this.scene.time.delayedCall(50, tryRun);
-    };
+            this.scene.time.delayedCall(50, tryRun);
+        };
 
-    tryRun();
-}
+        tryRun();
+    }
 
     private loadRandomQuiz() {
         let availableQuizzes = this.extractQuizzesFromList(this.quizzes);
@@ -529,15 +534,12 @@ export class PostGameManager {
         
         if (!SpeechRecognition) return;
 
-        // Evita di avviare l'ascolto se è già in corso (evita l'errore 'aborted')
         if (this.isListening) {
             return;
         }
 
         const recognition = new SpeechRecognition();
         recognition.lang = langCode; 
-        // Se noti che si interrompe troppo presto, puoi impostare continuous su true,
-        // ma dovrai gestire manualmente la chiusura con un timer o un secondo click.
         recognition.continuous = false; 
         recognition.interimResults = true;
         recognition.maxAlternatives = 1;
@@ -952,76 +954,86 @@ export class PostGameManager {
     }
 
     private update(time: number, delta: number) {
+        let hoveredElement: InteractiveElement | null = null;
+        let isAnyMouseHovering = false;
+
         const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const isHandActive = inputMode === 'hand';
 
-        if (inputMode === 'hand') {
+        let handX = -1;
+        let handY = -1;
+        let currentPinch = false;
+
+        if (isHandActive) {
             const tracker = HandTrackingController.getInstance();
-            const px = tracker.targetX * this.uiScene.cameras.main.width;
-            const py = tracker.targetY * this.uiScene.cameras.main.height;
-            const currentPinch = tracker.isClicked;
-            const isHandActive = inputMode === 'hand' && tracker.targetX !== -1;
-
-            let hoveredElement: InteractiveElement | null = null;
-
-            this.allInteractableButtons.forEach(el => {
-                let isVisible = el.obj.visible && el.obj.active;
-                let parent = el.obj.parentContainer;
-                while (parent && isVisible) {
-                    if (!parent.visible) isVisible = false;
-                    parent = parent.parentContainer;
-                }
-
-                if (!isVisible) {
-                    if (el.isHandHovered || el.isMouseHovered) {
-                        el.isHandHovered = false;
-                        el.isMouseHovered = false;
-                        el.simulateOut();
-                    }
-                    return;
-                }
-
-                const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
-
-                let isHandHovering = false;
-                if (isHandActive) {
-                    isHandHovering = Phaser.Geom.Rectangle.Contains(bounds, px, py);
-                }
-
-                const isMouseHovering = Phaser.Geom.Rectangle.Contains(bounds, this.customMouseX, this.customMouseY);
-
-                // --- Logica Hover Mano ---
-                if (isHandHovering && !el.isHandHovered) {
-                    el.isHandHovered = true;
-                    if (!el.isMouseHovered) el.simulateOver();
-                } else if (!isHandHovering && el.isHandHovered) {
-                    el.isHandHovered = false;
-                    if (!el.isMouseHovered) el.simulateOut();
-                }
-
-                // --- Logica Hover Mouse Custom ---
-                if (isMouseHovering && !el.isMouseHovered) {
-                    el.isMouseHovered = true;
-                    if (!el.isHandHovered) el.simulateOver();
-                } else if (!isMouseHovering && el.isMouseHovered) {
-                    el.isMouseHovered = false;
-                    if (!el.isHandHovered) el.simulateOut();
-                }
-
-                if (isHandHovering || isMouseHovering) {
-                    hoveredElement = el;
-                }
-            });
-
-            if (isHandActive && currentPinch && !this.previousPinchState) {
-                if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
-            }
-            this.previousPinchState = currentPinch;
-
-            if (this.isCustomMouseDown && !this.previousMouseClickState) {
-                if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
-            }
-            this.previousMouseClickState = this.isCustomMouseDown;
+            handX = tracker.targetX * this.uiScene.cameras.main.width;
+            handY = tracker.targetY * this.uiScene.cameras.main.height;
+            currentPinch = tracker.isClicked;
         }
+
+        this.allInteractableButtons.forEach(el => {
+            let isVisible = el.obj.visible && el.obj.active;
+            let parent = el.obj.parentContainer;
+            while (parent && isVisible) {
+                if (!parent.visible) isVisible = false;
+                parent = parent.parentContainer;
+            }
+
+            if (!isVisible) {
+                if (el.isHandHovered || el.isMouseHovered) {
+                    el.isHandHovered = false;
+                    el.isMouseHovered = false;
+                    el.simulateOut();
+                }
+                return;
+            }
+
+            const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
+
+            let isHandHovering = false;
+            if (isHandActive && handX !== -1) {
+                isHandHovering = Phaser.Geom.Rectangle.Contains(bounds, handX, handY);
+            }
+
+            const isMouseHovering = Phaser.Geom.Rectangle.Contains(bounds, this.customMouseX, this.customMouseY);
+
+            if (isHandHovering && !el.isHandHovered) {
+                el.isHandHovered = true;
+                if (!el.isMouseHovered) el.simulateOver();
+            } else if (!isHandHovering && el.isHandHovered) {
+                el.isHandHovered = false;
+                if (!el.isMouseHovered) el.simulateOut();
+            }
+
+            if (isMouseHovering && !el.isMouseHovered) {
+                el.isMouseHovered = true;
+                if (!el.isHandHovered) el.simulateOver();
+            } else if (!isMouseHovering && el.isMouseHovered) {
+                el.isMouseHovered = false;
+                if (!el.isHandHovered) el.simulateOut();
+            }
+
+            if (isHandHovering || isMouseHovering) {
+                hoveredElement = el;
+            }
+            if (isMouseHovering) isAnyMouseHovering = true;
+        });
+
+        if (!isAnyMouseHovering) {
+            this.scene.game.canvas.style.cursor = 'default';
+        }
+
+        if (isHandActive && currentPinch && !this.previousPinchState) {
+            if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+        }
+        if (isHandActive) {
+            this.previousPinchState = currentPinch;
+        }
+
+        if (this.isCustomMouseDown && !this.previousMouseClickState) {
+            if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+        }
+        this.previousMouseClickState = this.isCustomMouseDown;
     }
 
     private createWindow(width: number, height: number) {
@@ -1072,7 +1084,6 @@ export class PostGameManager {
         container.add([outer, text]);
 
         outer.setScrollFactor(0);
-        outer.setInteractive({ useHandCursor: true });
 
         const interactable: InteractiveElement = {
             obj: container,
@@ -1097,19 +1108,6 @@ export class PostGameManager {
                 onClick();
             }
         };
-
-        // Eventi mouse nativi combinati con le nuove flag
-        outer.on('pointerover', () => { 
-            interactable.isMouseHovered = true;
-            if (!interactable.isHandHovered) interactable.simulateOver(); 
-        });
-        
-        outer.on('pointerout', () => { 
-            interactable.isMouseHovered = false;
-            if (!interactable.isHandHovered) interactable.simulateOut(); 
-        });
-        
-        outer.on('pointerdown', () => { interactable.simulateDown(); }); 
 
         this.allInteractableButtons.push(interactable);
 

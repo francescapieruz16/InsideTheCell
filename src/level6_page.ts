@@ -137,13 +137,12 @@ export class Level6 extends Phaser.Scene {
         this.load.image('player_level6', '/assets/level6/player.png');
         this.load.image('virus_level6', '/assets/level6/virus.png');
         this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
-        
-        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
+
+        this.load.audio('music_minigame', '/assets/music/minigames_music.mp3');
     }
 
     create() {
-
-        AudioManager.playMusic(this, 'bg_music');
+        AudioManager.playMusic(this, 'music_minigame');
 
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {

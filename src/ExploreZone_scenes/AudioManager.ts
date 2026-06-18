@@ -9,14 +9,19 @@ export default class AudioManager {
             const savedSettings = localStorage.getItem('gameSettings');
             const targetVolume = savedSettings ? JSON.parse(savedSettings).musicVol / 100 : 1;
 
-            // 1. C'è già una musica attiva?
+            // 0. Pulizia sicura: se l'istanza è morta (il suo nodo audio è null), dimentichiamola
+            if (this.instance && !(this.instance as any).volumeNode) {
+                this.instance = null;
+            }
+
+            // 1. C'è già una musica attiva e integra?
             if (this.instance) {
                 if (this.currentKey === key) {
                     (this.instance as any).setVolume(targetVolume);
                     if (!this.instance.isPlaying) this.instance.play();
                     return;
                 } else {
-                    // SE LA CHIAVE È DIVERSA: Ferma e distruggi la musica vecchia!
+                    // SE LA CHIAVE È DIVERSA: Ferma e distruggi la musica vecchia
                     this.instance.stop();
                     this.instance.destroy();
                     this.instance = null;
@@ -27,14 +32,19 @@ export default class AudioManager {
             let existingMusic = scene.sound.get(key) as Phaser.Sound.BaseSound;
 
             if (existingMusic) {
-                this.instance = existingMusic;
-                this.currentKey = key;
-                (this.instance as any).setVolume(targetVolume);
-                if (!this.instance.isPlaying) this.instance.play();
-                return;
+                // Se il fantasma ha il nodo distrutto, rimuoviamolo dal SoundManager
+                if (!(existingMusic as any).volumeNode) {
+                    scene.sound.remove(existingMusic);
+                } else {
+                    this.instance = existingMusic;
+                    this.currentKey = key;
+                    (this.instance as any).setVolume(targetVolume);
+                    if (!this.instance.isPlaying) this.instance.play();
+                    return;
+                }
             }
 
-            // 3. Creiamo la nuova musica
+            // 3. Creiamo la nuova musica da zero
             this.instance = scene.sound.add(key, { loop: true, volume: targetVolume });
             this.currentKey = key;
             this.instance.play();
@@ -46,11 +56,8 @@ export default class AudioManager {
 
     public static stopMusic() {
         try {
-            if (this.instance) {
-                // We just stop the music, we don't destroy it.
-                // The logic to destroy and switch tracks is already handled by playMusic
-                // when a different music key is requested.
-                // This prevents issues when restarting a scene that uses the same music.
+            // Controlla sempre che il nodo sia valido prima di interagire
+            if (this.instance && (this.instance as any).volumeNode) {
                 this.instance.stop();
             }
         } catch (e) {
@@ -60,7 +67,7 @@ export default class AudioManager {
 
     public static setVolume(volume: number) {
         try {
-            if (this.instance) {
+            if (this.instance && (this.instance as any).volumeNode) {
                 (this.instance as any).setVolume(volume);
             }
         } catch (e) {
@@ -68,10 +75,10 @@ export default class AudioManager {
         }
     }
 
-    // --- NUOVO: GESTISCE IL VOLUME DEI DIALOGHI SENZA CRASHARE ---
     public static duckMusic(scene: Phaser.Scene, ducking: boolean) {
         try {
-            if (this.instance) {
+            // FIX: Applica il tween SOLO se la musica sta effettivamente suonando ed è integra
+            if (this.instance && this.instance.isPlaying && (this.instance as any).volumeNode) {
                 const savedSettings = localStorage.getItem('gameSettings');
                 const targetVolume = savedSettings ? JSON.parse(savedSettings).musicVol / 100 : 1;
                 

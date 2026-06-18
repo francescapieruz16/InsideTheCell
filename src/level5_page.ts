@@ -233,13 +233,12 @@ export class Level5 extends Phaser.Scene {
             '/assets/tutorial/ABI/ABI_standard.png'
         );
 
-        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
+        this.load.audio('music_minigame', '/assets/music/minigames_music.mp3');
     }
 
     create() {
-
-        AudioManager.playMusic(this, 'bg_music');
-
+        AudioManager.playMusic(this, 'music_minigame');
+        
         const bgHTML = document.getElementById('background') as HTMLImageElement;
         if (bgHTML) {
             bgHTML.src = '/assets/level5/background_level_5.png';

@@ -73,13 +73,12 @@ export class Level2 extends Phaser.Scene {
             this.load.image(key, `/assets/level1/${key}.png`);
         });
 
-        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
+        this.load.audio('music_minigame', '/assets/music/minigames_music.mp3');
 
     }
 
     create() {
-
-        AudioManager.playMusic(this, 'bg_music');
+        AudioManager.playMusic(this, 'music_minigame');
         this.game.canvas.style.pointerEvents = 'auto';
         this.game.canvas.style.position = 'relative';
         this.game.canvas.style.zIndex = '999';

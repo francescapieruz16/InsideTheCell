@@ -74,12 +74,12 @@ export default class Scene1_External extends Phaser.Scene {
         this.load.image('receptor_fake3', '/assets/level1/receptor_triangle.png');
         this.load.image('receptor_ace2', '/assets/level1/receptor_hexagon.png');
 
-        this.load.audio('bg_music', '/assets/tutorial/music/cell_exploration1.mp3');
+        this.load.audio('music_tutorial', '/assets/tutorial/music/cell_exploration1.mp3');
     }
 
     create() {
 
-        AudioManager.playMusic(this, 'bg_music');
+        AudioManager.playMusic(this, 'music_tutorial');
 
         const style = document.createElement('style');
         style.innerHTML = `

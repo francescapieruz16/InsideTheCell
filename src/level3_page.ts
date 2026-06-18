@@ -78,13 +78,12 @@ export class Level3 extends Phaser.Scene {
 
         this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png');
 
-        this.load.audio('bg_music', '/assets/music/minigames_music.mp3');
+        this.load.audio('music_minigame', '/assets/music/minigames_music.mp3');
 
     }
 
     create() {
-
-        AudioManager.playMusic(this, 'bg_music');
+        AudioManager.playMusic(this, 'music_minigame');
         this.game.canvas.style.pointerEvents = 'none';
 
         const bgHTML = document.getElementById('background') as HTMLImageElement;

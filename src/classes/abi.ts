@@ -185,11 +185,6 @@ export default class ABI {
         utterance.rate = 0.85; 
         utterance.lang = 'en-GB'; 
 
-        this.isTalking = true;
-        utterance.onend = () => {
-            this.isTalking = false;
-        };
-
         this.synth.speak(utterance);
     }
 

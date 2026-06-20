@@ -34,9 +34,9 @@ export default class Scene3_Internal extends Phaser.Scene {
         { id: 'mitochondrion', name: 'Mitochondrion', texture: 'organelle_mitochondrion' },
         { id: 'golgi_apparatus', name: 'Golgi Apparatus', texture: 'organelle_golgi' },
         { id: 'nucleo', name: 'Nucleus', texture: 'nucleo' },
-        { id: 'virus_debris1', name: 'RNA Virus', texture: 'virus_debris_1' },
-        { id: 'virus_debris2', name: 'Retrovirus', texture: 'virus_debris_2' },
-        { id: 'virus_debris3', name: 'DNA Virus', texture: 'virus_debris_3' }
+        { id: 'virus_debris3_1', name: 'RNA Virus', texture: 'virus_debris_3_1' },
+        { id: 'virus_debris3_2', name: 'Retrovirus', texture: 'virus_debris_3_2' },
+        { id: 'virus_debris3_3', name: 'DNA Virus', texture: 'virus_debris_3_3' }
     ];
 
 
@@ -92,9 +92,9 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.load.image('background_deep', '/assets/tutorial/sfondi/scene3_background_deep.png');
         this.load.image('circle', '/assets/tutorial/sfondi/circle.png');
 
-        this.load.image('virus_debris_1', '/assets/tutorial/virus/virus1.png');
-        this.load.image('virus_debris_2', '/assets/tutorial/virus/virus2.png');
-        this.load.image('virus_debris_3', '/assets/tutorial/virus/virus3.png');
+        this.load.image('virus_debris_3_1', '/assets/tutorial/virus/virus1.png');
+        this.load.image('virus_debris_3_2', '/assets/tutorial/virus/virus2.png');
+        this.load.image('virus_debris_3_3', '/assets/tutorial/virus/virus3.png');
     }
 
     constructor() {
@@ -810,21 +810,21 @@ export default class Scene3_Internal extends Phaser.Scene {
         if (logName === 'log1') {
             if (this.time.now > this.lastLog1Time + LOG_COOLDOWN) {
                 this.lastLog1Time = this.time.now;
-                JournalScene.unlockItem(this, 'virus_debris1', this.levelDiscoverables);
+                JournalScene.unlockItem(this, 'virus_debris3_1', this.levelDiscoverables);
                 this.abi.showDialogue("A.B.I.", this.dialogueLog1);
             }
         } 
         else if (logName === 'log2') {
             if (this.time.now > this.lastLog2Time + LOG_COOLDOWN) {
                 this.lastLog2Time = this.time.now;
-                JournalScene.unlockItem(this, 'virus_debris2', this.levelDiscoverables);
+                JournalScene.unlockItem(this, 'virus_debris3_2', this.levelDiscoverables);
                 this.abi.showDialogue("A.B.I.", this.dialogueLog2);
             }
         } 
         else if (logName === 'log3') {
             if (this.time.now > this.lastLog3Time + LOG_COOLDOWN) {
                 this.lastLog3Time = this.time.now;
-                JournalScene.unlockItem(this, 'virus_debris3', this.levelDiscoverables);
+                JournalScene.unlockItem(this, 'virus_debris3_3', this.levelDiscoverables);
                 this.abi.showDialogue("A.B.I.", this.dialogueLog3);
             }
         }

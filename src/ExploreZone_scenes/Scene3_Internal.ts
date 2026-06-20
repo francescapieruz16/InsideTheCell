@@ -607,13 +607,7 @@ export default class Scene3_Internal extends Phaser.Scene {
             wrapper.style.display = 'block';
             wrapper2.style.display = 'block';
         });
-            
-
-        // DEBUG: Clicca col mouse per ottenere le coordinate esatte
-        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            // pointer.worldX e worldY tengono conto dello scorrimento della telecamera
-            console.log(`{ x: ${Math.round(pointer.worldX)}, y: ${Math.round(pointer.worldY)} },`);
-        });
+        
 
 
         // --- CONTROLLO DINAMICO DELLO ZOOM CON IL MOUSE ---

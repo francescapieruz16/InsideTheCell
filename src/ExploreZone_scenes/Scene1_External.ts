@@ -361,14 +361,6 @@ export default class Scene1_External extends Phaser.Scene {
             }
         });
 
-        //TODO: remove shortcut
-        this.input.keyboard!.on('keydown-O', () => {
-            console.log("DEBUG: Salto direttamente alla Scene2_Membrane!");
-            
-            // Ferma eventuali musiche o robe in sospeso
-            this.scene.start('Scene2_Membrane', { incomingTexture: this.player.texture.key });
-        });
-
         
         // -----------------------------------------------------------------
 

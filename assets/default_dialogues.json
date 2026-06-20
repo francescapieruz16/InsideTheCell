@@ -26,7 +26,14 @@
             "dialogue_2_3": "A grim reminder of our mission's stakes. We must find the correct path.",
             "dialogue_3_1": "Path blocked. Scanners show a massive accumulation of crystallized cholesterol molecules.",
             "dialogue_3_2": "It seems the host organism has built up rigid 'lipid icebergs' within its fluid membrane.",
-            "dialogue_4": "Nuclear pore complex breached. We are proceeding into the cytoplasm. Brace for environmental shift."
+            "dialogue_4": "Nuclear pore complex breached. We are proceeding into the cytoplasm. Brace for environmental shift.",
+            "dialogue 5_1": "Hey! Can you see it? The structures around us are constantly shifting! This membrane isn't a solid wall, but a two-dimensional liquid.",
+            "dialogue 5_2": "The lipids and proteins drift laterally, like icebergs in a microscopic ocean. Biologists call this the 'Fluid Mosaic Model'.",
+            "dialogue 6_1": "We are approaching the nuclear pore complex. Once we breach this gate, we will enter the deep cytoplasm.",
+            "dialogue 6_2": "Prepare yourself: the environment will expand dramatically, filled with massive organelles like mitochondria and free-floating ribosomes.",
+            "dialogue 7_1": "Analyzing barrier depth... Did you know this membrane is only about 8 nanometers thick?",
+            "dialogue 7_2": "To put that in perspective, a standard sheet of paper is about 12,000 times thicker than this structure."
+
         },
         "tutorial_3": {
             "dialogue_1": "We have successfully entered the cytoplasm. The environment is vast and teeming with organelles. Our next objective is to locate the Endoplasmic Reticulum.",

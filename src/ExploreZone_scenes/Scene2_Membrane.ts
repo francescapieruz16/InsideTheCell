@@ -28,6 +28,9 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
     private dialogue2: any = [];
     private dialogue3: any = [];
+    private dialogue5: any =[];
+    private dialogue6: any = [];
+    private dialogue7: any = [];
 
 
     private dialogue1: string = "";
@@ -169,6 +172,18 @@ export default class Scene2_Membrane extends Phaser.Scene {
 
         this.dialogue4 = allDialogues.tutorials.tutorial_2.dialogue_4;
     
+        this.dialogue5 = [];
+        this.dialogue5.push(allDialogues.tutorials.tutorial_2.dialogue_5_1);
+        this.dialogue5.push(allDialogues.tutorials.tutorial_2.dialogue_5_2);
+
+        this.dialogue6 = [];
+        this.dialogue6.push(allDialogues.tutorials.tutorial_2.dialogue_6_1);
+        this.dialogue6.push(allDialogues.tutorials.tutorial_2.dialogue_6_2);
+
+        this.dialogue7 = [];
+        this.dialogue7.push(allDialogues.tutorials.tutorial_2.dialogue_7_1);
+        this.dialogue7.push(allDialogues.tutorials.tutorial_2.dialogue_7_2);
+        
 
         this.isTransitioning = true;
         const savedStateStr = localStorage.getItem('scene2_state');
@@ -313,20 +328,20 @@ export default class Scene2_Membrane extends Phaser.Scene {
                             // Mostra il testo corretto in base al numero
                             if (cellValue === 6) {
                                 this.abi.showRadioMessage(
-                                    "Hey! Can you see it? The structures around us are constantly shifting! This membrane isn't a solid wall, but a two-dimensional liquid. The lipids and proteins drift laterally, like icebergs in a microscopic ocean. Biologists call this the 'Fluid Mosaic Model'.",
-                                    7500
+                                    this.dialogue5,
+                                    8500
                                 );
                             } 
                             else if (cellValue === 7) {
                                 this.abi.showRadioMessage(
-                                    "We are approaching the nuclear pore complex. Once we breach this gate, we will enter the deep cytoplasm. Prepare yourself: the environment will expand dramatically, filled with massive organelles like mitochondria and free-floating ribosomes.", 
-                                    7500
+                                    this.dialogue6,
+                                    8500
                                 );
                             }
                                 else if (cellValue === 8) {
                                 this.abi.showRadioMessage(
-                                    "Analyzing barrier depth... Did you know this membrane is only about 8 nanometers thick? To put that in perspective, a standard sheet of paper is about 12,000 times thicker than this structure.",
-                                    6000
+                                    this.dialogue7,
+                                    7000
                                 );
                             }
                         }

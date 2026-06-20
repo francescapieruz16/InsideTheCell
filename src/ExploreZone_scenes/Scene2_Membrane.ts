@@ -307,10 +307,11 @@ export default class Scene2_Membrane extends Phaser.Scene {
                     iceberg.refreshBody(); // Aggiorna la hitbox statica
                 }
                 else if (cellValue === 6 || cellValue === 7 || cellValue === 8) {
-                    // 1. Creiamo una zona invisibile grande quanto un blocco TILE_SIZE
-                    let triggerZone = this.add.zone(posX, posY, TILE_SIZE, TILE_SIZE);
+                    // FIX 1: Usiamo un rettangolo con alpha 0 (invisibile). 
+                    // Il motore fisico riconoscerà sempre la sua hitbox di 150x150!
+                    let triggerZone = this.add.rectangle(posX, posY, TILE_SIZE, TILE_SIZE, 0x000000, 0);
                     
-                    // 2. Aggiungiamo la fisica statica alla zona
+                    // 2. Aggiungiamo la fisica statica al rettangolo
                     this.physics.add.existing(triggerZone, true);
                     
                     // 3. Usiamo i Data per assicurarci che si attivi una volta sola
@@ -325,28 +326,29 @@ export default class Scene2_Membrane extends Phaser.Scene {
                             // Segnala come scattata per il futuro
                             triggerZone.setData('hasTriggered', true);
                             
-                            // Mostra il testo corretto in base al numero
+                            // FIX 2: Usiamo join(' ') con uno SPAZIO per separare correttamente le frasi!
                             if (cellValue === 6) {
                                 this.abi.showRadioMessage(
-                                    this.dialogue5,
+                                    this.dialogue5.join(' '),
                                     8500
                                 );
                             } 
                             else if (cellValue === 7) {
                                 this.abi.showRadioMessage(
-                                    this.dialogue6,
+                                    this.dialogue6.join(' '),
                                     8500
                                 );
                             }
-                                else if (cellValue === 8) {
+                            else if (cellValue === 8) {
                                 this.abi.showRadioMessage(
-                                    this.dialogue7,
+                                    this.dialogue7.join(' '),
                                     7000
                                 );
                             }
                         }
                     });
                 }
+                 
             }
         }
 

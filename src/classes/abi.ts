@@ -473,7 +473,7 @@ export default class ABI {
         AudioManager.duckMusic(this.scene, false);
     }
 
-    public showRadioMessage(text: string, durationPerPage: number = 8000) {
+    public showRadioMessage(text: string | string[], durationPerPage: number = 8000) {
         if (!this.uiContainer) {
             this.scene.time.delayedCall(10, () => this.showRadioMessage(text, durationPerPage));
             return;
@@ -493,7 +493,17 @@ export default class ABI {
         // Abbassiamo la musica in modo sicuro tramite AudioManager
         AudioManager.duckMusic(this.scene, true);
 
-        const pages = this.autoSplitText(text, 180);
+        // --- FIX: GESTIONE ROBUSTA DI STRINGHE E ARRAY ---
+        let pages: string[] = [];
+        if (typeof text === 'string') {
+            pages = this.autoSplitText(text, 180);
+        } else if (Array.isArray(text)) {
+            // Se gli passi l'array del JSON, lo unisce in automatico in una stringa e lo divide per la UI
+            pages = this.autoSplitText(text.join(' '), 180);
+        } else {
+            pages = ["Error: Invalid text format"];
+        }
+
         let pageIndex = 0;
 
         const showNextPage = () => {

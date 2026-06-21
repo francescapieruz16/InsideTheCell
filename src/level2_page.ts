@@ -234,7 +234,7 @@ export class Level2 extends Phaser.Scene {
         });
 
         this.events.on('resume', () => {
-            backBtnDom.setVisible(false);
+            backBtnDom.setVisible(true);
         });
     }
 

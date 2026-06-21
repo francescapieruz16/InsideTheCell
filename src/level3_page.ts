@@ -377,6 +377,8 @@ export class Level3 extends Phaser.Scene {
         onResize(this.scale.gameSize);
 
         this.events.once('shutdown', () => {
+            wrapper.remove();
+            style.remove();
             this.scale.off('resize', onResize);
             AudioManager.stopMusic(); 
         });

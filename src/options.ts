@@ -184,16 +184,41 @@ export class OptionsScene extends Phaser.Scene {
         });
 
         btnNewGame.addEventListener('click', () => {
-            // Un popup nativo del browser per evitare misclick disastrosi
             const confirmed = window.confirm("WARNING: This will delete ALL your progress (Tutorials, Levels, BioLog, and Final Boss). Are you absolutely sure?");
+            
             if (confirmed) {
-                localStorage.removeItem('maxUnlockedLevel');
-                localStorage.removeItem('scene1_state');
-                localStorage.removeItem('scene2_state');
-                localStorage.removeItem('scene3_state');
-                localStorage.removeItem('journalUnlocks');
-                localStorage.removeItem('FINAL_BOSS_UNLOCKED');
-                alert("All progress has been completely wiped!");
+                // 1. Definiamo la "Lista Bianca" delle chiavi intoccabili
+                const keysToKeep = [
+                    'gameSettings', 
+                    'inputMode', 
+                    'DIALOGUES_JSON', 
+                    'ADMIN_SETTINGS_JSON', 
+                    'CONTEXT_AND_QUIZZES_JSON', 
+                    'QUIZZES_JSON',
+                    'GEMINI_API_KEY'
+                ];
+
+                // 2. Raccogliamo tutte le chiavi attualmente nel database che NON sono nella lista bianca
+                const keysToRemove: string[] = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && !keysToKeep.includes(key)) {
+                        keysToRemove.push(key);
+                    }
+                }
+
+                // 3. Eliminiamo chirurgicamente solo le chiavi di progresso
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+
+                // 4. Distruggiamo il registro temporaneo di Phaser
+                this.registry.destroy();
+
+                alert("All gameplay progress has been completely wiped! JSON data and settings preserved.");
+                
+                // 5. HARD RESET: Ricarichiamo la pagina web per svuotare la RAM
+                window.location.reload();
             }
         });
 

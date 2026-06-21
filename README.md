@@ -10,6 +10,8 @@
 * 📖 **Exploration and BioLog (Journal)**: Exploration phases in a cellular environment (e.g., membrane, cytoplasm) to collect scientific information ("Data Logs") that can be unlocked in an in-game journal.
 * ⚙️ **Admin Dashboard**: Isolated HTML web pages (`admin_dashboard.html` and `dialogues.html`) to manage API Keys, edit the entire game script, configure the AI, and save everything to JSON format.
 
+Note: The integrated Speech-to-Text feature in this game uses the `Web Speech API`. Currently, this feature is natively supported on **Google Chrome, Microsoft Edge, and Safari**.
+
 ---
 
 ## 🎮 Game Structure and Levels

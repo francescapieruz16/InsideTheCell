@@ -54,6 +54,8 @@ export class PostGameManager {
     private nextLevel: number = 0;
 
     private isListening: boolean = false;
+    private speechInstance: any = null;
+    private isRestartingSpeech: boolean = false;
 
     private postGameTexts: any = {
         questionLost: "",
@@ -197,6 +199,40 @@ export class PostGameManager {
 
         this.scene.events.on('update', this.update, this);
 
+        this.scene.events.on('pause', () => {
+            const chatInput = document.getElementById('llm-chat-input');
+            let isChatVisible = false;
+            if (chatInput && chatInput.getBoundingClientRect().width > 0) {
+                isChatVisible = true;
+            }
+            (this as any).chatWasVisibleBeforePause = isChatVisible;
+
+            if (this.chatManager) {
+                this.chatManager.hide();
+            }
+
+            if (this.llmContainer && this.llmContainer.visible) {
+                (this.llmContainer as any).wasVisibleBeforePause = true; 
+                this.llmContainer.setVisible(false);
+            } else if (this.llmContainer) {
+                (this.llmContainer as any).wasVisibleBeforePause = false;
+            }
+        });
+
+        this.scene.events.on('resume', () => {
+            if ((this as any).chatWasVisibleBeforePause) {
+                if (this.chatManager) {
+                    this.chatManager.show();
+                }
+                (this as any).chatWasVisibleBeforePause = false;
+            }
+
+            if (this.llmContainer && (this.llmContainer as any).wasVisibleBeforePause) {
+                this.llmContainer.setVisible(true);
+                (this.llmContainer as any).wasVisibleBeforePause = false;
+            }
+        });
+
         this.scene.events.once('shutdown', () => {
             this.scene.game.canvas.style.cursor = 'default';
             this.scene.events.off('update', this.update, this);
@@ -220,6 +256,11 @@ export class PostGameManager {
             this.allUIContainers = [];
             this.quizButtons = [];
             this.allInteractableButtons = [];
+
+            if (this.speechInstance) this.speechInstance.abort();
+
+            this.scene.events.off('pause');
+            this.scene.events.off('resume');
         });
     }
 
@@ -531,76 +572,88 @@ export class PostGameManager {
 
     private startSpeechToText(langCode: string = 'en-US') {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        
         if (!SpeechRecognition) return;
-
-        if (this.isListening) {
-            return;
-        }
-
-        const recognition = new SpeechRecognition();
-        recognition.lang = langCode; 
-        recognition.continuous = false; 
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
 
         const chatInput = document.getElementById('llm-chat-input') as HTMLInputElement;
 
-        recognition.onstart = () => {
+        if (this.isListening && this.speechInstance) {
+            if (chatInput) {
+                chatInput.value = "";
+                chatInput.placeholder = "Resetting mic...";
+            }
+            this.isRestartingSpeech = true;
+            this.speechInstance.abort();
+            return;
+        }
+
+        this.speechInstance = new SpeechRecognition();
+        this.speechInstance.lang = langCode; 
+        this.speechInstance.continuous = true; 
+        this.speechInstance.interimResults = true;
+        this.speechInstance.maxAlternatives = 1;
+
+        this.speechInstance.onstart = () => {
             this.isListening = true;
             this.scene.input.enabled = false;
 
             if (chatInput) {
                 chatInput.placeholder = "Listening... Speak now";
-                chatInput.value = ""; 
+                chatInput.value = "";
             }
         };
 
-        recognition.onresult = (event: any) => {
-            const resultIndex = event.resultIndex;
-            const transcript = event.results[resultIndex][0].transcript;
+        this.speechInstance.onresult = (event: any) => {
+            let fullTranscript = '';
+            for (let i = 0; i < event.results.length; i++) {
+                fullTranscript += event.results[i][0].transcript;
+            }
             if (chatInput) {
-                chatInput.value = transcript;
+                chatInput.value = fullTranscript;
+                chatInput.scrollLeft = chatInput.scrollWidth;
             }
         };
 
-        recognition.onspeechend = () => {
-            recognition.stop();
+        this.speechInstance.onspeechend = () => {
+            this.speechInstance?.stop();
         };
 
-        recognition.onend = () => {
+        this.speechInstance.onend = () => {
             this.isListening = false;
             this.scene.input.enabled = true;
 
-            if (chatInput && chatInput.placeholder.startsWith("Listening")) {
-                chatInput.placeholder = "Press mic to start dictating";
+            if (this.isRestartingSpeech) {
+                this.isRestartingSpeech = false;
+                setTimeout(() => {
+                    this.startSpeechToText(langCode);
+                }, 50);
+            } else {
+                if (chatInput && chatInput.placeholder.startsWith("Listening")) {
+                    chatInput.placeholder = "Press mic to start dictating";
+                }
             }
         };
 
-        recognition.onerror = (event: any) => {
+        this.speechInstance.onerror = (event: any) => {
             this.isListening = false;
             this.scene.input.enabled = true;
             
+            if (event.error === 'aborted') return;
+
             console.error("Speech Recognition Error Code:", event.error);
 
             if (chatInput) {
-            if (event.error === 'network' || event.error === 'no-speech') {
-                chatInput.placeholder = "Speech unavailable. Use Virtual Keyboard!";
-                
-                if (this.chatManager) {
-                    this.chatManager.showVirtualKeyboard();
-                }
-            } else {
-                chatInput.placeholder = `Error: ${event.error}. Use keyboard.`;
-                if (this.chatManager) {
-                    this.chatManager.showVirtualKeyboard();
+                if (event.error === 'network' || event.error === 'no-speech') {
+                    chatInput.placeholder = "Speech unavailable. Use Virtual Keyboard!";
+                    if (this.chatManager) this.chatManager.showVirtualKeyboard();
+                } else {
+                    chatInput.placeholder = `Error: ${event.error}. Use keyboard.`;
+                    if (this.chatManager) this.chatManager.showVirtualKeyboard();
                 }
             }
-        }
         };
 
         try {
-            recognition.start();
+            this.speechInstance.start();
         } catch (e) {
             console.error("Failed to start recognition:", e);
             this.isListening = false;

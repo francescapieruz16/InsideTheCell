@@ -436,13 +436,6 @@ export default class Scene2_Membrane extends Phaser.Scene {
             }
         });
 
-          // --- SCORCIATOIA DI DEBUG (Da rimuovere prima della consegna!) ---
-            this.input.keyboard!.on('keydown-O', () => {
-            console.log("DEBUG: Salto direttamente alla Scene3_Internal!");
-            
-            // Ferma eventuali musiche o robe in sospeso
-            this.scene.start('Scene3_Internal', { incomingTexture: this.player.texture.key });
-        });
 
         this.events.once('shutdown', () => {
             if (wrapper) wrapper.remove();

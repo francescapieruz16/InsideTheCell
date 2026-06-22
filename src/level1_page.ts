@@ -18,11 +18,8 @@ export class Level1 extends Phaser.Scene {
     private playerCart!: Phaser.Physics.Arcade.Sprite;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
 
-    private backgroundImage!: Phaser.GameObjects.Image;
-
     private cartSpeed: number = 800;
 
-    private cartFull: boolean = false;
     private isGameOver: boolean = false;
     private isWin: boolean = false;
     private isVaccinated: boolean = false;
@@ -62,7 +59,6 @@ export class Level1 extends Phaser.Scene {
         this.isGameOver = false;
         this.isWin = false;
         this.isChatActive = false;
-        this.cartFull = false;
         this.elapsedTime = 0;
     }
 
@@ -77,6 +73,8 @@ export class Level1 extends Phaser.Scene {
         this.load.image('receptor_triangle', '/assets/level1/receptor_triangle.png');
         this.load.image('virus_triangle', '/assets/level1/virus_triangle.png');
         this.load.image('cart', '/assets/level1/cart.png');
+        this.load.image('cart_1', '/assets/level1/cart_1.png');
+        this.load.image('cart_2', '/assets/level1/cart_2.png');
         this.load.image('cart_full', '/assets/level1/cart_full.png');
 
         this.load.image('ABI_standard', '/assets/tutorial/ABI/ABI_standard.png')
@@ -248,6 +246,7 @@ export class Level1 extends Phaser.Scene {
         onResize(this.scale.gameSize);
         
         this.events.once('shutdown', () => {
+            style.remove();
             this.scale.off('resize', onResize);
             AudioManager.stopMusic(); 
         });
@@ -266,7 +265,7 @@ export class Level1 extends Phaser.Scene {
         });
 
         this.events.on('resume', () => {
-            backBtnDom.setVisible(false);
+            backBtnDom.setVisible(true);
         });
     }
 
@@ -325,7 +324,6 @@ export class Level1 extends Phaser.Scene {
     }
 
     private setupGame() {
-        this.cartFull = false;
         this.playerCart.setTexture('cart');
         this.playerCart.clearTint();
         this.playerCart.setVelocity(0, 0);
@@ -434,9 +432,26 @@ export class Level1 extends Phaser.Scene {
         this.virusGroup.killAndHide(v);
         v.body?.stop();
 
-        if (!this.cartFull) {
-            this.cartFull = true;
-            this.playerCart.setTexture('cart_full');
+        const progress = this.elapsedTime / this.gameTime;
+
+        let nextTexture = 'cart_full';
+        if (progress < 0.33) {
+            nextTexture = 'cart_1';
+        } else if (progress < 0.66) {
+            nextTexture = 'cart_2';
+        }
+
+        if (this.playerCart.texture.key !== nextTexture) {
+            this.playerCart.setTexture(nextTexture);
+
+            const screenW = this.cameras.main.width;
+            if (this.isVaccinated) {
+                this.playerCart.displayWidth = screenW * 0.15;
+            } else {
+                this.playerCart.displayWidth = screenW * 0.1;
+            }
+            
+            this.playerCart.scaleY = this.playerCart.scaleX;
         }
     }
 

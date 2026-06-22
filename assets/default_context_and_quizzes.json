@@ -13,7 +13,7 @@
             ]
         },
         "minigame_2": {
-            "description": "The objective of the minigame is to prevent viruses from entering the cell membrane. The player controls the crosshair and can destroy the viruses before reaching the entry point, if too many viruses get through they enters the cell.",
+            "description": "The objective of the minigame is to prevent viruses from entering the cell membrane. The player controls the crosshair and its objective is to destroy the viruses before reaching the entry point, if too many viruses get through they enters the cell.",
             "knowledge": "After binding to the cell receptors, viruses can enter the cell by crossing the membrane. They do this through mechanisms like membrane fusion or endocytosis. Stopping the virus before it enters is essential to prevent the infection from progressing.",
             "quizzes": [
                 "What happens immediately after a virus binds to a host cell?\na(F): It destroys the cell instantly\nb(T): It attempts to enter the cell\nc(F): It starts replicating outside the cell",

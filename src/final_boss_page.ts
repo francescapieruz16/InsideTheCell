@@ -203,6 +203,7 @@ export class FinalBoss extends Phaser.Scene {
 
         this.events.once('shutdown', () => {
             wrapper.remove();
+            style.remove();
             this.scale.off('resize', this.onResize, this);
             this.allInteractableButtons = [];
             

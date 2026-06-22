@@ -23,7 +23,7 @@ export default class JournalScene extends Phaser.Scene {
 
     private bgOverlay!: Phaser.GameObjects.Rectangle;
     private uiContainer!: Phaser.GameObjects.Container;
-    private wipeBtn!: Phaser.GameObjects.Text;
+    // private wipeBtn!: Phaser.GameObjects.Text;
     private closeBtn!: Phaser.GameObjects.Text;
 
     private interactables: InteractiveElement[] = [];
@@ -120,39 +120,39 @@ export default class JournalScene extends Phaser.Scene {
             () => this.closeJournal()
         );
 
-        let confirmWipe = false;
-        this.wipeBtn = this.add.text(width / 2, height - 80, '[ ERASE DATA ]', {
-            fontSize: '24px', color: '#ffaa00', backgroundColor: '#331100', padding: { x: 20, y: 10 }
-        }).setOrigin(0.5);
+        // let confirmWipe = false;
+        // this.wipeBtn = this.add.text(width / 2, height - 80, '[ ERASE DATA ]', {
+        //     fontSize: '24px', color: '#ffaa00', backgroundColor: '#331100', padding: { x: 20, y: 10 }
+        // }).setOrigin(0.5);
 
-        this.makeInteractive(this.wipeBtn,
-            () => {
-                if (!confirmWipe) this.wipeBtn.setStyle({ backgroundColor: '#552200' });
-                else this.wipeBtn.setStyle({ backgroundColor: '#ff3333' });
-            },
-            () => {
-                if (!confirmWipe) this.wipeBtn.setStyle({ backgroundColor: '#331100' });
-                else this.wipeBtn.setStyle({ backgroundColor: '#ff0000' });
-            },
-            () => {
-                if (!confirmWipe) {
-                    confirmWipe = true;
-                    this.wipeBtn.setText('[ ARE YOU SURE? ]');
-                    this.wipeBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' });
+        // this.makeInteractive(this.wipeBtn,
+        //     () => {
+        //         if (!confirmWipe) this.wipeBtn.setStyle({ backgroundColor: '#552200' });
+        //         else this.wipeBtn.setStyle({ backgroundColor: '#ff3333' });
+        //     },
+        //     () => {
+        //         if (!confirmWipe) this.wipeBtn.setStyle({ backgroundColor: '#331100' });
+        //         else this.wipeBtn.setStyle({ backgroundColor: '#ff0000' });
+        //     },
+        //     () => {
+        //         if (!confirmWipe) {
+        //             confirmWipe = true;
+        //             this.wipeBtn.setText('[ ARE YOU SURE? ]');
+        //             this.wipeBtn.setStyle({ color: '#ffffff', backgroundColor: '#ff0000' });
                     
-                    this.time.delayedCall(3000, () => {
-                        if (this.scene.isActive()) {
-                            confirmWipe = false;
-                            this.wipeBtn.setText('[ ERASE DATA ]');
-                            this.wipeBtn.setStyle({ color: '#ffaa00', backgroundColor: '#331100' });
-                        }
-                    });
-                } else {
-                    localStorage.removeItem('journalUnlocks');
-                    this.scene.restart({ parentScene: this.parentSceneKey, items: this.itemsList });
-                }
-            }
-        );
+        //             this.time.delayedCall(3000, () => {
+        //                 if (this.scene.isActive()) {
+        //                     confirmWipe = false;
+        //                     this.wipeBtn.setText('[ ERASE DATA ]');
+        //                     this.wipeBtn.setStyle({ color: '#ffaa00', backgroundColor: '#331100' });
+        //                 }
+        //             });
+        //         } else {
+        //             localStorage.removeItem('journalUnlocks');
+        //             this.scene.restart({ parentScene: this.parentSceneKey, items: this.itemsList });
+        //         }
+        //     }
+        // );
 
         this.input.keyboard!.on('keydown-I', () => this.closeJournal());
         this.input.keyboard!.on('keydown-ESC', () => this.closeJournal());
@@ -165,7 +165,7 @@ export default class JournalScene extends Phaser.Scene {
 
             this.bgOverlay.setSize(newW, newH);
             this.uiContainer.setX(newW / 2);
-            this.wipeBtn.setPosition(newW / 2, newH - 80);
+            // this.wipeBtn.setPosition(newW / 2, newH - 80);
         };
 
         this.scale.on('resize', handleResize);
@@ -206,6 +206,12 @@ export default class JournalScene extends Phaser.Scene {
             fontSize: '28px', color: titleColor, fontStyle: 'bold',
             wordWrap: { width: 200 }
         }).setOrigin(0, 0.5); 
+
+        // Ridimensionamento dinamico
+        const maxTextWidth = 170; // Spazio massimo a disposizione per la scritta
+        if (nameLabel.width > maxTextWidth) {
+            nameLabel.setScale(maxTextWidth / nameLabel.width);
+        }
 
         container.add([cardBg, icon, nameLabel]);
     }

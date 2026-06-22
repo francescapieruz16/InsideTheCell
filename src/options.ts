@@ -80,10 +80,12 @@ export class OptionsScene extends Phaser.Scene {
                 background-color: #cc0000;
                 color: white;
                 border: 3px solid white;
-                padding: 15px 40px;
+                /* Aumentiamo il padding laterale e la larghezza */
+                padding: 15px 50px; 
                 font-size: 1.5rem;
-                width: 400px;
+                width: 500px; /* Aumentato da 400px a 500px */
                 box-shadow: 0 4px #880000;
+                white-space: nowrap; /* Impedisce alla scritta di andare a capo */
             }
 
             .red-btn:hover {
@@ -91,28 +93,6 @@ export class OptionsScene extends Phaser.Scene {
                 transform: scale(1.05);
             }
 
-            /* NUOVO STILE PANNELLO DEBUG */
-            .debug-container {
-                background-color: rgba(0, 0, 0, 0.8);
-                border: 2px dashed #00ffff;
-                padding: 15px;
-                color: white;
-                display: flex;
-                gap: 15px;
-                align-items: center;
-                font-family: Arial, sans-serif;
-            }
-
-            .debug-btn {
-                background-color: #444;
-                color: white;
-                border: 1px solid #fff;
-                padding: 8px 15px;
-                font-size: 1rem;
-            }
-
-            .debug-btn:hover { background-color: #666; transform: scale(1.05); }
-            .debug-input { width: 60px; font-size: 1.2rem; text-align: center; }
 
             .loader {
                 box-sizing: border-box;
@@ -181,17 +161,6 @@ export class OptionsScene extends Phaser.Scene {
         btnNewGame.innerText = '⚠ NEW GAME (WIPE ALL) ⚠';
         createUIElement(btnNewGame, 0, 50);
 
-        // NUOVO PANNELLO DEBUG
-        const debugPanel = document.createElement('div');
-        debugPanel.className = 'debug-container';
-        debugPanel.innerHTML = `
-            <span style="color:#00ffff; font-weight:bold;">DEBUG:</span>
-            <label>Level:</label>
-            <input type="number" id="dbgLevel" class="debug-input" min="1" max="6" value="1" />
-            <button id="btnSetLevel" class="debug-btn">SET MAX</button>
-            <button id="btnToggleBoss" class="debug-btn">TOGGLE BOSS</button>
-        `;
-        createUIElement(debugPanel, 0, 160);
 
         const spinner = document.createElement('div');
         spinner.className = 'loader';
@@ -215,46 +184,44 @@ export class OptionsScene extends Phaser.Scene {
         });
 
         btnNewGame.addEventListener('click', () => {
-            // Un popup nativo del browser per evitare misclick disastrosi
             const confirmed = window.confirm("WARNING: This will delete ALL your progress (Tutorials, Levels, BioLog, and Final Boss). Are you absolutely sure?");
+            
             if (confirmed) {
-                localStorage.removeItem('maxUnlockedLevel');
-                localStorage.removeItem('scene1_state');
-                localStorage.removeItem('scene2_state');
-                localStorage.removeItem('scene3_state');
-                localStorage.removeItem('journalUnlocks');
-                localStorage.removeItem('FINAL_BOSS_UNLOCKED');
-                alert("All progress has been completely wiped!");
-            }
-        });
+                // 1. Definiamo la "Lista Bianca" delle chiavi intoccabili
+                const keysToKeep = [
+                    'gameSettings', 
+                    'inputMode', 
+                    'DIALOGUES_JSON', 
+                    'ADMIN_SETTINGS_JSON', 
+                    'CONTEXT_AND_QUIZZES_JSON', 
+                    'QUIZZES_JSON',
+                    'GEMINI_API_KEY'
+                ];
 
-        // Gestione Logica Debug
-        this.time.delayedCall(100, () => {
-            const btnSetLevel = document.getElementById('btnSetLevel');
-            const dbgLevel = document.getElementById('dbgLevel') as HTMLInputElement;
-            const btnToggleBoss = document.getElementById('btnToggleBoss');
-
-            if (btnSetLevel && dbgLevel) {
-                btnSetLevel.addEventListener('click', () => {
-                    const val = Math.max(1, Math.min(6, parseInt(dbgLevel.value) || 1));
-                    localStorage.setItem('maxUnlockedLevel', val.toString());
-                    alert(`Max unlocked level forcefully set to ${val}`);
-                });
-            }
-
-            if (btnToggleBoss) {
-                btnToggleBoss.addEventListener('click', () => {
-                    const current = localStorage.getItem('FINAL_BOSS_UNLOCKED') === 'true';
-                    if (current) {
-                        localStorage.removeItem('FINAL_BOSS_UNLOCKED');
-                        alert("Final Boss is now LOCKED.");
-                    } else {
-                        localStorage.setItem('FINAL_BOSS_UNLOCKED', 'true');
-                        alert("Final Boss is now UNLOCKED.");
+                // 2. Raccogliamo tutte le chiavi attualmente nel database che NON sono nella lista bianca
+                const keysToRemove: string[] = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && !keysToKeep.includes(key)) {
+                        keysToRemove.push(key);
                     }
+                }
+
+                // 3. Eliminiamo chirurgicamente solo le chiavi di progresso
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
                 });
+
+                // 4. Distruggiamo il registro temporaneo di Phaser
+                this.registry.destroy();
+
+                alert("All gameplay progress has been completely wiped! JSON data and settings preserved.");
+                
+                // 5. HARD RESET: Ricarichiamo la pagina web per svuotare la RAM
+                window.location.reload();
             }
         });
+
 
         backBtn.addEventListener('click', () => {
             this.isCalibrating = false;

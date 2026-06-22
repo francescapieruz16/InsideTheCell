@@ -77,14 +77,18 @@ export default class AudioManager {
 
     public static duckMusic(scene: Phaser.Scene, ducking: boolean) {
         try {
-            // FIX: Applica il tween SOLO se la musica sta effettivamente suonando ed è integra
+            //  Applica il tween SOLO se la musica sta effettivamente suonando ed è integra
             if (this.instance && this.instance.isPlaying && (this.instance as any).volumeNode) {
                 const savedSettings = localStorage.getItem('gameSettings');
                 const targetVolume = savedSettings ? JSON.parse(savedSettings).musicVol / 100 : 1;
+
+                if (targetVolume === 0) return;
+
+                const duckedVolume = Math.min(0.1, targetVolume);
                 
                 scene.tweens.add({
                     targets: this.instance,
-                    volume: ducking ? 0.1 : targetVolume,
+                    volume: ducking ? duckedVolume : targetVolume,
                     duration: 500
                 });
             }

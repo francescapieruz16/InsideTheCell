@@ -305,7 +305,7 @@ export default class Scene1_External extends Phaser.Scene {
             });
         }
 
-        // --- NUOVO: Riattiva la fisica quando chiudi il diario ---
+
         // Questo evento scatta automaticamente quando JournalScene chiama this.scene.resume()
         this.events.on('pause', () => {
             this.scene.sleep('ABIScene'); // Nasconde istantaneamente il contatore

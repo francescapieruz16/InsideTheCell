@@ -513,7 +513,7 @@ export class Level3 extends Phaser.Scene {
             (this.genomeReleaseTime - this.genomeTimer) / 1000
         );
 
-        this.genomeText.setText(`Genoma releasing in: ${remainingSeconds}s`);
+        this.genomeText.setText(`Genome releasing in: ${remainingSeconds}s`);
 
         if (progress < 0.25) {
             this.virus.setTexture('virus_start');

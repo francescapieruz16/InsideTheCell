@@ -33,7 +33,6 @@
             "dialogue_6_2": "Prepare yourself: the environment will expand dramatically, filled with massive organelles like mitochondria and free-floating ribosomes.",
             "dialogue_7_1": "Analyzing barrier depth... Did you know this membrane is only about 8 nanometers thick?",
             "dialogue_7_2": "To put that in perspective, a standard sheet of paper is about 12,000 times thicker than this structure."
-
         },
         "tutorial_3": {
             "dialogue_1": "We have successfully entered the cytoplasm. The environment is vast and teeming with organelles. Our next objective is to locate the Endoplasmic Reticulum.",
@@ -78,16 +77,17 @@
             "dialogue_4": "Your mission is to shoot the viruses before they enter the membrane.\nStop enough particles to protect the cell."
         },
         "cutscene_3": {
-    "dialogue_1": "WARNING: The virus has entered the host cell and is beginning the uncoating process.\nIts protective shell is breaking down, exposing the viral genome inside the cell.",
-    "dialogue_2": "The path ahead is unstable.\nJump across cellular platforms and avoid the spikes blocking your route.",
-    "dialogue_3": "If uncoating is completed, the viral genome will become accessible inside the host cell, allowing the infection process to continue.\nReach the end before the countdown finishes.",
-    "dialogue_4": "Run, jump, and stay focused.\nReach the flag in time to stop the virus from completing uncoating."
-},
+            "dialogue_1": "WARNING: The virus has entered the host cell and is beginning the uncoating process.\nIts protective shell is breaking down, exposing the viral genome inside the cell.",
+            "dialogue_2": "The path ahead is unstable.\nJump across cellular platforms and avoid the spikes blocking your route.",
+            "dialogue_3": "If uncoating is completed, the viral genome will become accessible inside the host cell, allowing the infection process to continue.\nReach the end before the countdown finishes.",
+            "dialogue_4": "Run, jump, and stay focused.\nReach the flag in time to stop the virus from completing uncoating."
+        },
         "cutscene_4": {
             "dialogue_1": "A new challenge begins inside the cell.\nThe viral replication process is unstable, and hidden biological signals must be identified.",
             "dialogue_2": "Some cards represent genetic bases: Adenine, Cytosine, Guanine, and Uracil.\nThese are part of the information carried by genetic material.",
             "dialogue_3": "Other cards show key replication elements, such as Polymerase and Viral RNA.\nThese help the virus copy and spread its genetic instructions.",
-            "dialogue_4": "Be careful: Genome Mutation and Replication Error are dangerous cards. WARNING: If you match two identical Genome Mutation cards or two identical Replication Error cards, you immediately lose the game. Match the remaining cards and reveal the hidden patterns before your moves run out."        },
+            "dialogue_4": "Be careful: Genome Mutation and Replication Error are dangerous cards. WARNING: If you match two identical Genome Mutation cards or two identical Replication Error cards, you immediately lose the game. Match the remaining cards and reveal the hidden patterns before your moves run out."
+        },
         "cutscene_5": {
             "dialogue_1": "The virus is now assembling its structure.\nSmall molecular components are beginning to combine inside the cell.",
             "dialogue_2": "When two identical components touch, they merge into a larger and more complex viral part.",
@@ -95,12 +95,12 @@
             "dialogue_4": "In vaccinated mode, the assembly chain is weakened.\nComponents stop at an earlier stage and disappear when matched correctly.",
             "dialogue_5": "Control where each component falls.\nCombine identical pieces carefully and keep the viral structure below the danger line."
         },
-       "cutscene_6": {
-    "dialogue_1": "Newly assembled viral agents are leaving the infected cell. They are spreading through the cellular maze, moving fast toward new targets.",
-    "dialogue_2": "Unstable spread zones are forming across the maze. Any newly released virus that reaches them can increase the infection, turning a local infection into a widespread infection.",
-    "dialogue_3": "The immune defender has been deployed inside the cell. Its mission is to chase, intercept, and neutralize the newly released viruses before they overwhelm the system.",
-    "dialogue_4": "Contain the widespread infection before time runs out. Capture enough newly released viruses, prevent them from spreading to other cells, and restore balance inside the cell."
-}
+        "cutscene_6": {
+            "dialogue_1": "Newly assembled viral agents are leaving the infected cell. They are spreading through the cellular maze, moving fast toward new targets.",
+            "dialogue_2": "Unstable spread zones are forming across the maze. Any newly released virus that reaches them can increase the infection, turning a local infection into a widespread infection.",
+            "dialogue_3": "The immune defender has been deployed inside the cell. Its mission is to chase, intercept, and neutralize the newly released viruses before they overwhelm the system.",
+            "dialogue_4": "Contain the widespread infection before time runs out. Capture enough newly released viruses, prevent them from spreading to other cells, and restore balance inside the cell."
+        }
     },
     "minigames": {
         "minigame_1": {
@@ -114,9 +114,9 @@
             "dialogue_3": "Remember that after binding to the cell receptors, viruses can enter the cell by crossing the membrane.\nThey do this through mechanisms like membrane fusion or endocytosis.\nStopping the virus before it enters is essential to prevent the infection from progressing."
         },
         "minigame_3": {
-            "dialogue_1": "The viral genome was released!",
-            "dialogue_2": "You were not able to reach the end in time.\nThe virus opened and released its genetic material inside the cell.\nNow the viral genome can take control of the host cell machinery and start producing new viral components.\nThis is the third step of the infection.",
-            "dialogue_3": "Remember that after entering the cell, the virus releases its genetic material during a process called genome release or uncoating.\nOnce the viral genome is free inside the host cell, it can take control of the cell machinery and start producing new viral components."
+            "dialogue_1": "The viral genome was exposed!",
+            "dialogue_2": "You were not able to reach the end in time.\nThe virus completed uncoating and exposed its genetic material inside the cell.\nNow the viral genome can take control of the host cell machinery and start producing new viral components.\nThis is the third step of the infection.",
+            "dialogue_3": "Remember that after entering the cell, the virus undergoes uncoating: its protective shell breaks down and the viral genome becomes exposed inside the host cell."
         },
         "minigame_4": {
             "dialogue_1": "Replication error detected!",
@@ -142,7 +142,15 @@
         "dialogue_1": "Why do you think you lost?\nThink about the infection phase.",
         "dialogue_2": "Do you have any other questions?\nIf not, proceed to the quiz.",
         "dialogue_3": "Let's proceed to the quiz!",
-        "dialogue_4": "Correct! You are now vaccinated!",
-        "dialogue_5": "Wrong answer. Try again!"
+        "dialogue_4": "Correct! You are now vaccinated!\nNew strength unlocked!",
+        "dialogue_5": "Wrong answer. Try again!",
+        "vaccinated_feedback": {
+            "level_1": "Correct! You are now vaccinated!\nNew strength unlocked: a wider defense platform and slower viral particles before they reach the cell receptors.",
+            "level_2": "Correct! You are now vaccinated!\nNew strength unlocked: slower viral particles, making it easier to stop them before they enter the membrane.",
+            "level_3": "Correct! You are now vaccinated!\nNew strength unlocked: extra time to stop uncoating before the viral genome is fully exposed.",
+            "level_4": "Correct! You are now vaccinated!\nNew strength unlocked: mutation risks are removed, making viral replication easier to control.",
+            "level_5": "Correct! You are now vaccinated!\nNew strength unlocked: fewer viral components and a safer danger line during assembly.",
+            "level_6": "Correct! You are now vaccinated!\nNew strength unlocked: fewer, slower newly released viruses and only one spread zone to contain."
+        }
     }
 }

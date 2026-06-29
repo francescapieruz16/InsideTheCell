@@ -114,8 +114,13 @@ export class PostGameManager {
             this.customMouseY = (yRel * scaleY) + scrollY;
         };
 
-        this.onMouseDown = () => { this.isCustomMouseDown = true; };
-        this.onMouseUp = () => { this.isCustomMouseDown = false; };
+        this.onMouseDown = () => {
+            this.isCustomMouseDown = true;
+        };
+
+        this.onMouseUp = () => {
+            this.isCustomMouseDown = false;
+        };
 
         window.addEventListener('mousemove', this.onMouseMove);
         window.addEventListener('mousedown', this.onMouseDown);
@@ -202,9 +207,11 @@ export class PostGameManager {
         this.scene.events.on('pause', () => {
             const chatInput = document.getElementById('llm-chat-input');
             let isChatVisible = false;
+
             if (chatInput && chatInput.getBoundingClientRect().width > 0) {
                 isChatVisible = true;
             }
+
             (this as any).chatWasVisibleBeforePause = isChatVisible;
 
             if (this.chatManager) {
@@ -212,7 +219,7 @@ export class PostGameManager {
             }
 
             if (this.llmContainer && this.llmContainer.visible) {
-                (this.llmContainer as any).wasVisibleBeforePause = true; 
+                (this.llmContainer as any).wasVisibleBeforePause = true;
                 this.llmContainer.setVisible(false);
             } else if (this.llmContainer) {
                 (this.llmContainer as any).wasVisibleBeforePause = false;
@@ -224,6 +231,7 @@ export class PostGameManager {
                 if (this.chatManager) {
                     this.chatManager.show();
                 }
+
                 (this as any).chatWasVisibleBeforePause = false;
             }
 
@@ -257,7 +265,9 @@ export class PostGameManager {
             this.quizButtons = [];
             this.allInteractableButtons = [];
 
-            if (this.speechInstance) this.speechInstance.abort();
+            if (this.speechInstance) {
+                this.speechInstance.abort();
+            }
 
             this.scene.events.off('pause');
             this.scene.events.off('resume');
@@ -391,7 +401,13 @@ export class PostGameManager {
                     allDialogues.post_minigames.dialogue_3 ||
                     this.postGameTexts.proceedQuiz;
 
+                const vaccinatedFeedbackKey = `level_${this.currentLevel}`;
+
+                const vaccinatedFeedback =
+                    allDialogues.post_minigames.vaccinated_feedback?.[vaccinatedFeedbackKey];
+
                 this.postGameTexts.correctAnswer =
+                    vaccinatedFeedback ||
                     allDialogues.post_minigames.dialogue_4 ||
                     this.postGameTexts.correctAnswer;
 
@@ -572,7 +588,10 @@ export class PostGameManager {
 
     private startSpeechToText(langCode: string = 'en-US') {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) return;
+
+        if (!SpeechRecognition) {
+            return;
+        }
 
         const chatInput = document.getElementById('llm-chat-input') as HTMLInputElement;
 
@@ -581,14 +600,15 @@ export class PostGameManager {
                 chatInput.value = "";
                 chatInput.placeholder = "Resetting mic...";
             }
+
             this.isRestartingSpeech = true;
             this.speechInstance.abort();
             return;
         }
 
         this.speechInstance = new SpeechRecognition();
-        this.speechInstance.lang = langCode; 
-        this.speechInstance.continuous = true; 
+        this.speechInstance.lang = langCode;
+        this.speechInstance.continuous = true;
         this.speechInstance.interimResults = true;
         this.speechInstance.maxAlternatives = 1;
 
@@ -603,10 +623,12 @@ export class PostGameManager {
         };
 
         this.speechInstance.onresult = (event: any) => {
-            let fullTranscript = '';
+            let fullTranscript = "";
+
             for (let i = 0; i < event.results.length; i++) {
                 fullTranscript += event.results[i][0].transcript;
             }
+
             if (chatInput) {
                 chatInput.value = fullTranscript;
                 chatInput.scrollLeft = chatInput.scrollWidth;
@@ -623,6 +645,7 @@ export class PostGameManager {
 
             if (this.isRestartingSpeech) {
                 this.isRestartingSpeech = false;
+
                 setTimeout(() => {
                     this.startSpeechToText(langCode);
                 }, 50);
@@ -636,18 +659,26 @@ export class PostGameManager {
         this.speechInstance.onerror = (event: any) => {
             this.isListening = false;
             this.scene.input.enabled = true;
-            
-            if (event.error === 'aborted') return;
+
+            if (event.error === 'aborted') {
+                return;
+            }
 
             console.error("Speech Recognition Error Code:", event.error);
 
             if (chatInput) {
                 if (event.error === 'network' || event.error === 'no-speech') {
                     chatInput.placeholder = "Speech unavailable. Use Virtual Keyboard!";
-                    if (this.chatManager) this.chatManager.showVirtualKeyboard();
+
+                    if (this.chatManager) {
+                        this.chatManager.showVirtualKeyboard();
+                    }
                 } else {
                     chatInput.placeholder = `Error: ${event.error}. Use keyboard.`;
-                    if (this.chatManager) this.chatManager.showVirtualKeyboard();
+
+                    if (this.chatManager) {
+                        this.chatManager.showVirtualKeyboard();
+                    }
                 }
             }
         };
@@ -794,6 +825,7 @@ export class PostGameManager {
             const nextBtn = this.createButton(0, 20, 320, 70, 'FINAL BOSS', '28px', () => {
                 this.goToScene('CutsceneFinalBoss');
             });
+
             winContainer.add([...windowUi.list, title, nextBtn, menuBtn]);
         }
 
@@ -963,7 +995,9 @@ export class PostGameManager {
                 fontStyle: 'bold',
                 color: '#ffffff',
                 align: 'center',
-                wordWrap: { width: 720 }
+                wordWrap: {
+                    width: 720
+                }
             }
         ).setOrigin(0.5);
 
@@ -995,7 +1029,9 @@ export class PostGameManager {
                     this.chatManager.hide();
                 }
 
-                this.scene.scene.restart({ vaccinated: true });
+                this.scene.scene.restart({
+                    vaccinated: true
+                });
             });
         } else {
             this.abi.MoveDialogueY(0);
@@ -1027,8 +1063,12 @@ export class PostGameManager {
         this.allInteractableButtons.forEach(el => {
             let isVisible = el.obj.visible && el.obj.active;
             let parent = el.obj.parentContainer;
+
             while (parent && isVisible) {
-                if (!parent.visible) isVisible = false;
+                if (!parent.visible) {
+                    isVisible = false;
+                }
+
                 parent = parent.parentContainer;
             }
 
@@ -1038,38 +1078,63 @@ export class PostGameManager {
                     el.isMouseHovered = false;
                     el.simulateOut();
                 }
+
                 return;
             }
 
-            const bounds = Phaser.Geom.Rectangle.Inflate(Phaser.Geom.Rectangle.Clone(el.obj.getBounds()), 15, 15);
+            const bounds = Phaser.Geom.Rectangle.Inflate(
+                Phaser.Geom.Rectangle.Clone(el.obj.getBounds()),
+                15,
+                15
+            );
 
             let isHandHovering = false;
+
             if (isHandActive && handX !== -1) {
                 isHandHovering = Phaser.Geom.Rectangle.Contains(bounds, handX, handY);
             }
 
-            const isMouseHovering = Phaser.Geom.Rectangle.Contains(bounds, this.customMouseX, this.customMouseY);
+            const isMouseHovering = Phaser.Geom.Rectangle.Contains(
+                bounds,
+                this.customMouseX,
+                this.customMouseY
+            );
 
             if (isHandHovering && !el.isHandHovered) {
                 el.isHandHovered = true;
-                if (!el.isMouseHovered) el.simulateOver();
+
+                if (!el.isMouseHovered) {
+                    el.simulateOver();
+                }
             } else if (!isHandHovering && el.isHandHovered) {
                 el.isHandHovered = false;
-                if (!el.isMouseHovered) el.simulateOut();
+
+                if (!el.isMouseHovered) {
+                    el.simulateOut();
+                }
             }
 
             if (isMouseHovering && !el.isMouseHovered) {
                 el.isMouseHovered = true;
-                if (!el.isHandHovered) el.simulateOver();
+
+                if (!el.isHandHovered) {
+                    el.simulateOver();
+                }
             } else if (!isMouseHovering && el.isMouseHovered) {
                 el.isMouseHovered = false;
-                if (!el.isHandHovered) el.simulateOut();
+
+                if (!el.isHandHovered) {
+                    el.simulateOut();
+                }
             }
 
             if (isHandHovering || isMouseHovering) {
                 hoveredElement = el;
             }
-            if (isMouseHovering) isAnyMouseHovering = true;
+
+            if (isMouseHovering) {
+                isAnyMouseHovering = true;
+            }
         });
 
         if (!isAnyMouseHovering) {
@@ -1077,27 +1142,54 @@ export class PostGameManager {
         }
 
         if (isHandActive && currentPinch && !this.previousPinchState) {
-            if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+            if (hoveredElement) {
+                (hoveredElement as InteractiveElement).simulateDown();
+            }
         }
+
         if (isHandActive) {
             this.previousPinchState = currentPinch;
         }
 
         if (this.isCustomMouseDown && !this.previousMouseClickState) {
-            if (hoveredElement) (hoveredElement as InteractiveElement).simulateDown();
+            if (hoveredElement) {
+                (hoveredElement as InteractiveElement).simulateDown();
+            }
         }
+
         this.previousMouseClickState = this.isCustomMouseDown;
     }
 
     private createWindow(width: number, height: number) {
         const container = this.uiScene.add.container(0, 0);
 
-        const shadow = this.uiScene.add.rectangle(8, 8, width, height, 0x000000, 0.35);
+        const shadow = this.uiScene.add.rectangle(
+            8,
+            8,
+            width,
+            height,
+            0x000000,
+            0.35
+        );
 
-        const outer = this.uiScene.add.rectangle(0, 0, width, height, 0xff5a0a, 1)
+        const outer = this.uiScene.add.rectangle(
+            0,
+            0,
+            width,
+            height,
+            0xff5a0a,
+            1
+        )
             .setStrokeStyle(4, 0xffffff);
 
-        const inner = this.uiScene.add.rectangle(0, 0, width - 12, height - 12, 0xd94700, 1);
+        const inner = this.uiScene.add.rectangle(
+            0,
+            0,
+            width - 12,
+            height - 12,
+            0xd94700,
+            1
+        );
 
         container.add([shadow, outer, inner]);
 
@@ -1126,10 +1218,13 @@ export class PostGameManager {
             fontStyle: 'bold',
             color: '#ffffff',
             align: 'center',
-            wordWrap: { width: width - 40 }
+            wordWrap: {
+                width: width - 40
+            }
         }).setOrigin(0.5);
 
         const maxTextWidth = width - 40;
+
         if (text.width > maxTextWidth) {
             text.setScale(maxTextWidth / text.width);
         }
@@ -1153,11 +1248,13 @@ export class PostGameManager {
             simulateDown: () => {
                 container.setScale((container as any).baseScale * 0.95);
                 this.scene.game.canvas.style.cursor = 'default';
+
                 setTimeout(() => {
                     if (container.active) {
                         container.setScale((container as any).baseScale * 1.05);
                     }
                 }, 150);
+
                 onClick();
             }
         };
@@ -1180,7 +1277,9 @@ export class PostGameManager {
                 .map(l => l.trim())
                 .filter(l => l.length > 0);
 
-            if (lines.length < 2) continue;
+            if (lines.length < 2) {
+                continue;
+            }
 
             const question = lines[0];
             const answers: any[] = [];

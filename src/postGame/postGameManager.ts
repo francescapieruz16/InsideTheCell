@@ -62,7 +62,8 @@ export class PostGameManager {
         proceedPrompt: "",
         proceedQuiz: "",
         correctAnswer: "",
-        wrongAnswer: ""
+        wrongAnswer: "",
+        noLlmAcknowledgments: []
     };
 
     private quizzes: any = {};
@@ -102,14 +103,19 @@ export class PostGameManager {
 
         this.onMouseMove = (e: MouseEvent) => {
             if (!this.scene || !this.scene.scale || !this.scene.game.canvas) return;
+
             const canvas = this.scene.game.canvas;
             const rect = canvas.getBoundingClientRect();
+
             const xRel = e.clientX - rect.left;
             const yRel = e.clientY - rect.top;
+
             const scaleX = this.scene.scale.gameSize.width / rect.width;
             const scaleY = this.scene.scale.gameSize.height / rect.height;
+
             const scrollX = this.uiScene?.cameras?.main?.scrollX || 0;
             const scrollY = this.uiScene?.cameras?.main?.scrollY || 0;
+
             this.customMouseX = (xRel * scaleX) + scrollX;
             this.customMouseY = (yRel * scaleY) + scrollY;
         };
@@ -206,6 +212,7 @@ export class PostGameManager {
 
         this.scene.events.on('pause', () => {
             const chatInput = document.getElementById('llm-chat-input');
+
             let isChatVisible = false;
 
             if (chatInput && chatInput.getBoundingClientRect().width > 0) {
@@ -243,6 +250,7 @@ export class PostGameManager {
 
         this.scene.events.once('shutdown', () => {
             this.scene.game.canvas.style.cursor = 'default';
+
             this.scene.events.off('update', this.update, this);
             this.scene.scale.off('resize', this.handleResize, this);
 
@@ -303,6 +311,7 @@ export class PostGameManager {
         const levelKey = `minigame_${this.currentLevel}`;
 
         const savedAdminSettings = localStorage.getItem('ADMIN_SETTINGS_JSON');
+
         let adminSettings: any = null;
 
         if (savedAdminSettings) {
@@ -355,6 +364,7 @@ export class PostGameManager {
         console.log("QUIZZES LOADED:", this.quizzes);
 
         const savedDialogues = localStorage.getItem('DIALOGUES_JSON');
+
         let allDialogues: any = null;
 
         if (savedDialogues) {
@@ -414,6 +424,14 @@ export class PostGameManager {
                 this.postGameTexts.wrongAnswer =
                     allDialogues.post_minigames.dialogue_5 ||
                     this.postGameTexts.wrongAnswer;
+
+                const noLlmAcknowledgments =
+                    allDialogues.post_minigames.no_llm_acknowledgments;
+
+                this.postGameTexts.noLlmAcknowledgments =
+                    Array.isArray(noLlmAcknowledgments) && noLlmAcknowledgments.length > 0
+                        ? noLlmAcknowledgments
+                        : this.postGameTexts.noLlmAcknowledgments;
             }
         }
 
@@ -497,6 +515,16 @@ export class PostGameManager {
         }
     }
 
+    private getRandomNoLlmAcknowledgment() {
+        const acknowledgments = this.postGameTexts.noLlmAcknowledgments;
+
+        if (!Array.isArray(acknowledgments) || acknowledgments.length === 0) {
+            return "Good reflection. Let's use this idea for the quiz.";
+        }
+
+        return Phaser.Math.RND.pick(acknowledgments);
+    }
+
     public async evaluatePlayerChatInput(playerMessage: string) {
         if (this.llmContainer) {
             this.llmContainer.setVisible(false);
@@ -507,7 +535,12 @@ export class PostGameManager {
         }
 
         if (!this.llm) {
-            this.abi.showDialogue("ABI", this.defaultResponse, () => {
+            const noLlmFeedbackPages = [
+                this.getRandomNoLlmAcknowledgment(),
+                this.defaultResponse
+            ];
+
+            this.abi.showDialogue("ABI", noLlmFeedbackPages, () => {
                 this.proceedToQuiz();
             });
 
@@ -578,6 +611,7 @@ export class PostGameManager {
 
         } catch (e) {
             console.log("LLM error: " + e);
+
             this.isWaitingForLLM = false;
 
             this.abi.showDialogue("ABI", this.defaultResponse, () => {
@@ -603,6 +637,7 @@ export class PostGameManager {
 
             this.isRestartingSpeech = true;
             this.speechInstance.abort();
+
             return;
         }
 
@@ -857,7 +892,9 @@ export class PostGameManager {
                 this.chatManager.hide();
             }
 
-            this.scene.scene.restart({ vaccinated: true });
+            this.scene.scene.restart({
+                vaccinated: true
+            });
         });
 
         const menuBtn = this.createButton(0, 110, 320, 70, 'Menu', '28px', () => {
@@ -1055,6 +1092,7 @@ export class PostGameManager {
 
         if (isHandActive) {
             const tracker = HandTrackingController.getInstance();
+
             handX = tracker.targetX * this.uiScene.cameras.main.width;
             handY = tracker.targetY * this.uiScene.cameras.main.height;
             currentPinch = tracker.isClicked;
@@ -1308,7 +1346,9 @@ export class PostGameManager {
 
     public extractDefaultInfoForLevel(level: number, text: string): string[] {
         const lines = text.split('\n');
+
         let isCapturing = false;
+
         const extractedLines: string[] = [];
 
         for (const line of lines) {
@@ -1316,6 +1356,7 @@ export class PostGameManager {
 
             if (trimmedLine.startsWith(`${level}a:`)) {
                 isCapturing = true;
+
                 extractedLines.push(
                     trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim()
                 );

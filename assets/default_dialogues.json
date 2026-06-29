@@ -139,18 +139,26 @@
         }
     },
     "post_minigames": {
-        "dialogue_1": "Why do you think you lost?\nThink about the infection phase.",
-        "dialogue_2": "Do you have any other questions?\nIf not, proceed to the quiz.",
-        "dialogue_3": "Let's proceed to the quiz!",
-        "dialogue_4": "Correct! You are now vaccinated!\nNew strength unlocked!",
-        "dialogue_5": "Wrong answer. Try again!",
-        "vaccinated_feedback": {
-            "level_1": "Correct! You are now vaccinated!\nNew strength unlocked: a wider defense platform and slower viral particles before they reach the cell receptors.",
-            "level_2": "Correct! You are now vaccinated!\nNew strength unlocked: slower viral particles, making it easier to stop them before they enter the membrane.",
-            "level_3": "Correct! You are now vaccinated!\nNew strength unlocked: extra time to stop uncoating before the viral genome is fully exposed.",
-            "level_4": "Correct! You are now vaccinated!\nNew strength unlocked: mutation risks are removed, making viral replication easier to control.",
-            "level_5": "Correct! You are now vaccinated!\nNew strength unlocked: fewer viral components and a safer danger line during assembly.",
-            "level_6": "Correct! You are now vaccinated!\nNew strength unlocked: fewer, slower newly released viruses and only one spread zone to contain."
+    "dialogue_1": "Why do you think you lost?\nThink about the infection phase.",
+    "dialogue_2": "Do you have any other questions?\nIf not, proceed to the quiz.",
+    "dialogue_3": "Let's proceed to the quiz!",
+    "dialogue_4": "Correct! You are now vaccinated!\nNew strength unlocked!",
+    "dialogue_5": "Wrong answer. Try again!",
+    "no_llm_acknowledgments": [
+        "Good reflection. Let's connect your answer to the infection phase before the quiz.",
+        "Nice reasoning. Keep that idea in mind as we move to the quiz.",
+        "Good observation. Now let's check how well you understood this viral step.",
+        "That response helps frame the infection process. Let's continue with the quiz.",
+        "Interesting reflection. Now let's test this idea with a short quiz.",
+        "Good effort. Let's use this moment to reinforce the viral mechanism in the quiz."
+    ],
+    "vaccinated_feedback": {
+        "level_1": "Correct! You are now vaccinated!\nNew strength unlocked: a wider defense platform and slower viral particles before they reach the cell receptors.",
+        "level_2": "Correct! You are now vaccinated!\nNew strength unlocked: slower viral particles, making it easier to stop them before they enter the membrane.",
+        "level_3": "Correct! You are now vaccinated!\nNew strength unlocked: extra time to stop uncoating before the viral genome is fully exposed.",
+        "level_4": "Correct! You are now vaccinated!\nNew strength unlocked: mutation risks are removed, making viral replication easier to control.",
+        "level_5": "Correct! You are now vaccinated!\nNew strength unlocked: fewer viral components and a safer danger line during assembly.",
+        "level_6": "Correct! You are now vaccinated!\nNew strength unlocked: fewer, slower newly released viruses and only one spread zone to contain."
         }
     }
 }

@@ -49,6 +49,8 @@ export default class Scene3_Internal extends Phaser.Scene {
     private dialogue5: any = [];
     private dialogue6: any = [];
     private dialogue7: any = [];
+    private dialogue8: any = [];
+   
 
     // --- DIALOGHI DATA LOG VIRALI ---
     private dialogueLog1: any= [];
@@ -186,6 +188,8 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.dialogue5 = [];
         this.dialogue6 = [];
         this.dialogue7 = [];
+        this.dialogue8 = [];
+      
         this.dialogueLog1 = [];
         this.dialogueLog2 = [];
         this.dialogueLog3 = [];
@@ -208,6 +212,10 @@ export default class Scene3_Internal extends Phaser.Scene {
         this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_1);
         this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_2);
         this.dialogue7.push(allDialogues.tutorials.tutorial_3.dialogue_7_3);
+
+        this.dialogue8.push(allDialogues.tutorials.tutorial_3.dialogue_8_1);
+        this.dialogue8.push(allDialogues.tutorials.tutorial_3.dialogue_8_2);
+        this.dialogue8.push(allDialogues.tutorials.tutorial_3.dialogue_8_3);
 
         this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogue_Log1_1);
         this.dialogueLog1.push(allDialogues.tutorials.tutorial_3.dialogue_Log1_2);
@@ -758,11 +766,23 @@ export default class Scene3_Internal extends Phaser.Scene {
     private handleNucleusCollision(): void {
         if (this.abi.isTalking) return;
 
-        // Comportamento a cooldown come gli altri organuli fisici
         if (this.time.now > this.lastNucleusDialogueTime + this.DIALOGUE_COOLDOWN) {
             this.lastNucleusDialogueTime = this.time.now;
+            
             JournalScene.unlockItem(this, 'nucleo', this.levelDiscoverables);
-            this.abi.showDialogue("A.B.I.", this.dialogue7);
+
+            const savedData = localStorage.getItem('journalUnlocks');
+            const unlockedItems = savedData ? JSON.parse(savedData) : [];
+            const TOTAL_ITEMS = 15;
+
+            if (unlockedItems.length < TOTAL_ITEMS) {
+                // Passiamo direttamente l'array sicuro, senza calcoli dinamici
+                this.abi.showDialogue("A.B.I.", this.dialogue8);
+            } else {
+                this.abi.showDialogue("A.B.I.", this.dialogue7, () => {
+                    this.showTutorialCompletePopup();
+                });
+            }
         }
     }
 
@@ -838,5 +858,95 @@ export default class Scene3_Internal extends Phaser.Scene {
             hasSeenIntro: this.hasSeenIntro
         };
         localStorage.setItem('scene3_state', JSON.stringify(state));
+    }
+
+    private showTutorialCompletePopup() {
+        // Ferma il mondo fisico e la navicella
+        this.physics.world.pause();
+        (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const cx = this.cameras.main.scrollX + width / 2;
+        const cy = this.cameras.main.scrollY + height / 2;
+
+        // 1. Oscura lo schermo in background (questo rimane in Phaser per scurire il gioco)
+        const overlay = this.add.rectangle(cx, cy, width * 2, height * 2, 0x000000, 0.85);
+        overlay.setDepth(2000);
+        overlay.setInteractive(); 
+
+        // 2. Crea il popup direttamente come elemento HTML nativo
+        const popupWrapper = document.createElement('div');
+        // --- FIX: Posizionamento Assoluto HTML ---
+        popupWrapper.style.position = 'absolute';
+        popupWrapper.style.top = '50%';
+        popupWrapper.style.left = '50%';
+        popupWrapper.style.transform = 'translate(-50%, -50%)';
+        popupWrapper.style.zIndex = '9999'; // Lo forza sopra qualsiasi altro elemento della pagina
+        // -----------------------------------------
+        popupWrapper.style.display = 'flex';
+        popupWrapper.style.flexDirection = 'column';
+        popupWrapper.style.alignItems = 'center';
+        popupWrapper.style.justifyContent = 'center';
+        popupWrapper.style.backgroundColor = 'rgba(17, 34, 51, 0.95)';
+        popupWrapper.style.border = '4px solid #4caf50';
+        popupWrapper.style.padding = '40px 60px';
+        popupWrapper.style.borderRadius = '12px';
+        popupWrapper.style.color = 'white';
+        popupWrapper.style.fontFamily = 'Arial, sans-serif';
+        popupWrapper.style.textAlign = 'center';
+
+        // Titolo
+        const title = document.createElement('h1');
+        title.innerText = 'TUTORIAL COMPLETE!';
+        title.style.color = '#4caf50';
+        title.style.fontSize = '46px';
+        title.style.margin = '0 0 15px 0';
+        title.style.textShadow = '2px 2px 4px #000000';
+
+        // Sottotitolo
+        const subtitle = document.createElement('p');
+        subtitle.innerText = 'You have successfully scanned all 15 biological structures.';
+        subtitle.style.fontSize = '22px';
+        subtitle.style.margin = '0 0 40px 0';
+
+        // Pulsante Menu
+        const menuBtn = document.createElement('button');
+        menuBtn.innerText = 'RETURN TO MENU';
+        menuBtn.style.padding = '15px 35px';
+        menuBtn.style.fontSize = '1.5rem';
+        menuBtn.style.fontWeight = 'bold';
+        menuBtn.style.cursor = 'pointer';
+        menuBtn.style.backgroundColor = '#4caf50';
+        menuBtn.style.color = 'white';
+        menuBtn.style.border = '2px solid white';
+        menuBtn.style.borderRadius = '8px';
+        menuBtn.style.transition = 'transform 0.2s, background-color 0.2s';
+
+        // Effetti hover
+        menuBtn.addEventListener('mouseenter', () => {
+            menuBtn.style.transform = 'scale(1.05)';
+            menuBtn.style.backgroundColor = '#388e3c';
+        });
+        menuBtn.addEventListener('mouseleave', () => {
+            menuBtn.style.transform = 'scale(1)';
+            menuBtn.style.backgroundColor = '#4caf50';
+        });
+        
+        // Click sul pulsante
+        menuBtn.addEventListener('click', () => {
+            popupWrapper.remove(); // FIX: Distrugge l'HTML quando cliccato
+            this.sound.stopAll(); 
+            this.scene.sleep('ABIScene');
+            this.scene.start('MenuPageScene');
+        });
+
+        popupWrapper.appendChild(title);
+        popupWrapper.appendChild(subtitle);
+        popupWrapper.appendChild(menuBtn);
+
+        // FIX: Invece di usare this.add.dom, lo appende direttamente al container dell'app
+        const gameContainer = document.getElementById('app') || document.body;
+        gameContainer.appendChild(popupWrapper);
     }
 }

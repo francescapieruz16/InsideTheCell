@@ -47,10 +47,13 @@ export class Level5 extends Phaser.Scene {
     private canDrop = true;
 
     private levelStartTime = 0;
+    private timerText: Phaser.GameObjects.Text | null = null;
+    private timerPanel: Phaser.GameObjects.Rectangle | null = null;
 
     private lastVaccinatedMergeAssistCheck = 0;
 
     private readonly wallThickness = 38;
+    private readonly unvaccinatedTimeLimit = 30000; // 30 seconds
 
     private readonly initialComponentCount = 200;
     private readonly vaccinatedFinalLevel = 4;
@@ -154,6 +157,8 @@ export class Level5 extends Phaser.Scene {
 
         this.assemblyProgress = 0;
         this.levelStartTime = 0;
+        this.timerText = null;
+        this.timerPanel = null;
         this.lastVaccinatedMergeAssistCheck = 0;
 
         this.score = 0;
@@ -274,6 +279,7 @@ export class Level5 extends Phaser.Scene {
         backBtn.className = 'Back';
         backBtn.innerText = 'PAUSE';
         backBtn.style.pointerEvents = 'auto';
+
         const wrapper = document.createElement('div');
         wrapper.style.position = 'absolute';
         wrapper.style.top = '20px';
@@ -282,6 +288,7 @@ export class Level5 extends Phaser.Scene {
         wrapper.style.zIndex = '1000';
         wrapper.style.pointerEvents = 'none';
         wrapper.appendChild(backBtn);
+
         const gameContainer = document.getElementById('app') || document.body;
         gameContainer.appendChild(wrapper);
 
@@ -298,6 +305,7 @@ export class Level5 extends Phaser.Scene {
         const height = this.LOGICAL_HEIGHT;
 
         this.createContainer(width, height);
+        this.createUnvaccinatedTimer();
         this.createControls();
         this.createCollisionHandler();
 
@@ -334,10 +342,11 @@ export class Level5 extends Phaser.Scene {
             style.remove();
             this.scale.off('resize', onResize);
             this.tweens.killAll();
+            this.clearUnvaccinatedTimer();
             AudioManager.stopMusic(); 
         });
 
-        if(this.input.keyboard){
+        if (this.input.keyboard) {
             this.input.keyboard.on('keydown-ESC', () => {
                 wrapper.style.display = 'none';
 
@@ -1167,6 +1176,94 @@ export class Level5 extends Phaser.Scene {
         );
     }
 
+    private createUnvaccinatedTimer() {
+    if (this.isVaccinated) {
+        return;
+    }
+
+    const panelWidth = 330;
+    const panelHeight = 95;
+    const panelX = 195;
+    const panelY = 75;
+
+    this.timerPanel = this.add.rectangle(
+        panelX,
+        panelY,
+        panelWidth,
+        panelHeight,
+        0x001b1d,
+        0.78
+    );
+
+    this.timerPanel.setDepth(50);
+    this.timerPanel.setStrokeStyle(5, 0x88e6ff, 0.7);
+
+    this.timerText = this.add.text(
+        panelX,
+        panelY - 24,
+        'TIME: 30',
+        {
+            fontFamily: 'monospace',
+            fontSize: '42px',
+            color: '#ffffff',
+            stroke: '#001020',
+            strokeThickness: 7,
+            resolution: 2
+        }
+    );
+
+    this.timerText.setDepth(60);
+    this.timerText.setOrigin(0.5, 0);
+}
+    private checkUnvaccinatedTimer() {
+        if (this.isVaccinated) {
+            return;
+        }
+
+        if (this.gameEnded || this.isSeedingBox || !this.hasStartedPlaying) {
+            return;
+        }
+
+        if (!this.levelStartTime) {
+            return;
+        }
+
+        const elapsedTime = this.time.now - this.levelStartTime;
+
+        const remainingTime = Math.max(
+            0,
+            this.unvaccinatedTimeLimit - elapsedTime
+        );
+
+        const remainingSeconds = Math.ceil(remainingTime / 1000);
+
+        if (this.timerText) {
+            this.timerText.setText(`TIME: ${remainingSeconds}`);
+
+            if (remainingSeconds <= 10) {
+                this.timerText.setColor('#ff4444');
+            } else {
+                this.timerText.setColor('#ffffff');
+            }
+        }
+
+        if (remainingTime <= 0) {
+            this.loseGame();
+        }
+    }
+
+    private clearUnvaccinatedTimer() {
+        if (this.timerText) {
+            this.timerText.destroy();
+            this.timerText = null;
+        }
+
+        if (this.timerPanel) {
+            this.timerPanel.destroy();
+            this.timerPanel = null;
+        }
+    }
+
     private checkDangerLine() {
         if (this.gameEnded) {
             return;
@@ -1269,15 +1366,14 @@ export class Level5 extends Phaser.Scene {
             this.currentPreview = null;
         }
 
+        this.clearUnvaccinatedTimer();
         this.clearComponents();
 
-        // --- LOGICA DI SBLOCCO LIVELLO SUCCESSIVO ---
         const currentMax = parseInt(localStorage.getItem('maxUnlockedLevel') || '1', 10);
-        // Sblocca il livello 6 solo se non eravamo già andati oltre
+
         if (currentMax < 6) {
             localStorage.setItem('maxUnlockedLevel', '6');
         }
-        // --------------------------------------------
 
         this.postGameManager.showWinScreen();
     }
@@ -1293,6 +1389,8 @@ export class Level5 extends Phaser.Scene {
             this.currentPreview.destroy();
             this.currentPreview = null;
         }
+
+        this.clearUnvaccinatedTimer();
 
         this.activeComponents.forEach(component => {
             if (component.body) {
@@ -1318,10 +1416,9 @@ export class Level5 extends Phaser.Scene {
         this.updatePreviewMovement();
         this.stabilizeComponents();
 
-        // Solo in modalità vaccinata:
-        // aiuta componenti uguali e vicini a fondersi anche se non si toccano perfettamente.
         this.checkVaccinatedNearbyMerges();
 
+        this.checkUnvaccinatedTimer();
         this.checkDangerLine();
     }
 }

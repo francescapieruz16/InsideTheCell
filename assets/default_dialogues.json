@@ -75,11 +75,11 @@
             "dialogue_4": "Your mission is to shoot the viruses before they enter the membrane.\nStop enough particles to protect the cell."
         },
         "cutscene_3": {
-            "dialogue_1": "WARNING: The virus is preparing to release its genetic material into the cell.\nYou must move before the infection spreads.",
-            "dialogue_2": "The path ahead is unstable.\nJump across cellular platforms and avoid the spikes blocking your route.",
-            "dialogue_3": "If the viral genome is released, the cell will be compromised.\nReach the end before the countdown finishes.",
-            "dialogue_4": "Run, jump, and stay focused.\nReach the flag in time to stop the infection from taking over."
-        },
+    "dialogue_1": "WARNING: The virus has entered the host cell and is beginning the uncoating process.\nIts protective shell is breaking down, exposing the viral genome inside the cell.",
+    "dialogue_2": "The path ahead is unstable.\nJump across cellular platforms and avoid the spikes blocking your route.",
+    "dialogue_3": "If uncoating is completed, the viral genome will become accessible inside the host cell, allowing the infection process to continue.\nReach the end before the countdown finishes.",
+    "dialogue_4": "Run, jump, and stay focused.\nReach the flag in time to stop the virus from completing uncoating."
+},
         "cutscene_4": {
             "dialogue_1": "A new challenge begins inside the cell.\nThe viral replication process is unstable, and hidden biological signals must be identified.",
             "dialogue_2": "Some cards represent genetic bases: Adenine, Cytosine, Guanine, and Uracil.\nThese are part of the information carried by genetic material.",
@@ -92,12 +92,12 @@
             "dialogue_4": "In vaccinated mode, the assembly chain is weakened.\nComponents stop at an earlier stage and disappear when matched correctly.",
             "dialogue_5": "Control where each component falls.\nCombine identical pieces carefully and keep the viral structure below the danger line."
         },
-        "cutscene_6": {
-            "dialogue_1": "Viral agents have breached the cytoplasm. They are spreading through the cellular maze, moving fast through the inner pathways of the cell.",
-            "dialogue_2": "Unstable replication zones are forming across the maze. Any virus that reaches them can multiply, turning a small infection into a dangerous outbreak.",
-            "dialogue_3": "The immune defender has been deployed inside the cell. Its mission is to chase, intercept, and neutralize the viral agents before they overwhelm the system.",
-            "dialogue_4": "Contain the widespread infection before time runs out. Capture enough newly released viruses, prevent them from spreading to other cells, and restore balance inside the cell."
-        }
+       "cutscene_6": {
+    "dialogue_1": "Newly assembled viral agents are leaving the infected cell. They are spreading through the cellular maze, moving fast toward new targets.",
+    "dialogue_2": "Unstable spread zones are forming across the maze. Any newly released virus that reaches them can increase the infection, turning a local infection into a widespread infection.",
+    "dialogue_3": "The immune defender has been deployed inside the cell. Its mission is to chase, intercept, and neutralize the newly released viruses before they overwhelm the system.",
+    "dialogue_4": "Contain the widespread infection before time runs out. Capture enough newly released viruses, prevent them from spreading to other cells, and restore balance inside the cell."
+}
     },
     "minigames": {
         "minigame_1": {

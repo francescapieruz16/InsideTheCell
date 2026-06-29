@@ -136,7 +136,7 @@
         }
     },
     "post_minigames": {
-        "dialogue_1": "Why do you think you lost?",
+        "dialogue_1": "Why do you think you lost?\nThink about the infection phase.",
         "dialogue_2": "Do you have any other questions?\nIf not, proceed to the quiz.",
         "dialogue_3": "Let's proceed to the quiz!",
         "dialogue_4": "Correct! You are now vaccinated!",

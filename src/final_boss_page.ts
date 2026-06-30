@@ -1088,7 +1088,7 @@ export class FinalBoss extends Phaser.Scene {
     }
 
     update() {
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode = this.registry.get('inputMode');
         const tracker = HandTrackingController.getInstance();
         const currentPinch = inputMode === 'hand' ? tracker.isClicked : false;
 

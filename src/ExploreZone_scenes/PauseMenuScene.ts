@@ -203,7 +203,7 @@ export default class PauseMenuScene extends Phaser.Scene {
     }
 
     update(time: number, delta: number) {
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode = this.registry.get('inputMode');
         
         let hoveredButton: MenuButton | null = null;
         let isAnyMouseHovering = false;

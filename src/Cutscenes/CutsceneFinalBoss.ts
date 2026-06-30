@@ -183,7 +183,7 @@ export default class CutsceneFinalBoss extends Phaser.Scene {
     }
 
     update() {
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode = this.registry.get('inputMode');
         if (inputMode !== 'hand') return;
 
         const tracker = HandTrackingController.getInstance();

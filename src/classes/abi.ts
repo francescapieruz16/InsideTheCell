@@ -129,9 +129,11 @@ export default class ABI {
         const voices = this.synth.getVoices();
         
         // Cerchiamo la voce preferita
-        const preferredVoice = voices.find(v => v.name.includes("Google US English")) || 
-                               voices.find(v => v.lang === "en-US") ||
-                               voices.find(v => v.lang === "en-GB");
+        const preferredVoice = voices.find(v => v.name.includes("Google US English") && v.name.includes("Female")) || 
+                                                voices.find(v => v.name.includes("Samantha")) ||       // Apple/Safari standard
+                                                voices.find(v => v.name.includes("Zira")) ||           // Windows/Edge standard
+                                                voices.find(v => v.name.includes("Female")) ||         // Filtro generico
+                                                voices.find(v => v.lang === "en-US");                  // Fallback inglese base
         
         if (preferredVoice) {
             this.robotVoice = preferredVoice;
@@ -172,7 +174,7 @@ export default class ABI {
             utterance.voice = this.robotVoice;
         }
 
-        utterance.pitch = 1; 
+        utterance.pitch = 0.8; 
         utterance.rate = 1;  
         utterance.volume = finalVolume;
         

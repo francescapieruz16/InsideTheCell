@@ -6,6 +6,7 @@ import defaultDialoguesJSON from '../assets/default_dialogues.json';
 
 export class AdminDashboard {
     private apiKeyInput!: HTMLInputElement;
+    private modelSelect!: HTMLSelectElement;
     private promptInput!: HTMLTextAreaElement;
     private jsonArea!: HTMLTextAreaElement;
     
@@ -20,6 +21,7 @@ export class AdminDashboard {
 
     private init() {
         this.apiKeyInput = document.getElementById('api-key') as HTMLInputElement;
+        this.modelSelect = document.getElementById('ai-model') as HTMLSelectElement;
         this.promptInput = document.getElementById('generic-prompt') as HTMLTextAreaElement;
         this.jsonArea = document.getElementById('raw-json') as HTMLTextAreaElement;
         
@@ -37,6 +39,8 @@ export class AdminDashboard {
 
     private loadAndPopulateData() {
         this.apiKeyInput.value = localStorage.getItem('GEMINI_API_KEY') || "";
+
+        this.modelSelect.value = localStorage.getItem('GEMINI_MODEL') || "gemini-2.5-flash";
 
         const savedData = localStorage.getItem('ADMIN_SETTINGS_JSON');
         let settingsData;
@@ -59,6 +63,7 @@ export class AdminDashboard {
         if (!data) return;
 
         this.promptInput.value = data.game_prompt || "";
+        this.modelSelect.value = data.ai_model || "gemini-2.5-flash";
 
         for (let i = 1; i <= 6; i++) {
             const levelData = data.minigames[`minigame_${i}`] || {};
@@ -109,12 +114,14 @@ export class AdminDashboard {
 
     private async handleSave() {
         const apiKey = this.apiKeyInput.value.trim();
+        const selectedModel = this.modelSelect ? this.modelSelect.value : "gemini-2.5-flash";
         this.setLoadingState(true);
 
         const dataObj = this.buildJSONFromUI();
         const jsonString = JSON.stringify(dataObj, null, 4);
 
         localStorage.setItem('GEMINI_API_KEY', apiKey);
+        localStorage.setItem('GEMINI_MODEL', selectedModel);
         localStorage.setItem('ADMIN_SETTINGS_JSON', jsonString);
         
         this.jsonArea.value = jsonString;
@@ -132,117 +139,158 @@ export class AdminDashboard {
 
             try {
                 const llm = new ChatGoogleGenerativeAI({
-                    model: "gemini-3-flash-preview",
+                    model: selectedModel,
                     apiKey: apiKey,
                     temperature: 0.7,
                 });
 
                 // ==========================================
+                // BASE SYSTEM PROMPT
+                // ==========================================
+                const systemPromptBase = `${dataObj.game_prompt}\n`;
+
+                const promises: Promise<void>[] = [];
+
+                // ==========================================
                 // STEP 1: TUTORIALS
                 // ==========================================
-                console.log("Generating tutorials...");
-                const tutorialsPrompt = `${dataObj.game_prompt}\n
-                You are rewriting the introductory tutorials for the game.
-                I will provide the "Current Dialogues JSON" template for the tutorials.
-                Tutorial 1 is the external part of the cell. Tutorial 2 explains the membrane. Tutorial 3 explains the internal part of the cell.
-                
-                Follow these strict rules:
-                1. Keep the EXACT same JSON keys as the template. Only change the string values.
-                2. Write as an engaging AI tutor explaining the game to a student.
-                CRITICAL: You MUST return ONLY a valid JSON object. Do not wrap it in markdown formatting like \`\`\`json. Return purely the raw JSON string.`;
+                const tutPromise = (async () => {
+                    console.log("Generating tutorials...");
+                    const tutorialsPrompt = `${systemPromptBase}\n
+                    You are rewriting the introductory tutorials for the game.
+                    I will provide the "Current Dialogues JSON" template for the tutorials.
 
-                const tutChain = ChatPromptTemplate.fromMessages([
-                    ["system", tutorialsPrompt],
-                    ["user", "Current Dialogues JSON:\n{current_json}"]
-                ]).pipe(llm).pipe(new StringOutputParser());
+                    Follow these strict rules:
+                    1. Keep the EXACT same JSON keys as the template. Only change the string values.
+                    2. STYLE MATCH: You MUST maintain the same tone, personality, formatting, and approximate length of the original strings provided in the template. Do not change the overall vibe of the conversation.
+                    CRITICAL: You MUST return ONLY a valid JSON object. Do not wrap it in markdown formatting like \`\`\`json. Return purely the raw JSON string.`;
 
-                let tutFeedback = await tutChain.invoke({
-                    current_json: JSON.stringify(currentDialogues.tutorials, null, 2)
-                });
+                    const tutChain = ChatPromptTemplate.fromMessages([
+                        ["system", tutorialsPrompt],
+                        ["user", "Current Dialogues JSON:\n{current_json}"]
+                    ]).pipe(llm).pipe(new StringOutputParser());
 
-                try {
-                    tutFeedback = tutFeedback.replace(/```json/g, '').replace(/```/g, '').trim();
-                    currentDialogues.tutorials = JSON.parse(tutFeedback);
-                } catch (e) {
-                    console.error("Errore parsing Tutorials JSON", tutFeedback);
-                }
+                    let tutFeedback = await tutChain.invoke({
+                        current_json: JSON.stringify(currentDialogues.tutorials, null, 2)
+                    });
+
+                    try {
+                        tutFeedback = tutFeedback.replace(/```json/g, '').replace(/```/g, '').trim();
+                        currentDialogues.tutorials = JSON.parse(tutFeedback);
+                    } catch (e) {
+                        console.error("Errore parsing Tutorials JSON", tutFeedback);
+                    }
+                })();
+                promises.push(tutPromise);
 
                 // ==========================================
-                // STEP 2: MINIGAMES
+                // STEP 2: CUTSCENES
+                // ==========================================
+                const cutPromise = (async () => {
+                    console.log("Generating cutscenes...");
+                    const cutscenesPrompt = `${systemPromptBase}\n
+                    You are rewriting the introductory cutscenes for the game.
+                    I will provide the "Current Dialogues JSON" template for the cutscenes.
+
+                    Follow these strict rules:
+                    1. Keep the EXACT same JSON keys as the template. Only change the string values.
+                    2. STYLE MATCH: You MUST maintain the same tone, personality, formatting, and approximate length of the original strings provided in the template. Do not change the overall vibe of the conversation.
+                    CRITICAL: You MUST return ONLY a valid JSON object. Do not wrap it in markdown formatting like \`\`\`json. Return purely the raw JSON string.`;
+
+                    const cutChain = ChatPromptTemplate.fromMessages([
+                        ["system", cutscenesPrompt],
+                        ["user", "Current Dialogues JSON:\n{current_json}"]
+                    ]).pipe(llm).pipe(new StringOutputParser());
+
+                    let cutFeedback = await cutChain.invoke({
+                        current_json: JSON.stringify(currentDialogues.cutscenes, null, 2)
+                    });
+
+                    try {
+                        cutFeedback = cutFeedback.replace(/```json/g, '').replace(/```/g, '').trim();
+                        currentDialogues.cutscenes = JSON.parse(cutFeedback);
+                    } catch (e) {
+                        console.error("Errore parsing Cutscenes JSON", cutFeedback);
+                    }
+                })();
+                promises.push(cutPromise);
+
+                // ==========================================
+                // STEP 3: MINIGAMES
                 // ==========================================
                 console.log("Generating minigames...");
                 for (let level = 1; level <= 6; level++) {
-                    const minigameDesc = dataObj.minigames[`minigame_${level}`].description;
-                    const knowledgeContext = dataObj.minigames[`minigame_${level}`].knowledge;
+                    const minigameDesc = dataObj.minigames[`minigame_${level}`]?.description;
+                    const knowledgeContext = dataObj.minigames[`minigame_${level}`]?.knowledge;
                     const currentLevelDialogues = currentDialogues.minigames[`minigame_${level}`] || { dialogue_1: "", dialogue_2: "", dialogue_3: "" };
 
                     if (!minigameDesc || !knowledgeContext) continue;
 
-                    const minigamePrompt = `${dataObj.game_prompt}\n
-                    You are rewriting the post-game failure dialogues for a specific level.
-                    I will provide you with the "Minigame Description", the "Knowledge Context", and the "Current Dialogues JSON" template for this level.
-                    The player has just lost the minigame.
+                    const mgPromise = (async () => {
+                        const minigamePrompt = `${systemPromptBase}\n
+                        You are rewriting the post-game failure dialogues for a specific level.
+                        I will provide you with the "Minigame Description", the "Knowledge Context", and the "Current Dialogues JSON" template for this level.
+
+                        Follow these strict rules:
+                        1. EXCLUSIVELY use the provided "Knowledge Context" or "Minigame Description".
+                        2. Keep the EXACT same JSON keys as the template. Only change the string values.
+                        3. STYLE MATCH: You MUST maintain the same tone, personality, formatting, and approximate length of the original strings provided in the template. Do not change the overall vibe of the conversation.
+                        CRITICAL: You MUST return ONLY a valid JSON object. Do not wrap it in markdown.`;
+
+                        const mgChain = ChatPromptTemplate.fromMessages([
+                            ["system", minigamePrompt],
+                            ["user", "Minigame description: {minigame_description}\n\nKnowledge context: {knowledge}\n\nCurrent Dialogues JSON:\n{current_json}"]
+                        ]).pipe(llm).pipe(new StringOutputParser());
+
+                        let mgFeedback = await mgChain.invoke({
+                            minigame_description: minigameDesc,
+                            knowledge: knowledgeContext,
+                            current_json: JSON.stringify(currentLevelDialogues, null, 2)
+                        });
+
+                        try {
+                            mgFeedback = mgFeedback.replace(/```json/g, '').replace(/```/g, '').trim();
+                            currentDialogues.minigames[`minigame_${level}`] = JSON.parse(mgFeedback);
+                        } catch (e) {
+                            console.error(`Errore parsing Minigame ${level} JSON`, mgFeedback);
+                        }
+                    })();
+                    promises.push(mgPromise);
+                }
+
+                // ==========================================
+                // STEP 4: POST-MINIGAMES
+                // ==========================================
+                const pgPromise = (async () => {
+                    console.log("Generating post-minigames...");
+                    const postGamePrompt = `${systemPromptBase}\n
+                    You are rewriting the standard UI messages for the post-minigame chat and quiz phase.
+                    I will provide the "Current Dialogues JSON" template.
 
                     Follow these strict rules:
-                    1. EXCLUSIVELY use the provided "Knowledge Context" or "Minigame Description".
-                    2. Keep the EXACT same JSON keys as the template. Only change the string values.
-                    3. 'dialogue_1': A short, dramatic exclamation announcing the virus's success (max 6-8 words).
-                    4. 'dialogue_2': Gently state the failure and provide a brief (1-2 sentences) explanation of the biological event.
-                    5. 'dialogue_3': A helpful hint that summarizes the core concept from the "Knowledge Context", giving the player the crucial information they need to answer the upcoming quiz correctly (e.g., "Remember that during the binding phase, viruses must use their surface proteins to attach to specific cell receptors like a lock and key.").
+                    1. Keep the EXACT same JSON keys as the template. Only change the string values.
+                    2. STYLE MATCH: You MUST maintain the same tone, personality, formatting, and approximate length of the original strings provided in the template. Do not change the overall vibe of the conversation.
                     CRITICAL: You MUST return ONLY a valid JSON object. Do not wrap it in markdown.`;
 
-                    const mgChain = ChatPromptTemplate.fromMessages([
-                        ["system", minigamePrompt],
-                        ["user", "Minigame description: {minigame_description}\n\nKnowledge context: {knowledge}\n\nCurrent Dialogues JSON:\n{current_json}"]
+                    const pgChain = ChatPromptTemplate.fromMessages([
+                        ["system", postGamePrompt],
+                        ["user", "Current Dialogues JSON:\n{current_json}"]
                     ]).pipe(llm).pipe(new StringOutputParser());
 
-                    let mgFeedback = await mgChain.invoke({
-                        minigame_description: minigameDesc,
-                        knowledge: knowledgeContext,
-                        current_json: JSON.stringify(currentLevelDialogues, null, 2)
+                    let pgFeedback = await pgChain.invoke({
+                        current_json: JSON.stringify(currentDialogues.post_minigames, null, 2)
                     });
 
                     try {
-                        mgFeedback = mgFeedback.replace(/```json/g, '').replace(/```/g, '').trim();
-                        currentDialogues.minigames[`minigame_${level}`] = JSON.parse(mgFeedback);
+                        pgFeedback = pgFeedback.replace(/```json/g, '').replace(/```/g, '').trim();
+                        currentDialogues.post_minigames = JSON.parse(pgFeedback);
                     } catch (e) {
-                        console.error(`Errore parsing Minigame ${level} JSON`, mgFeedback);
+                        console.error("Errore parsing Post-Minigames JSON", pgFeedback);
                     }
-                }
+                })();
+                promises.push(pgPromise);
 
-                // ==========================================
-                // STEP 3: POST-MINIGAMES
-                // ==========================================
-                console.log("Generating post-minigames...");
-                const postGamePrompt = `${dataObj.game_prompt}\n
-                You are rewriting the standard UI messages for the post-minigame chat and quiz phase.
-                I will provide the "Current Dialogues JSON" template.
-                
-                - dialogue_1: Ask the player why they think they lost.
-                - dialogue_2: Ask if they have other questions, otherwise proceed to the quiz.
-                - dialogue_3: Exclamation to start the quiz.
-                - dialogue_4: Congratulate the player for a correct answer (vaccination successful).
-                - dialogue_5: Inform the player of a wrong answer and prompt them to try again.
-                
-                Follow these strict rules:
-                1. Keep the EXACT same JSON keys as the template. Only change the string values.
-                CRITICAL: You MUST return ONLY a valid JSON object. Do not wrap it in markdown.`;
-
-                const pgChain = ChatPromptTemplate.fromMessages([
-                    ["system", postGamePrompt],
-                    ["user", "Current Dialogues JSON:\n{current_json}"]
-                ]).pipe(llm).pipe(new StringOutputParser());
-
-                let pgFeedback = await pgChain.invoke({
-                    current_json: JSON.stringify(currentDialogues.post_minigames, null, 2)
-                });
-
-                try {
-                    pgFeedback = pgFeedback.replace(/```json/g, '').replace(/```/g, '').trim();
-                    currentDialogues.post_minigames = JSON.parse(pgFeedback);
-                } catch (e) {
-                    console.error("Errore parsing Post-Minigames JSON", pgFeedback);
-                }
+                await Promise.all(promises);
 
                 localStorage.setItem('DIALOGUES_JSON', JSON.stringify(currentDialogues, null, 4));
                 this.showToast('Settings and dialogues saved successfully! Redirecting...', '#27ae60', '#e8f8f5');
@@ -274,33 +322,11 @@ export class AdminDashboard {
     private handleReset() {
         if (!confirm("Are you sure you want to reset all settings to default?")) return;
         localStorage.removeItem('GEMINI_API_KEY');
+        localStorage.removeItem('GEMINI_MODEL');
         localStorage.removeItem('ADMIN_SETTINGS_JSON');
         this.apiKeyInput.value = "";
         this.populateUIFromJSON(defaultSettingsJSON);
         this.showToast('Settings reset to default values.', '#e74c3c', '#fdedec');
-    }
-
-    private extractCleanDialogue(text: string): string[] {
-        const lines = text.split('\n');
-        let isCapturing = false;
-        const extractedLines: string[] = [];
-
-        for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (trimmedLine.startsWith(`a:`)) {
-                isCapturing = true;
-                extractedLines.push(trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim());
-            } else if (isCapturing && trimmedLine.startsWith(`b:`)) {
-                extractedLines.push(trimmedLine.substring(trimmedLine.indexOf(':') + 1).trim());
-            } else if (isCapturing && trimmedLine.match(/^[a-z]:/) && !trimmedLine.startsWith(`a:`) && !trimmedLine.startsWith(`b:`)) {
-                break;
-            } else if (isCapturing && trimmedLine.length > 0) {
-                if (extractedLines.length > 0) {
-                    extractedLines[extractedLines.length - 1] += '\n' + trimmedLine;
-                }
-            }
-        }
-        return extractedLines.length > 0 ? extractedLines : ["Error parsing data.", "Please try again."];
     }
 
     private setLoadingState(isLoading: boolean) {

@@ -159,7 +159,7 @@ export class PostGameManager {
             this.llm = null;
         }
 
-        const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode = this.scene.registry.get('inputMode')
         const isHandTrackingActive = inputMode === 'hand';
 
         this.chatManager = new ChatManager(
@@ -920,7 +920,10 @@ export class PostGameManager {
         const cy = this.uiScene.cameras.main.height / 2;
         const zoom = this.uiScene.cameras.main.height / 1080;
 
-        this.continueToQuizBtn = this.createButton(cx - 150, cy, 260, 64, 'Go to the quiz', '28px', () => {
+        const offsetX = 700;
+        const offsetY = 430;
+
+        this.continueToQuizBtn = this.createButton(offsetX, offsetY, 300, 75, 'Go to the quiz', '34px', () => {
             if (this.llmContainer) {
                 this.llmContainer.setVisible(false);
             }
@@ -1085,7 +1088,7 @@ export class PostGameManager {
         let hoveredElement: InteractiveElement | null = null;
         let isAnyMouseHovering = false;
 
-        const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode = this.scene.registry.get('inputMode')
         const isHandActive = inputMode === 'hand';
 
         let handX = -1;

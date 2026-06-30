@@ -243,7 +243,7 @@ export default class ABI {
     }
 
     private update(time: number, delta: number) {
-        const inputMode = this.scene.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode = this.scene.registry.get('inputMode')
         if (inputMode !== 'hand') return;
 
         const tracker = HandTrackingController.getInstance();

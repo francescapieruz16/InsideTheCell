@@ -231,9 +231,7 @@ export default class Cutscene4 extends Phaser.Scene {
     }
 
     update() {
-        const inputMode =
-            this.registry.get('inputMode') ||
-            localStorage.getItem('inputMode');
+        const inputMode = this.registry.get('inputMode')
 
         if (inputMode !== 'hand') return;
 
@@ -350,9 +348,7 @@ export default class Cutscene4 extends Phaser.Scene {
             .setScale(uiScale)
             .setDepth(10);
 
-        const inputMode =
-            this.registry.get('inputMode') ||
-            localStorage.getItem('inputMode');
+        const inputMode = this.registry.get('inputMode')
 
         const commands =
             inputMode === 'hand'

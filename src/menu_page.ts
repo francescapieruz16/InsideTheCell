@@ -204,7 +204,7 @@ export class MenuPageScene extends Phaser.Scene {
             this.scale.off('resize', onResize);
         });
 
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode = this.registry.get('inputMode');
 
         if (inputMode === 'hand') {
             if (!this.scene.isActive('HandCursorScene')) {

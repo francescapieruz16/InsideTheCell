@@ -287,7 +287,7 @@ export default class JournalScene extends Phaser.Scene {
         let hoveredElement: InteractiveElement | null = null;
         let isAnyMouseHovering = false;
 
-        const inputMode = this.registry.get('inputMode') || localStorage.getItem('inputMode');
+        const inputMode = this.registry.get('inputMode');
         const isHandActive = inputMode === 'hand';
 
         let handX = -1;

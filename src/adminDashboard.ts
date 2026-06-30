@@ -40,7 +40,7 @@ export class AdminDashboard {
     private loadAndPopulateData() {
         this.apiKeyInput.value = localStorage.getItem('GEMINI_API_KEY') || "";
 
-        this.modelSelect.value = localStorage.getItem('GEMINI_MODEL') || "gemini-2.5-flash";
+        this.modelSelect.value = localStorage.getItem('GEMINI_MODEL') || "gemini-3.1-flash-lite";
 
         const savedData = localStorage.getItem('ADMIN_SETTINGS_JSON');
         let settingsData;
@@ -63,7 +63,7 @@ export class AdminDashboard {
         if (!data) return;
 
         this.promptInput.value = data.game_prompt || "";
-        this.modelSelect.value = data.ai_model || "gemini-2.5-flash";
+        this.modelSelect.value = data.ai_model || "gemini-3.1-flash-lite";
 
         for (let i = 1; i <= 6; i++) {
             const levelData = data.minigames[`minigame_${i}`] || {};
@@ -114,7 +114,7 @@ export class AdminDashboard {
 
     private async handleSave() {
         const apiKey = this.apiKeyInput.value.trim();
-        const selectedModel = this.modelSelect ? this.modelSelect.value : "gemini-2.5-flash";
+        const selectedModel = this.modelSelect ? this.modelSelect.value : "gemini-3.1-flash-lite";
         this.setLoadingState(true);
 
         const dataObj = this.buildJSONFromUI();

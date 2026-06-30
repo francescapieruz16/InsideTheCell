@@ -44,6 +44,7 @@ export class PostGameManager {
     private quizButtons: Phaser.GameObjects.Container[] = [];
     private continueToQuizBtn!: Phaser.GameObjects.Container;
 
+    private modelSelect!: string;
     private prompt: string = "";
     private minigame_description: string = "";
     private knowledge: string = "";
@@ -141,11 +142,12 @@ export class PostGameManager {
         }
 
         const savedApiKey = localStorage.getItem('GEMINI_API_KEY') || "";
+        this.modelSelect = localStorage.getItem('GEMINI_MODEL') || "gemini-3.1-flash-lite";
 
         if (savedApiKey.trim() !== "") {
             try {
                 this.llm = new ChatGoogleGenerativeAI({
-                    model: "gemini-3-flash-preview",
+                    model: this.modelSelect,
                     apiKey: savedApiKey,
                     temperature: 0.7,
                 });

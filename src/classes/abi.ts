@@ -125,13 +125,26 @@ export default class ABI {
     }
 
     private initVoice() {
-        const loadVoices = () => {
-            const voices = this.synth.getVoices();
-            this.robotVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0] || null;  
-        };
+    const loadVoices = () => {
+        const voices = this.synth.getVoices();
+        
+        // Cerchiamo la voce preferita
+        const preferredVoice = voices.find(v => v.name.includes("Google US English")) || 
+                               voices.find(v => v.lang === "en-US") ||
+                               voices.find(v => v.lang === "en-GB");
+        
+        if (preferredVoice) {
+            this.robotVoice = preferredVoice;
+        } else {
+            // Fallback estremo se non trova nulla di inglese
+            this.robotVoice = voices[0] || null;
+        }
+    };
 
-        loadVoices();
+    // Carica subito
+    loadVoices();
 
+        // Gestisci il caricamento asincrono delle voci (fondamentale su Chrome)
         if (this.synth.onvoiceschanged !== undefined) {
             this.synth.onvoiceschanged = loadVoices;
         }
@@ -159,8 +172,8 @@ export default class ABI {
             utterance.voice = this.robotVoice;
         }
 
-        utterance.pitch = 1.5; 
-        utterance.rate = 1.5;  
+        utterance.pitch = 1; 
+        utterance.rate = 1;  
         utterance.volume = finalVolume;
         
         this.synth.speak(utterance);

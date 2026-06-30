@@ -3,24 +3,28 @@ export class ChatManager {
     private chatInput: HTMLInputElement;
     private chatSend: HTMLButtonElement;
     private chatMic?: HTMLButtonElement;
+    private chatQuizBtn: HTMLButtonElement;
     private keyboardUi?: HTMLDivElement;
     
     private onMessageSent: (message: string) => void;
     private onChatStateChange: (isActive: boolean) => void;
     private onMicClick?: () => void;
     private onKeyboardStateChange?: (isOpen: boolean) => void;
+    private onQuizClick?: () => void;
 
     constructor(
         onMessageSent: (message: string) => void,
         onChatStateChange: (isActive: boolean) => void,
         isHandTrackingActive: boolean = false,
         onMicClick?: () => void,
-        onKeyboardStateChange?: (isOpen: boolean) => void
+        onKeyboardStateChange?: (isOpen: boolean) => void,
+        onQuizClick?: () => void
     ) {
         this.onMessageSent = onMessageSent;
         this.onChatStateChange = onChatStateChange;
         this.onMicClick = onMicClick;
         this.onKeyboardStateChange = onKeyboardStateChange;
+        this.onQuizClick = onQuizClick;
 
         this.chatUi = document.createElement('div');
         this.chatUi.id = 'llm-chat-ui';
@@ -35,7 +39,9 @@ export class ChatManager {
         this.chatSend.id = 'llm-chat-send';
         this.chatSend.innerText = 'Send';
 
-        this.chatUi.appendChild(this.chatInput);
+        this.chatQuizBtn = document.createElement('button');
+        this.chatQuizBtn.id = 'llm-chat-quiz-btn';
+        this.chatQuizBtn.innerText = 'Go to the quiz';
 
         if (isHandTrackingActive) {
             this.chatMic = document.createElement('button');
@@ -60,12 +66,8 @@ export class ChatManager {
             this.chatMic.onclick = () => {
                 if (this.onMicClick) this.onMicClick();
             };
-
-            this.chatUi.appendChild(this.chatMic);
         }
 
-        this.chatUi.appendChild(this.chatSend);
-        
         document.getElementById('app')?.appendChild(this.chatUi);
 
         Object.assign(this.chatUi.style, {
@@ -80,8 +82,29 @@ export class ChatManager {
             justifyContent: 'center',
             gap: '15px',
             width: '60%',
-            maxWidth: '750px'
+            maxWidth: '900px' // Leggermente aumentato per far spazio a tutti i bottoni
         });
+
+        // Styling del bottone Quiz per stare in linea
+        Object.assign(this.chatQuizBtn.style, {
+            height: '60px',
+            padding: '0 30px',
+            backgroundColor: '#3d5381',
+            color: 'white',
+            fontSize: '24px',
+            fontWeight: 'bold',
+            fontFamily: 'Arial, sans-serif',
+            border: '3px solid white',
+            borderRadius: '20px',
+            cursor: 'pointer',
+            boxSizing: 'border-box',
+            whiteSpace: 'nowrap', // Impedisce al testo di andare a capo
+            display: 'none' 
+        });
+
+        this.chatQuizBtn.onclick = () => {
+            if (this.onQuizClick) this.onQuizClick();
+        };
 
         const inputRow = document.createElement('div');
         Object.assign(inputRow.style, {
@@ -94,6 +117,10 @@ export class ChatManager {
         inputRow.appendChild(this.chatInput);
         if (this.chatMic) inputRow.appendChild(this.chatMic);
         inputRow.appendChild(this.chatSend);
+        
+        // IL CAMBIAMENTO PRINCIPALE È QUI: Appendo il bottone quiz di fianco al send!
+        inputRow.appendChild(this.chatQuizBtn);
+        
         this.chatUi.appendChild(inputRow);
 
         Object.assign(this.chatInput.style, {
@@ -140,6 +167,14 @@ export class ChatManager {
         this.chatInput.addEventListener('keyup', (event: KeyboardEvent) => {
             event.stopPropagation();
         });
+    }
+
+    public showQuizButton() {
+        this.chatQuizBtn.style.display = 'block';
+    }
+
+    public hideQuizButton() {
+        this.chatQuizBtn.style.display = 'none';
     }
 
     public showVirtualKeyboard() {

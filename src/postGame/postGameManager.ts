@@ -39,10 +39,8 @@ export class PostGameManager {
 
     private allUIContainers: Phaser.GameObjects.Container[] = [];
 
-    private llmContainer!: Phaser.GameObjects.Container;
     private finalQuizContainer!: Phaser.GameObjects.Container;
     private quizButtons: Phaser.GameObjects.Container[] = [];
-    private continueToQuizBtn!: Phaser.GameObjects.Container;
 
     private modelSelect!: string;
     private prompt: string = "";
@@ -207,6 +205,13 @@ export class PostGameManager {
                 } else {
                     this.abi.MoveDialogueY(-100);
                 }
+            },
+            () => {
+                if (this.chatManager) {
+                    this.chatManager.hide();
+                    this.chatManager.hideQuizButton();
+                }
+                this.proceedToQuiz();
             }
         );
 
@@ -226,13 +231,6 @@ export class PostGameManager {
             if (this.chatManager) {
                 this.chatManager.hide();
             }
-
-            if (this.llmContainer && this.llmContainer.visible) {
-                (this.llmContainer as any).wasVisibleBeforePause = true;
-                this.llmContainer.setVisible(false);
-            } else if (this.llmContainer) {
-                (this.llmContainer as any).wasVisibleBeforePause = false;
-            }
         });
 
         this.scene.events.on('resume', () => {
@@ -242,11 +240,6 @@ export class PostGameManager {
                 }
 
                 (this as any).chatWasVisibleBeforePause = false;
-            }
-
-            if (this.llmContainer && (this.llmContainer as any).wasVisibleBeforePause) {
-                this.llmContainer.setVisible(true);
-                (this.llmContainer as any).wasVisibleBeforePause = false;
             }
         });
 
@@ -440,7 +433,6 @@ export class PostGameManager {
         this.dialogues = [...this.defaultDialogues];
 
         this.waitForUISceneReady(() => {
-            this.buildChat();
             this.loadRandomQuiz();
         });
     }
@@ -528,10 +520,6 @@ export class PostGameManager {
     }
 
     public async evaluatePlayerChatInput(playerMessage: string) {
-        if (this.llmContainer) {
-            this.llmContainer.setVisible(false);
-        }
-
         if (this.chatManager) {
             this.chatManager.hide();
         }
@@ -583,15 +571,8 @@ export class PostGameManager {
             this.isWaitingForLLM = false;
 
             this.abi.showDialogue("ABI", feedbackPages, () => {
-                if (this.continueToQuizBtn) {
-                    this.continueToQuizBtn.setVisible(true);
-                }
-
-                if (this.llmContainer) {
-                    this.llmContainer.setVisible(true);
-                }
-
                 if (this.chatManager) {
+                    this.chatManager.showQuizButton();
                     this.chatManager.show();
                 }
 
@@ -779,8 +760,8 @@ export class PostGameManager {
             this.chatManager.hide();
         }
 
-        if (this.continueToQuizBtn) {
-            this.continueToQuizBtn.setVisible(false);
+        if (this.chatManager) {
+            this.chatManager.hideQuizButton();
         }
 
         this.abi.showDialogue(
@@ -913,37 +894,6 @@ export class PostGameManager {
 
         goContainer.setScale(zoom);
         this.allUIContainers.push(goContainer);
-    }
-
-    private buildChat() {
-        const cx = this.uiScene.cameras.main.width / 2;
-        const cy = this.uiScene.cameras.main.height / 2;
-        const zoom = this.uiScene.cameras.main.height / 1080;
-
-        const offsetX = 700;
-        const offsetY = 430;
-
-        this.continueToQuizBtn = this.createButton(offsetX, offsetY, 300, 75, 'Go to the quiz', '34px', () => {
-            if (this.llmContainer) {
-                this.llmContainer.setVisible(false);
-            }
-
-            if (this.chatManager) {
-                this.chatManager.hide();
-            }
-
-            this.proceedToQuiz();
-        });
-
-        this.continueToQuizBtn.setVisible(false);
-
-        this.llmContainer = this.uiScene.add.container(cx, cy, [this.continueToQuizBtn])
-            .setDepth(100)
-            .setVisible(false)
-            .setScrollFactor(0);
-
-        this.llmContainer.setScale(zoom);
-        this.allUIContainers.push(this.llmContainer);
     }
 
     private buildQuiz() {

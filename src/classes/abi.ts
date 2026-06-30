@@ -365,8 +365,6 @@ export default class ABI {
         this.dialogueText.setText("");
         this.isTyping = true;
 
-        this.speakText(this.currentFullText);
-
         if (this.isBossTalking) {
             this.speakBossText(this.currentFullText);
         } else {
